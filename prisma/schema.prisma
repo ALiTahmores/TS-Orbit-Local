@@ -1,0 +1,330 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ProjectStatus {
+  active
+  pending
+  completed
+  delayed
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum TaskStatus {
+  pending
+  inprogress
+  review
+  completed
+  blocked
+  cancelled
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  COMPANY_MANAGER
+  PROJECT_MANAGER
+  UI_UX_DESIGNER
+  WORDPRESS_DEVELOPER
+  SEO_SPECIALIST
+  CONTENT_SPECIALIST
+  QA_SPECIALIST
+  CLIENT
+}
+
+enum FileCategory {
+  brand
+  logo
+  images
+  documents
+  contracts
+  content
+  seo
+  dev
+}
+
+enum ContentStatus {
+  received
+  writing
+  review
+  approved
+  published
+}
+
+enum ContentApproval {
+  none
+  pending
+  approved
+  rejected
+}
+
+enum BugStatus {
+  pending
+  inprogress
+  fixed
+  verified
+}
+
+enum InvoiceStatus {
+  paid
+  pending
+}
+
+model User {
+  id               String          @id @default(uuid())
+  email            String          @unique
+  passwordHash     String
+  name             String
+  role             UserRole        @default(PROJECT_MANAGER)
+  avatar           String?
+  phone            String?
+  isTwoFactorEnabled Boolean       @default(false)
+  twoFactorSecret  String?
+  createdAt        String
+  status           String          @default("online")
+  
+  // Relations
+  tasksAssigned    Task[]          @relation("AssignedTasks")
+  filesUploaded    FileAsset[]     @relation("UploadedFiles")
+  commentsWritten  Comment[]
+  activities       ActivityLog[]
+  auditLogs        AuditLog[]
+  clientProfile    Client?         @relation("UserClient")
+}
+
+model Client {
+  id            String         @id @default(uuid())
+  company       String
+  userId        String         @unique
+  user          User           @relation("UserClient", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  projects      Project[]      @relation("ClientProjects")
+  feedbacks     Feedback[]
+  invoices      Invoice[]
+  meetings      Meeting[]
+}
+
+model Project {
+  id           String         @id @default(uuid())
+  title        String
+  description  String
+  progress     Int            @default(0)
+  status       ProjectStatus  @default(active)
+  priority     TaskPriority   @default(medium)
+  startDate    String
+  deadline     String
+  budget       String
+  clientName   String
+  clientId     String?
+  client       Client?        @relation("ClientProjects", fields: [clientId], references: [id])
+  
+  // Relations
+  tasks        Task[]
+  files        FileAsset[]
+  wpTasks      WpTask[]
+  seoTasks     SeoTask[]
+  contentTasks ContentTask[]
+  qaTasks      QaTask[]
+  meetings     Meeting[]
+  timeline     ProjectTimeline[]
+  milestones   Milestone[]
+}
+
+model Task {
+  id           String         @id @default(uuid())
+  projectId    String
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title        String
+  description  String
+  priority     TaskPriority   @default(medium)
+  status       TaskStatus     @default(pending)
+  department   String
+  assignedToId String?
+  assignedTo   User?          @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  startDate    String
+  deadline     String
+  progress     Int            @default(0)
+  
+  // Sub-items
+  comments     Comment[]
+  checklist    ChecklistItem[]
+  dependencies String[]       @default([])
+}
+
+model Milestone {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  dueDate     String
+  completed   Boolean  @default(false)
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  timestamp String
+}
+
+model ChecklistItem {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title     String
+  completed Boolean  @default(false)
+}
+
+model FileAsset {
+  id              String        @id @default(uuid())
+  name            String
+  category        FileCategory  @default(documents)
+  size            String
+  uploadDate      String
+  version         Int           @default(1)
+  tag             String?
+  uploadedById    String
+  uploadedBy      User          @relation("UploadedFiles", fields: [uploadedById], references: [id])
+  projectId       String?
+  project         Project?      @relation(fields: [projectId], references: [id])
+  versionHistory  Json?
+}
+
+model WpTask {
+  id         String     @id @default(uuid())
+  projectId  String
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category   String     // hosting, domain, dns, cloudflare, security, performance etc.
+  name       String
+  status     String     // pending, inprogress, completed, blocked
+  owner      String
+  dueDate    String
+  notes      String?
+  progress   Int        @default(0)
+}
+
+model ContentTask {
+  id             String          @id @default(uuid())
+  projectId      String
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pageName       String
+  status         ContentStatus   @default(received)
+  writer         String
+  reviewer       String
+  approvalStatus ContentApproval @default(none)
+  deadline       String
+  attachments    String[]
+  contentBody    String?
+}
+
+model SeoTask {
+  id         String       @id @default(uuid())
+  projectId  String
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category   String       // technical, on_page, schema etc.
+  name       String
+  priority   TaskPriority @default(medium)
+  assignedTo String
+  status     String       // pending, inprogress, completed
+  progress   Int          @default(0)
+  dueDate    String
+  metricsLabel String?
+  metricsVal   String?
+  metricsTrend String?
+}
+
+model QaTask {
+  id          String     @id @default(uuid())
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  category    String     // responsive, forms, checkout etc.
+  priority    TaskPriority @default(medium)
+  assignedTo  String
+  status      BugStatus  @default(pending)
+  fixVersion  String?
+  dateLogged  String
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  content   String
+  date      String
+  approved  Boolean  @default(false)
+}
+
+model Invoice {
+  id        String        @id @default(uuid())
+  clientId  String
+  client    Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  amount    String
+  status    InvoiceStatus @default(pending)
+  date      String
+}
+
+model Meeting {
+  id        String   @id @default(uuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  title     String
+  date      String
+  summary   String
+}
+
+model ProjectTimeline {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  timestamp   String
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  actionType  String
+  description String
+  timestamp   String
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  ipAddress String?
+  userAgent String?
+  action    String
+  timestamp String
+}
+
+model ExternalApiConnection {
+  id          String   @id @default(uuid())
+  name        String
+  endpointUrl String
+  apiType     String   // REST, Webhook, SOAP
+  authType    String   // BearerToken, ApiKey, OAuth2, None
+  credentials String   // encrypted or masked
+  status      String   @default("active") // active, disabled
+  healthState String   @default("healthy") // healthy, degraded, offline
+  lastPing    String?
+}

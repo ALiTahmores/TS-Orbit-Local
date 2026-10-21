@@ -1,0 +1,23 @@
+const definition = (method:string,path:string,fields:string[]=[])=>({method,path,fields});
+export const collaborationContracts = [
+  definition('GET','/api/chat/users'), definition('GET','/api/chat/conversations'),
+  definition('POST','/api/chat/conversations',['recipientId','isGroup','title','teamId','memberIds']),
+  definition('PUT','/api/chat/conversations/:id',['title','closed']),
+  definition('POST','/api/chat/conversations/:id/close',['closed']),
+  definition('POST','/api/chat/conversations/:id/members',['userIds']),
+  definition('DELETE','/api/chat/conversations/:id/members/:userId'),
+  definition('PUT','/api/chat/conversations/:id/preferences',['muted']),
+  definition('GET','/api/chat/conversations/:id/messages'),
+  definition('POST','/api/chat/conversations/:id/messages',['content','attachmentIds','attachments','replyToMessageId','codeSnippet','voiceNote']),
+  definition('PUT','/api/chat/messages/:id',['content','codeSnippet']),
+  definition('DELETE','/api/chat/messages/:id'),
+  definition('POST','/api/chat/messages/:id/react',['emoji']),
+  definition('POST','/api/chat/conversations/:id/pin',['messageId','pin']),
+  definition('POST','/api/chat/conversations/:id/read',['messageId']),
+  definition('GET','/api/chat/requests'), definition('POST','/api/chat/requests',['targetTeamId','requestText']),
+  definition('PUT','/api/chat/requests/:id/respond',['status']),
+  definition('DELETE','/api/chat/permissions/team/:teamId/user/:userId'),
+  definition('GET','/api/notifications'), definition('PUT','/api/notifications/read-all'),
+  definition('PUT','/api/notifications/:id/read'), definition('POST','/api/notifications/clear'),
+  definition('GET','/api/activity-logs'),
+];

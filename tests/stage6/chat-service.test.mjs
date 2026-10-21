@@ -1,0 +1,188 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { build } from 'esbuild';
+import express from 'express';
+
+const root = fileURLToPath(new URL('../../', import.meta.url));
+test('durable scoped chat lifecycle, grants, content, receipts and rollback', async t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-stage6-chat-'));
+  assert.ok(path.resolve(directory).startsWith(path.resolve(os.tmpdir()) + path.sep));
+  const generated = path.join(directory, 'chat.cjs');
+  await build({ stdin: { contents: "export { ChatService } from './server/chat/service.ts'; export { createChatRouter } from './server/chat/router.ts'; export { chatParticipant, chatCanConnect } from './server/chat/access.ts'; export { ScopedState, membership } from './server/policy/scope.ts'; export { PersistenceCoordinator } from './server/persistence.ts'; export { SqliteStore, emptyState } from './server/db/store.ts';", resolveDir: root }, outfile: generated, bundle: true, platform: 'node', target: 'node24', format: 'cjs', logLevel: 'silent' });
+  const { ChatService, createChatRouter, chatParticipant, ScopedState, membership, PersistenceCoordinator, SqliteStore, emptyState } = createRequire(import.meta.url)(generated);
+  const state = emptyState();
+  state.users = ['owner', 'alice', 'bob', 'lead', 'visitor', 'viewer', 'outside'].map(id => ({ id, username: id, email: id + '@test.invalid', name: id + ' name', accountStatus: 'ACTIVE', avatar: '/avatars/avatar-1.svg', passwordHash: 'never disclose', phone: 'private' }));
+  state.workspaces = [{ id: 'wa', ownerId: 'owner', members: ['alice', 'bob', 'lead', 'visitor'].map(userId => ({ userId, role: 'MEMBER', permissions: ['write'] })).concat({ userId: 'viewer', role: 'VIEWER', permissions: ['read'] }) }, { id: 'wb', ownerId: 'outside', members: [] }];
+  state.teams = [{ id: 'ta', workspaceId: 'wa', name: 'Team A', leaderId: 'alice' }, { id: 'tb', workspaceId: 'wa', name: 'Team B', leaderId: 'lead' }, { id: 'other_team', workspaceId: 'wb', name: 'Foreign team' }];
+  state.teamMembers = [{ id: 'ta_alice', teamId: 'ta', userId: 'alice', isLeader: true }, { id: 'ta_visitor', teamId: 'ta', userId: 'visitor' }, { id: 'tb_bob', teamId: 'tb', userId: 'bob' }, { id: 'tb_lead', teamId: 'tb', userId: 'lead', isLeader: true }];
+  const scoped = new ScopedState(state), dbFile = path.join(directory, 'orbit.sqlite'); let store = new SqliteStore(dbFile); store.saveState(state);
+  let snapshot, failCommit = false;
+  const db = { beginTransaction() { snapshot = structuredClone(state); store.begin(); }, commitTransaction() { if (failCommit) { failCommit = false; throw Object.assign(new Error('injected failure'), { code: 'TEST_FAILURE' }); } store.saveState(state); store.commit(); snapshot = undefined; }, rollbackTransaction() { store.rollback(); if (snapshot) { for (const key of Object.keys(state)) delete state[key]; Object.assign(state, snapshot); snapshot = undefined; } }, getState() { return state; } };
+  const persistence = new PersistenceCoordinator(db), events = [];
+  const broadcast = (event, payload) => persistence.afterCommit(() => events.push({ event, payload }));
+  const files = { get(id) { const file = state.files.find(row => row.id === id && scoped.visible('files', row) && !row.deletedAt); if (!file) throw Object.assign(new Error('missing'), { status: 404 }); return { id, name: file.name, mimeType: file.mimeType, currentVersionId: file.currentVersionId, contentAvailable: file.available !== false, versionHistory: state.fileVersions.filter(row => row.fileId === id).map(version => ({ ...version, contentAvailable: true, downloadPath: `/api/files/${id}/versions/${version.id}/download` })) }; } };
+  const notify = input => { for (const userId of input.recipientIds) state.notifications.push({ id: 'notification_' + state.notifications.length, workspaceId: input.workspaceId, userId, title: input.title, description: input.description, eventKey: input.eventKey, conversationId: input.conversationId, messageId: input.messageId }); broadcast('app_notifications_updated', {}); };
+  const service = new ChatService({ scoped, files, broadcast, notify });
+  const app = express(); app.use(persistence.middleware); app.use(express.json());
+  app.use((req, res, next) => { const user = state.users.find(row => row.id === req.headers['x-test-user']); const workspaceId = String(req.headers['x-workspace-id'] || 'wa'); if (!membership(state, user, workspaceId)) return res.status(403).json({ error: 'FORBIDDEN' }); scoped.run({ kind: 'workspace', user, workspaceId, method: req.method, path: req.path }, next); });
+  app.use('/api', createChatRouter(service)); app.use((error, _req, res, _next) => res.status(error.status || 500).json({ error: error.code || error.message }));
+  const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
+  const base = `http://127.0.0.1:${server.address().port}/api/chat`;
+  t.after(async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); await persistence.stop(); store.close(); fs.rmSync(directory, { recursive: true, force: true }); });
+  const call = async (route, body, method = body === undefined ? 'GET' : 'POST', user = 'owner', workspace = 'wa') => { const response = await fetch(base + route, { method, headers: { 'content-type': 'application/json', 'x-test-user': user, 'x-workspace-id': workspace }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); return { status: response.status, body: await response.json() }; };
+  const ok = (result, status = 200) => { assert.equal(result.status, status, JSON.stringify(result.body)); return result.body; };
+  let dm, group, requestId, messageId, replyId;
+
+  await t.test('read projections have no side effects, external users or private account data', async () => {
+    const before = structuredClone(state); const users = ok(await call('/users'));
+    assert.deepEqual(state, before); assert.equal(users.some(user => user.id === 'outside'), false); assert.equal(users[0].phone, undefined); assert.equal(users[0].passwordHash, undefined);
+    assert.deepEqual(ok(await call('/conversations')), []); assert.deepEqual(state, before);
+    assert.equal(ok(await call('/users', undefined, 'GET', 'alice')).find(user => user.id === 'bob').canDirectChat, false);
+  });
+  await t.test('DM creation is authorized, scoped, UUID based and deduplicated', async () => {
+    assert.equal((await call('/conversations', { recipientId: 'bob' }, 'POST', 'alice')).status, 403);
+    assert.equal((await call('/conversations', { recipientId: 'outside' })).status, 422);
+    assert.equal((await call('/conversations', { recipientId: 'owner', userId: 'alice' })).status, 422);
+    dm = ok(await call('/conversations', { recipientId: 'alice' }), 201);
+    assert.match(dm.id, /^conv_[0-9a-f-]{36}$/); assert.deepEqual(dm.participants.sort(), ['alice', 'owner']);
+    assert.equal(ok(await call('/conversations', { recipientId: 'owner' }, 'POST', 'alice')).id, dm.id);
+    assert.equal(state.conversations.length, 1); assert.equal((await call(`/conversations/${dm.id}/messages`, undefined, 'GET', 'bob')).status, 404);
+    assert.deepEqual(ok(await call('/conversations', undefined, 'GET', 'outside', 'wb')), []);
+    assert.equal((await call('/conversations', { recipientId: 'owner' }, 'POST', 'viewer')).status, 403);
+  });
+  await t.test('real messages validate body and sender, replies, code, reactions and monotonic reads', async () => {
+    const route = `/conversations/${dm.id}/messages`;
+    assert.equal((await call(route, { content: 'spoof', senderId: 'alice' })).status, 422); assert.equal((await call(route, {})).status, 422);
+    const first = ok(await call(route, { content: 'hello @alice', codeSnippet: { language: 'ts', code: 'const value = 1;' } }), 201); messageId = first.id;
+    assert.equal(first.senderId, 'owner'); assert.equal(first.senderName, 'owner name'); assert.equal(first.codeSnippet.code, 'const value = 1;');
+    const second = ok(await call(route, { content: 'reply', replyToMessageId: first.id }, 'POST', 'alice'), 201); replyId = second.id; assert.equal(second.replyTo.content, 'hello @alice');
+    const reacted = ok(await call(`/messages/${first.id}/react`, { emoji: '👍' }, 'POST', 'alice')); assert.deepEqual(reacted.reactions, [{ emoji: '👍', users: ['alice'], userIds: ['alice'], count: 1 }]);
+    assert.equal((await call(`/messages/${first.id}/react`, { emoji: 'plain text' })).status, 422);
+    assert.equal(ok(await call(`/messages/${first.id}/react`, { emoji: '👍' }, 'POST', 'alice')).reactions.length, 0);
+    const read = ok(await call(`/conversations/${dm.id}/read`, { messageId: second.id }, 'POST', 'alice')); assert.equal(read.receipt.lastReadMessageId, second.id);
+    assert.equal(ok(await call(`/conversations/${dm.id}/read`, { messageId: first.id }, 'POST', 'alice')).receipt.lastReadMessageId, second.id);
+    assert.equal(ok(await call(route)).find(row => row.id === first.id).readBy.includes('alice'), true);
+    assert.equal(ok(await call('/conversations', undefined, 'GET', 'alice'))[0].unreadCount, 0);
+  });
+  await t.test('group management, per-member preferences and revocation preserve history', async () => {
+    group = ok(await call('/conversations', { isGroup: true, title: 'Real group', memberIds: ['alice', 'viewer'] }), 201);
+    assert.equal(group.members.length, 3); assert.equal((await call(`/conversations/${group.id}`, { title: 'forbidden' }, 'PUT', 'alice')).status, 403);
+    assert.equal(ok(await call(`/conversations/${group.id}/preferences`, { muted: true }, 'PUT', 'viewer')).muted, true);
+    assert.equal((await call(`/conversations/${group.id}/messages`, { content: 'viewer write' }, 'POST', 'viewer')).status, 403);
+    ok(await call(`/conversations/${group.id}/members`, { userIds: ['bob'] }));
+    const gmsg = ok(await call(`/conversations/${group.id}/messages`, { content: 'notification test' }), 201);
+    assert.equal(state.notifications.some(row => row.messageId === gmsg.id && row.userId === 'viewer'), false);
+    assert.equal((await call(`/conversations/${group.id}/members/owner`, {}, 'DELETE')).status, 409);
+    ok(await call(`/conversations/${group.id}/members/bob`, {}, 'DELETE'));
+    assert.equal(chatParticipant(scoped, 'bob', group.id, 'wa'), false); assert.equal((await call(`/conversations/${group.id}/messages`, undefined, 'GET', 'bob')).status, 404);
+    assert.equal(state.messages.some(row => row.id === gmsg.id), true);
+    ok(await call(`/conversations/${group.id}/members`, { userIds: ['bob'] })); assert.equal(chatParticipant(scoped, 'bob', group.id, 'wa'), true);
+  });
+  await t.test('foreign reply, pin, read cursor and attachment references are rejected', async () => {
+    const other = ok(await call(`/conversations/${group.id}/messages`, { content: 'other conversation' }), 201);
+    assert.equal((await call(`/conversations/${dm.id}/messages`, { content: 'reply', replyToMessageId: other.id })).status, 422);
+    assert.equal((await call(`/conversations/${dm.id}/pin`, { messageId: other.id, pin: true })).status, 422);
+    assert.equal((await call(`/conversations/${dm.id}/read`, { messageId: other.id })).status, 422);
+    assert.equal((await call(`/conversations/${dm.id}/messages`, { attachments: [{ name: 'fake', url: 'blob:old' }] })).status, 422);
+    assert.equal((await call(`/conversations/${dm.id}/messages`, { attachmentIds: ['missing'] })).status, 422);
+  });
+  await t.test('managed attachments retain exact version and voice payload across file replacement', async () => {
+    state.files.push({ id: 'asset', workspaceId: 'wa', conversationId: dm.id, uploadedById: 'owner', managed: true, name: 'voice.ogg', mimeType: 'audio/ogg', currentVersionId: 'asset_v1' });
+    state.fileVersions.push({ id: 'asset_v1', fileId: 'asset', workspaceId: 'wa', version: 1, name: 'voice.ogg', mimeType: 'audio/ogg', byteSize: 16 });
+    const route = `/conversations/${dm.id}/messages`, sent = ok(await call(route, { voiceNote: { fileId: 'asset', durationSeconds: 2.5 } }), 201);
+    assert.equal(sent.attachments[0].versionId, 'asset_v1'); assert.equal(sent.voiceNote.fileId, 'asset');
+    assert.equal((await call(route, { attachmentIds: ['asset'] }, 'POST', 'alice')).status, 422);
+    state.fileVersions.push({ id: 'asset_v2', fileId: 'asset', workspaceId: 'wa', version: 2, name: 'replacement.ogg', mimeType: 'audio/ogg', byteSize: 32 }); state.files.find(row => row.id === 'asset').currentVersionId = 'asset_v2';
+    const existing = ok(await call(route)).find(row => row.id === sent.id); assert.equal(existing.attachments[0].versionId, 'asset_v1'); assert.equal(existing.attachments[0].downloadPath, '/api/files/asset/versions/asset_v1/download');
+    state.files.find(row => row.id === 'asset').deletedAt = new Date().toISOString(); assert.equal(ok(await call(route)).find(row => row.id === sent.id).attachments[0].contentAvailable, false);
+  });
+  await t.test('author edits, pin and delete tombstone are durable and do not expose deleted content', async () => {
+    assert.equal((await call(`/messages/${messageId}`, { content: 'stolen edit' }, 'PUT', 'alice')).status, 403);
+    const edited = ok(await call(`/messages/${messageId}`, { content: 'edited text' }, 'PUT')); assert.equal(edited.edited, true);
+    assert.equal(state.messages.find(row => row.id === messageId).history[0].content, 'hello @alice');
+    ok(await call(`/conversations/${dm.id}/pin`, { messageId, pin: true })); assert.equal(ok(await call(`/conversations/${dm.id}/messages`)).find(row => row.id === messageId).pinned, true);
+    ok(await call(`/messages/${messageId}`, {}, 'DELETE'));
+    const messages = ok(await call(`/conversations/${dm.id}/messages`)), tombstone = messages.find(row => row.id === messageId);
+    assert.ok(tombstone.deletedAt); assert.equal(tombstone.content, ''); assert.equal(tombstone.history, undefined); assert.equal(tombstone.codeSnippet, undefined); assert.equal(tombstone.pinned, false);
+    assert.equal(messages.find(row => row.id === replyId).replyTo.content, 'پیام حذف شده'); assert.equal(state.messages.find(row => row.id === messageId).content, 'edited text');
+  });
+  await t.test('close/reopen enforces read-only archived history and management', async () => {
+    ok(await call(`/conversations/${dm.id}/close`, {}));
+    assert.equal((await call(`/conversations/${dm.id}/messages`, { content: 'closed' })).status, 409);
+    assert.equal((await call(`/conversations/${dm.id}`, { closed: false }, 'PUT', 'alice')).status, 403);
+    assert.ok(ok(await call(`/conversations/${dm.id}/messages`)).length);
+    assert.equal(ok(await call(`/conversations/${dm.id}`, { closed: false }, 'PUT')).status, 'active');
+  });
+  await t.test('requests are isolated, manager approved, durable, and immediately revocable', async () => {
+    const requested = ok(await call('/requests', { targetTeamId: 'tb', requestText: 'Need to discuss' }, 'POST', 'alice'), 201); requestId = requested.id;
+    assert.equal((await call('/requests', { targetTeamId: 'tb', requestText: 'duplicate' }, 'POST', 'alice')).status, 409);
+    assert.deepEqual(ok(await call('/requests', undefined, 'GET', 'bob')), []);
+    assert.equal((await call(`/requests/${requestId}/respond`, { status: 'approved' }, 'PUT', 'bob')).status, 404);
+    ok(await call(`/requests/${requestId}/respond`, { status: 'approved' }, 'PUT', 'lead'));
+    assert.equal(ok(await call('/users', undefined, 'GET', 'alice')).find(user => user.id === 'bob').canDirectChat, true);
+    assert.equal((await call('/conversations', { isGroup: true, title: 'Incompatible members', memberIds: ['bob', 'visitor'] }, 'POST', 'alice')).status, 403);
+    const crossGroup = ok(await call('/conversations', { isGroup: true, title: 'Approved cross-team group', memberIds: ['bob'] }, 'POST', 'alice'), 201);
+    assert.equal(state.conversations.find(row => row.id === crossGroup.id).accessMode, 'connection_scoped');
+    assert.equal(chatParticipant(scoped, 'alice', crossGroup.id, 'wa'), true); assert.equal(chatParticipant(scoped, 'bob', crossGroup.id, 'wa'), true);
+    assert.equal((await call(`/conversations/${crossGroup.id}/members`, { userIds: ['visitor'] }, 'POST', 'alice')).status, 403);
+    state.files.push({ id: 'cross_group_asset', workspaceId: 'wa', conversationId: crossGroup.id, name: 'legacy.txt' });
+    const cross = ok(await call('/conversations', { recipientId: 'bob' }, 'POST', 'alice'), 201);
+    ok(await call(`/conversations/${cross.id}/messages`, { content: 'approved cross-team' }, 'POST', 'alice'), 201);
+    assert.equal(chatParticipant(scoped, 'alice', cross.id, 'wa'), true);
+    ok(await call('/permissions/team/tb/user/alice', {}, 'DELETE', 'lead'));
+    assert.equal(chatParticipant(scoped, 'alice', cross.id, 'wa'), false); assert.equal(chatParticipant(scoped, 'bob', cross.id, 'wa'), false);
+    assert.equal((await call(`/conversations/${cross.id}/messages`, undefined, 'GET', 'alice')).status, 404);
+    assert.equal(chatParticipant(scoped, 'alice', crossGroup.id, 'wa'), false); assert.equal(chatParticipant(scoped, 'bob', crossGroup.id, 'wa'), false);
+    assert.equal((await call(`/conversations/${crossGroup.id}/messages`, { content: 'revoked group send' }, 'POST', 'alice')).status, 404);
+    scoped.run({ kind: 'workspace', user: state.users.find(row => row.id === 'alice'), workspaceId: 'wa', method: 'GET', path: '/api/files' }, () => assert.equal(scoped.visible('files', state.files.find(row => row.id === 'cross_group_asset')), false));
+    assert.equal(chatParticipant(scoped, 'bob', group.id, 'wa'), true); assert.equal(state.conversations.find(row => row.id === group.id).accessMode, 'workspace_managed');
+    assert.ok(state.messages.some(row => row.conversationId === cross.id));
+    assert.equal((await call('/requests', { targetTeamId: 'other_team', requestText: 'foreign' }, 'POST', 'alice')).status, 404);
+  });
+  await t.test('team groups require leader and respond to actual team membership changes', async () => {
+    assert.equal((await call('/conversations', { isGroup: true, teamId: 'tb', title: 'No' }, 'POST', 'bob')).status, 403);
+    const team = ok(await call('/conversations', { isGroup: true, teamId: 'tb', title: 'Team B' }, 'POST', 'lead'), 201);
+    assert.deepEqual(team.participants.sort(), ['bob', 'lead']);
+    state.teamMembers.find(row => row.id === 'tb_bob').revokedAt = new Date().toISOString();
+    assert.equal(chatParticipant(scoped, 'bob', team.id, 'wa'), false);
+    delete state.teamMembers.find(row => row.id === 'tb_bob').revokedAt;
+    state.users.find(row => row.id === 'bob').accountStatus = 'SUSPENDED'; assert.equal(chatParticipant(scoped, 'bob', team.id, 'wa'), false);
+    state.users.find(row => row.id === 'bob').accountStatus = 'ACTIVE';
+  });
+  await t.test('pagination is stable, validated and never crosses conversations', async () => {
+    const route = `/conversations/${dm.id}/messages`, original = ok(await call(route));
+    const last = ok(await call(route + '?limit=1')); assert.deepEqual(last.map(row => row.id), original.slice(-1).map(row => row.id));
+    const previous = ok(await call(route + `?limit=1&before=${last[0].id}`)); assert.deepEqual(previous.map(row => row.id), original.slice(-2, -1).map(row => row.id));
+    for (const query of ['limit=0', 'limit=501', 'limit=NaN', 'before=foreign', 'unknown=yes']) assert.equal((await call(route + '?' + query)).status, 422);
+    const receipt = ok(await call(`/conversations/${dm.id}/read`, { messageId: original.at(-1).id }, 'POST', 'alice')); const count = events.length;
+    assert.equal(ok(await call(`/conversations/${dm.id}/read`, { messageId: original.at(-1).id }, 'POST', 'alice')).receipt.lastReadMessageId, receipt.receipt.lastReadMessageId); assert.equal(events.length, count);
+    const code = '  const x = 1;\n\n', message = ok(await call(route, { codeSnippet: { language: 'ts', code } }), 201); assert.equal(message.codeSnippet.code, code);
+    assert.equal((await call(`/messages/${message.id}/react`, { emoji: 'hello 😀' })).status, 422);
+  });
+  await t.test('legacy data remains unchanged on reads and conflicting scope cannot grant participation', async () => {
+    const id = 'legacy_group'; state.conversations.push({ id, workspaceId: 'wa', type: 'group', title: 'Historical', creatorId: 'owner' });
+    state.conversationMembers.push({ id: 'legacy_owner', conversationId: id, userId: 'owner' }, { id: 'legacy_alice', conversationId: id, userId: 'alice' });
+    state.messages.push({ id: 'legacy_message', conversationId: id, senderId: 'alice', senderName: 'Historic alice', content: 'History', timestamp: '2020-01-01T00:00:00.000Z', attachments: [{ name: 'old.png', url: 'blob:expired' }] });
+    const before = structuredClone(state), rows = ok(await call(`/conversations/${id}/messages`)); assert.deepEqual(state, before); assert.equal(rows[0].senderName, 'Historic alice'); assert.equal(rows[0].attachments[0].contentAvailable, false); assert.equal(rows[0].attachments[0].downloadPath, null);
+    state.conversationMembers.push({ id: 'conflicting_member', workspaceId: 'wb', conversationId: id, userId: 'visitor' });
+    assert.equal(chatParticipant(scoped, 'visitor', id, 'wa'), false); state.conversationMembers = state.conversationMembers.filter(row => row.id !== 'conflicting_member');
+    assert.equal(ok(await call(`/conversations/${id}`, { title: 'Preserved and renamed' }, 'PUT')).title, 'Preserved and renamed');
+  });
+  await t.test('SQLite commit failure rolls back message, notifications, audit and every event', async () => {
+    const before = structuredClone(state), eventCount = events.length; failCommit = true;
+    assert.equal((await call(`/conversations/${dm.id}/messages`, { content: 'must roll back' })).status, 503);
+    assert.deepEqual(state, before); assert.equal(events.length, eventCount);
+  });
+  await t.test('restart retains messages, versions, requests, receipts, preferences and tombstones', async () => {
+    store.close(); store = new SqliteStore(dbFile); const loaded = store.loadState(); assert.deepEqual(loaded, JSON.parse(JSON.stringify(state)));
+    assert.ok(loaded.messages.find(row => row.id === messageId).deletedAt); assert.ok(loaded.messages.find(row => row.id === messageId).history.length >= 2);
+    assert.equal(loaded.conversationRequests.find(row => row.id === requestId).status, 'approved'); assert.ok(loaded.conversationPermissions.some(row => row.revokedAt));
+    assert.ok(loaded.readReceipts.some(row => row.conversationId === dm.id && loaded.messages.some(message => message.id === row.lastReadMessageId))); assert.ok(loaded.conversationMembers.some(row => row.userId === 'viewer' && row.muted));
+    assert.ok(events.some(event => event.event === 'app_chat_updated')); assert.ok(events.filter(event => event.event === 'app_chat_updated').every(event => event.payload.type === 'data_changed'));
+  });
+});

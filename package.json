@@ -1,0 +1,62 @@
+{
+  "name": "ts-orbit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/start.mjs",
+    "clean": "node scripts/clean.mjs",
+    "lint": "tsc --noEmit",
+    "account": "node scripts/account.mjs",
+    "local:account": "node scripts/account.mjs",
+    "test:stage1": "node --test tests/stage1/*.test.mjs",
+    "db": "node scripts/database.mjs",
+    "test:stage2": "node --test tests/stage2/*.test.mjs",
+    "test:stage3": "node --test tests/stage3/*.test.mjs",
+    "test:stage4": "node --test tests/stage4/*.test.mjs",
+    "test:stage5": "node --test tests/stage5/*.test.mjs",
+    "test:stage6": "node --test tests/stage6/*.test.mjs",
+    "test": "node --test tests/stage1/*.test.mjs tests/stage2/*.test.mjs tests/stage3/*.test.mjs tests/stage4/*.test.mjs tests/stage5/*.test.mjs tests/stage6/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=24.19.0 <25",
+    "npm": ">=10"
+  },
+  "dependencies": {
+    "@radix-ui/react-label": "^2.1.15",
+    "@radix-ui/react-slot": "^1.3.3",
+    "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "framer-motion": "^13.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "ogl": "^1.0.11",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "recharts": "^3.9.2",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.14.0",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3"
+  }
+}

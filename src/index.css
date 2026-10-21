@@ -1,0 +1,336 @@
+@import "tailwindcss";
+
+@font-face { font-family: "Vazirmatn"; src: url("/fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("/fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Spacing Scale */
+  --space-4: 0.25rem;   /* 4px */
+  --space-8: 0.5rem;    /* 8px */
+  --space-12: 0.75rem;  /* 12px */
+  --space-16: 1rem;     /* 16px */
+  --space-20: 1.25rem;  /* 20px */
+  --space-24: 1.5rem;   /* 24px */
+  --space-32: 2rem;     /* 32px */
+  --space-40: 2.5rem;   /* 40px */
+  --space-48: 3rem;     /* 48px */
+  --space-64: 4rem;     /* 64px */
+
+  /* Border Radius Scale */
+  --radius-8: 0.5rem;   /* 8px */
+  --radius-12: 0.75rem; /* 12px */
+  --radius-16: 1rem;    /* 16px */
+  --radius-20: 1.25rem; /* 20px */
+  --radius-24: 1.5rem;  /* 24px */
+
+  /* Light Theme Color Tokens */
+  --bg-app: #F5F7FA;
+  --bg-surface-primary: #FFFFFF;
+  --bg-surface-secondary: #F8F9FC;
+  --color-accent: #155DFC;
+  --color-accent-hover: #0E50D6;
+  --color-success: #10B981;
+  --color-success-hover: #059669;
+  --color-warning: #F5A623;
+  --color-warning-hover: #D97706;
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --border-primary: rgba(21, 93, 252, 0.08);
+  --border-strong: rgba(21, 93, 252, 0.16);
+  --text-primary: #1E2229;
+  --text-secondary: #5E6675;
+  --text-muted: #9EA3B0;
+  --hover-overlay: rgba(21, 93, 252, 0.04);
+
+  /* Shadows (Light theme) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px -1px rgba(21, 93, 252, 0.05), 0 2px 4px -1px rgba(21, 93, 252, 0.03);
+  --shadow-lg: 0 10px 25px -3px rgba(21, 93, 252, 0.08), 0 4px 12px -2px rgba(21, 93, 252, 0.04);
+  --shadow-floating: 0 20px 32px -5px rgba(21, 93, 252, 0.12), 0 10px 16px -5px rgba(21, 93, 252, 0.06);
+  --shadow-glow: 0 0 15px 2px rgba(21, 93, 252, 0.15);
+
+  /* Animations Scale */
+  --anim-fast: 150ms;
+  --anim-normal: 250ms;
+  --anim-slow: 400ms;
+}
+
+.dark {
+  /* Dark Theme Color Tokens (Deep Navy Slate - #0b0f19 / #131b2e / #1a2438 / #232f48) */
+  --bg-app: #0b0f19;
+  --bg-surface-primary: #131b2e;
+  --bg-surface-secondary: #1a2438;
+  --color-accent: #155DFC;
+  --color-accent-hover: #0E50D6;
+  --color-success: #10B981;
+  --color-success-hover: #059669;
+  --color-warning: #F5A623;
+  --color-warning-hover: #D97706;
+  --color-danger: #EF4444;
+  --color-danger-hover: #DC2626;
+  --border-primary: #232f48;
+  --border-strong: #2e3d5c;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --hover-overlay: rgba(255, 255, 255, 0.04);
+
+  /* Shadows (Dark theme) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.6), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  --shadow-floating: 0 20px 32px -5px rgba(0, 0, 0, 0.7), 0 10px 16px -5px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 15px 2px rgba(21, 93, 252, 0.25);
+}
+
+@theme {
+  --font-sans: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-fa: "Vazirmatn", "Inter", sans-serif;
+  --font-en: "Inter", "Vazirmatn", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Theme Spacing mapping */
+  --spacing-space-4: var(--space-4);
+  --spacing-space-8: var(--space-8);
+  --spacing-space-12: var(--space-12);
+  --spacing-space-16: var(--space-16);
+  --spacing-space-20: var(--space-20);
+  --spacing-space-24: var(--space-24);
+  --spacing-space-32: var(--space-32);
+  --spacing-space-40: var(--space-40);
+  --spacing-space-48: var(--space-48);
+  --spacing-space-64: var(--space-64);
+
+  /* Radius mapping */
+  --radius-radius-8: var(--radius-8);
+  --radius-radius-12: var(--radius-12);
+  --radius-radius-16: var(--radius-16);
+  --radius-radius-20: var(--radius-20);
+  --radius-radius-24: var(--radius-24);
+
+  /* Shadows mapping */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-floating: var(--shadow-floating);
+  --shadow-glow: var(--shadow-glow);
+
+  /* Color mapping */
+  --color-bg-app: var(--bg-app);
+  --color-surface-primary: var(--bg-surface-primary);
+  --color-surface-secondary: var(--bg-surface-secondary);
+  --color-brand-accent: var(--color-accent);
+  --color-brand-accent-hover: var(--color-accent-hover);
+  --color-brand-success: var(--color-success);
+  --color-brand-success-hover: var(--color-success-hover);
+  --color-brand-warning: var(--color-warning);
+  --color-brand-warning-hover: var(--color-warning-hover);
+  --color-brand-danger: var(--color-danger);
+  --color-brand-danger-hover: var(--color-danger-hover);
+  --color-border-primary: var(--border-primary);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-hover-overlay: var(--hover-overlay);
+
+  /* Midnight Legacy mapping for background compatibility */
+  --color-midnight-bg: var(--bg-app);
+  --color-midnight-surface: var(--bg-surface-primary);
+  --color-midnight-accent: var(--color-accent);
+  --color-midnight-secondary: var(--color-warning);
+  --color-midnight-ink: var(--text-primary);
+  --color-midnight-muted: var(--text-secondary);
+  --color-midnight-border: var(--border-primary);
+  --color-midnight-hover: var(--hover-overlay);
+}
+
+html, body, *, input, button, select, textarea, optgroup {
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01" 1; /* Enable native Persian digits for Vazirmatn */
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: none;
+}
+
+input, textarea, select, button {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+input:focus, input:focus-visible, textarea:focus, textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none;
+}
+
+html, body {
+  direction: rtl;
+  text-align: right;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  transition: background-color var(--anim-normal) ease, color var(--anim-normal) ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Persian Digits & RTL/LTR Typography Utilities */
+[dir="rtl"], .lang-fa, .font-fa {
+  font-family: "Vazirmatn", "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01" 1;
+}
+
+[dir="ltr"], .lang-en, .font-en {
+  font-family: "Inter", "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+  direction: ltr;
+  text-align: left;
+}
+
+.persian-digits, .fa-num {
+  font-feature-settings: "ss01" 1;
+}
+
+.latin-digits, .en-num {
+  font-feature-settings: "ss01" 0;
+  font-family: "Inter", sans-serif;
+}
+
+html:not(.dark), html:not(.dark) body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+}
+
+html.dark, html.dark body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+}
+
+/* Background patterns */
+.dot-matrix {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(21, 93, 252, 0.018) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+html:not(.dark) .dot-matrix {
+  background-image: radial-gradient(rgba(21, 93, 252, 0.02) 1px, transparent 1px);
+}
+
+/* Minimalist Borderless Scrollbar Styling across WebKit and Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(226, 238, 255, 0.45) transparent;
+}
+
+html.dark * {
+  scrollbar-color: rgba(186, 215, 255, 0.2) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(226, 238, 255, 0.45);
+  border-radius: 9999px;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: background-color 0.2s ease;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(186, 215, 255, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(191, 219, 254, 0.7);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(191, 219, 254, 0.5);
+}
+
+/* Permanent Browser Autofill Reset for Dark Glass Inputs */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #232d3f inset !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: #f1f5f9 !important;
+}
+
+/* Premium Card Styling */
+.bento-card {
+  background: #131b2e;
+  border-radius: 20px;
+  border: 1px solid #232f48;
+  padding: 24px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html:not(.dark) .bento-card {
+  background: white;
+  border-color: rgba(21, 93, 252, 0.08);
+  box-shadow: 0 4px 24px rgba(21, 93, 252, 0.02);
+}
+
+.bento-card:hover {
+  border-color: rgba(21, 93, 252, 0.24);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+html:not(.dark) .bento-card:hover {
+  border-color: rgba(21, 93, 252, 0.2);
+  box-shadow: 0 12px 30px rgba(21, 93, 252, 0.05);
+}
+
+/* Hide scrollbar utility */
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+}
+.scrollbar-none {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+/* Roadmap Flowing Light Beam Animations */
+@keyframes flowLightBeam {
+  from {
+    stroke-dashoffset: 48;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.flow-beam-active {
+  animation: flowLightBeam 1.2s linear infinite;
+}
+
+.flow-beam-blocked {
+  animation: flowLightBeam 0.7s linear infinite;
+}
+

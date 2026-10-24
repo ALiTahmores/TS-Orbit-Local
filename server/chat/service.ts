@@ -18,7 +18,7 @@ const fail = (status: number, code: string, message: string): never => { throw n
 // millisecond. Random UUID ordering must never move a read cursor backwards.
 const order = (a: any, b: any) => String(a.createdAt || a.timestamp || '').localeCompare(String(b.createdAt || b.timestamp || ''));
 const publicAvatar = (user: any) => typeof user.avatar === 'string' && user.avatar.length <= 700_000
-  && (/^\/avatars\/[\w.-]+\.svg$/.test(user.avatar) || /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(user.avatar)) ? user.avatar : localAvatar(user.id || user.name || 'TS Orbit');
+  && (/^\/avatars\/[\w.-]+\.svg$/.test(user.avatar) || /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(user.avatar)) ? user.avatar : localAvatar(user.name || user.id || 'TS Orbit');
 const grouped = (conversation: any) => conversation.isGroup === true || conversation.type === 'group' || conversation.type === 'team' || !!conversation.teamId;
 
 export class ChatService {

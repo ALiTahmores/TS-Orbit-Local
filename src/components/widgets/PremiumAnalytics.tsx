@@ -4,26 +4,27 @@ import {
   Filter, 
   MoreHorizontal, 
   CheckCircle2, 
-  Eye, 
-  HelpCircle, 
-  Ban, 
+  Eye,
+  Clock,
+  Ban,
   Sparkles,
-  ArrowUpRight,
   Zap,
   RotateCcw,
   Download
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, 
-  AreaChart,
+import {
+  ResponsiveContainer,
   Area,
-  XAxis, 
-  YAxis, 
-  Tooltip, 
+  XAxis,
+  YAxis,
+  Tooltip,
   CartesianGrid,
   ComposedChart
 } from 'recharts';
 import { Task, Project } from '../../types';
+import { completionSeries, downloadCsv, seriesToCsv } from '../../lib/taskAnalytics';
+
+const faDigits = (value: number | string) => String(value).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 
 interface PremiumAnalyticsProps {
   tasks: Task[];
@@ -71,7 +72,7 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
 }) => {
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'quarterly'>('monthly');
   const [visibleSeries, setVisibleSeries] = useState({
-    productivity: true,
+    onTime: true,
     completed: true,
   });
 
@@ -91,54 +92,23 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
   const stats = useMemo(() => {
     const safeTasks = projectTasks || [];
     const total = safeTasks.length;
-    if (total === 0) {
-      return {
-        total: 0,
-        completed: 0,
-        review: 0,
-        inprogress: 0,
-        qa: 0,
-        blocked: 0,
-        pending: 0,
-        productivity: 82,
-        health: 88,
-        completedRate: 0,
-        reviewRate: 0,
-        inprogressRate: 0,
-        qaRate: 0,
-        blockedRate: 0
-      };
-    }
-
-    const completed = safeTasks.filter(t => t && t.status === 'completed').length;
-    const review = safeTasks.filter(t => t && t.status === 'review').length;
-    const inprogress = safeTasks.filter(t => t && t.status === 'inprogress').length;
-    const qa = safeTasks.filter(t => t && t.department === 'qa' && t.status !== 'completed').length;
-    const blocked = safeTasks.filter(t => t && t.status === 'blocked').length;
-    const pending = safeTasks.filter(t => t && t.status === 'pending').length;
-
-    // Weighted Productivity formula
-    const weightedSum = (completed * 100) + (review * 80) + (inprogress * 65) + (qa * 75) + (pending * 30) + (blocked * 5);
-    const productivity = Math.round(weightedSum / total);
-
-    // Health score: heavily reduced by blocked tasks, slightly by pending
-    const health = Math.max(20, 100 - (blocked * 15) - (pending * 3));
+    const count = (status: string) => safeTasks.filter(t => t && t.status === status).length;
+    const rate = (value: number) => total ? Math.round((value / total) * 100) : 0;
+    const completed = count('completed'), review = count('review'), inprogress = count('inprogress');
+    const blocked = count('blocked'), pending = count('pending');
 
     return {
       total,
       completed,
       review,
       inprogress,
-      qa,
       blocked,
       pending,
-      productivity: Math.min(100, Math.max(10, productivity)),
-      health: Math.min(100, Math.max(10, health)),
-      completedRate: Math.round((completed / total) * 100),
-      reviewRate: Math.round((review / total) * 100),
-      inprogressRate: Math.round((inprogress / total) * 100),
-      qaRate: Math.round((qa / total) * 100),
-      blockedRate: Math.round((blocked / total) * 100)
+      completedRate: rate(completed),
+      reviewRate: rate(review),
+      inprogressRate: rate(inprogress),
+      pendingRate: rate(pending),
+      blockedRate: rate(blocked)
     };
   }, [projectTasks]);
 
@@ -148,67 +118,9 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
     return Math.min(100, Math.round((stats.completed / stats.total) * 100));
   }, [stats]);
 
-  // 2. TIMESERIES GENERATION CORRELATED TO REAL APP METRICS
-  const chartData = useMemo(() => {
-    const baseProd = stats.total > 0 ? (stats.productivity || 0) : 0;
-    const baseComp = stats.total > 0 ? (stats.completed || 0) : 0;
-
-    if (period === 'daily') {
-      const days = isRtl 
-        ? ['شنبه', '۱شنبه', '۲شنبه', '۳شنبه', '۴شنبه', '۵شنبه', 'جمعه'] 
-        : ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-      
-      return days.map((day, idx) => {
-        const factor = 1 + (idx - 3) * 0.04;
-        return {
-          name: day,
-          'Productivity': Math.min(100, Math.max(10, Math.round(baseProd * factor))),
-          'Completed': Math.max(0, Math.round(baseComp * 0.45 + idx * 0.6))
-        };
-      });
-    }
-
-    if (period === 'weekly') {
-      const weeks = isRtl
-        ? ['هفته ۱', 'هفته ۲', 'هفته ۳', 'هفته ۴']
-        : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-
-      return weeks.map((week, idx) => {
-        const factor = 0.85 + idx * 0.08;
-        return {
-          name: week,
-          'Productivity': Math.min(100, Math.round(baseProd * factor)),
-          'Completed': Math.max(1, Math.round(baseComp * (0.3 + idx * 0.25)))
-        };
-      });
-    }
-
-    if (period === 'quarterly') {
-      const quarters = isRtl ? ['Q1', 'Q2', 'Q3', 'Q4'] : ['Q1', 'Q2', 'Q3', 'Q4'];
-      return quarters.map((quarter, idx) => {
-        const factor = [0.9, 1.05, 0.95, 1.12][idx];
-        return {
-          name: quarter,
-          'Productivity': Math.min(100, Math.round(baseProd * factor)),
-          'Completed': Math.max(2, Math.round(baseComp * 2.5 * factor))
-        };
-      });
-    }
-
-    // Default: Monthly (6 Months)
-    const months = isRtl
-      ? ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور']
-      : ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
-
-    return months.map((month, idx) => {
-      const factor = [0.84, 0.92, 0.97, 1.02, 0.96, 1.06][idx];
-      return {
-        name: month,
-        'Productivity': Math.min(100, Math.round(baseProd * factor)),
-        'Completed': Math.max(1, Math.round(baseComp * (0.5 + idx * 0.15) * factor))
-      };
-    });
-  }, [period, stats, isRtl]);
+  // 2. COMPLETIONS PER PERIOD, FROM EACH TASK'S STATUS HISTORY
+  const chartData = useMemo(() => completionSeries(projectTasks, period), [projectTasks, period]);
+  const chartIsEmpty = chartData.every(point => point.Completed === 0);
 
   const circularSegments = useMemo(() => {
     return [
@@ -243,14 +155,14 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
         icon: <Eye size={11} className="text-[#7867FF]" />
       },
       {
-        id: 'qa',
-        label: isRtl ? 'تست کیفیت' : 'QA Testing',
-        count: stats.qa,
-        rate: stats.qaRate,
+        id: 'pending',
+        label: isRtl ? 'در انتظار' : 'To do',
+        count: stats.pending,
+        rate: stats.pendingRate,
         color: '#FF78C8',
         radius: 17,
         strokeWidth: 5,
-        icon: <HelpCircle size={11} className="text-[#FF78C8]" />
+        icon: <Clock size={11} className="text-[#FF78C8]" />
       },
       {
         id: 'blocked',
@@ -311,13 +223,13 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
             <div className="text-right">
               <span className="text-[10px] font-black text-[#5B7CFF] dark:text-[#5B7CFF] tracking-widest uppercase flex items-center gap-1.5 justify-start">
                 <Sparkles size={11} className="text-[#5B7CFF]" />
-                {isRtl ? 'تحلیل داده‌های آماری' : 'Intelligent Trend Monitor'}
+                {isRtl ? 'روند انجام کار' : 'Delivery trend'}
               </span>
               <h3 className="text-lg font-black text-neutral-900 dark:text-white mt-1">
-                {isRtl ? 'نمودار راندمان و بهره‌وری کارگاه' : 'Workshop Standing & Efficiency Trends'}
+                {isRtl ? 'وظایف تکمیل‌شده و تحویل به‌موقع' : 'Completed tasks and on-time delivery'}
               </h3>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                {isRtl ? 'روند پیشرفت تسک‌های بسته‌شده و راندمان کاری.' : 'Correlative speed indexing, task outputs, and workspace standing.'}
+                {isRtl ? 'تعداد وظایفی که در هر بازه بسته شده‌اند و درصدی که تا سررسید تحویل شده‌اند.' : 'Tasks closed per period and the share delivered by their due date.'}
               </p>
             </div>
 
@@ -367,21 +279,21 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                         <span className="text-[10px] font-bold text-neutral-400 block mb-2 px-1 border-b border-neutral-100 dark:border-white/5 pb-1 text-right">
                           {isRtl ? 'فیلتر نمایش نمودارها' : 'Toggle Datasets'}
                         </span>
-                        <button 
-                          onClick={() => setVisibleSeries(prev => ({ ...prev, productivity: !prev.productivity }))}
+                        <button
+                          onClick={() => setVisibleSeries(prev => ({ ...prev, onTime: !prev.onTime }))}
                           className="w-full flex items-center justify-between text-xs font-bold p-2 rounded-md hover:bg-neutral-50 dark:hover:bg-white/5 text-right cursor-pointer text-neutral-700 dark:text-neutral-200"
                         >
                           <span className="w-2.5 h-2.5 rounded-full bg-[#5B7CFF] block" />
-                          <span>{isRtl ? 'امتیاز راندمان کاری' : 'Productivity Index'}</span>
-                          <span className="text-[9px] text-neutral-400">{visibleSeries.productivity ? 'ON' : 'OFF'}</span>
+                          <span>{isRtl ? 'تحویل به‌موقع (٪)' : 'On-time delivery (%)'}</span>
+                          <span className="text-[9px] text-neutral-400">{visibleSeries.onTime ? (isRtl ? 'نمایش' : 'On') : (isRtl ? 'پنهان' : 'Off')}</span>
                         </button>
-                        <button 
+                        <button
                           onClick={() => setVisibleSeries(prev => ({ ...prev, completed: !prev.completed }))}
                           className="w-full flex items-center justify-between text-xs font-bold p-2 rounded-md hover:bg-neutral-50 dark:hover:bg-white/5 text-right cursor-pointer text-neutral-700 dark:text-neutral-200"
                         >
                           <span className="w-2.5 h-2.5 rounded-full bg-[#FFD66B] block" />
-                          <span>{isRtl ? 'تسک‌های انجام شده' : 'Completed Scale'}</span>
-                          <span className="text-[9px] text-neutral-400">{visibleSeries.completed ? 'ON' : 'OFF'}</span>
+                          <span>{isRtl ? 'وظایف تکمیل‌شده' : 'Completed tasks'}</span>
+                          <span className="text-[9px] text-neutral-400">{visibleSeries.completed ? (isRtl ? 'نمایش' : 'On') : (isRtl ? 'پنهان' : 'Off')}</span>
                         </button>
                       </motion.div>
                     </>
@@ -412,7 +324,7 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                         <button 
                           onClick={() => {
                             setPeriod('monthly');
-                            setVisibleSeries({ productivity: true, completed: true });
+                            setVisibleSeries({ onTime: true, completed: true });
                             setOptionsMenuOpen(false);
                           }}
                           className="w-full text-xs font-bold p-2.5 rounded-md hover:bg-neutral-50 dark:hover:bg-white/5 text-right cursor-pointer flex items-center justify-between text-neutral-700 dark:text-neutral-200"
@@ -422,7 +334,7 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                         </button>
                         <button 
                           onClick={() => {
-                            alert(isRtl ? 'خروجی داده‌ها ذخیره شد.' : 'Monitoring logs successfully exported.');
+                            downloadCsv(`ts-orbit-trend-${period}.csv`, seriesToCsv(chartData));
                             setOptionsMenuOpen(false);
                           }}
                           className="w-full text-xs font-bold p-2.5 rounded-md hover:bg-neutral-50 dark:hover:bg-white/5 text-right cursor-pointer flex items-center justify-between text-neutral-700 dark:text-neutral-200"
@@ -474,14 +386,16 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                   dy={10}
                 />
 
-                <YAxis 
+                <YAxis
+                  yAxisId="rate"
                   stroke="currentColor"
                   className="text-neutral-400 dark:text-neutral-500 font-sans font-bold"
-                  fontSize={10} 
+                  fontSize={10}
                   tickLine={false}
                   axisLine={false}
                   domain={[0, 100]}
                 />
+                <YAxis yAxisId="count" orientation="right" hide allowDecimals={false} domain={[0, 'auto']} />
 
                 {/* Beautiful Custom Premium Tooltip */}
                 <Tooltip
@@ -498,10 +412,10 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                             {payload.map((entry, idx) => (
                               <div key={idx} className="flex items-center justify-between gap-6 text-xs font-bold">
                                 <span className="font-black font-sans tabular-nums" style={{ color: entry.color }}>
-                                  {entry.value}%
+                                  {entry.value === null || entry.value === undefined ? '—' : entry.name === 'OnTime' ? `${isRtl ? faDigits(entry.value as number) : entry.value}٪` : (isRtl ? faDigits(entry.value as number) : entry.value)}
                                 </span>
                                 <span className="text-neutral-600 dark:text-neutral-300">
-                                  {entry.name === 'Productivity' ? (isRtl ? 'راندمان کاری' : 'Productivity') : (isRtl ? 'کارهای تکمیل شده' : 'Completed Scale')}
+                                  {entry.name === 'OnTime' ? (isRtl ? 'تحویل به‌موقع' : 'On time') : (isRtl ? 'وظایف تکمیل‌شده' : 'Completed')}
                                 </span>
                               </div>
                             ))}
@@ -514,12 +428,14 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                 />
 
                 {/* Premium Area series with Bezier interpolation and gradient fill */}
-                {visibleSeries.productivity && (
-                  <Area 
-                    type="monotone" 
-                    dataKey="Productivity" 
-                    name="Productivity"
-                    stroke="#5B7CFF" 
+                {visibleSeries.onTime && (
+                  <Area
+                    yAxisId="rate"
+                    connectNulls
+                    type="monotone"
+                    dataKey="OnTime"
+                    name="OnTime"
+                    stroke="#5B7CFF"
                     strokeWidth={1.8}
                     fillOpacity={1} 
                     fill="url(#premiumBlueGradient)" 
@@ -537,8 +453,9 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
 
                 {/* Secondary Bezier Curve representing completed metrics */}
                 {visibleSeries.completed && (
-                  <Area 
-                    type="monotone" 
+                  <Area
+                    yAxisId="count"
+                    type="monotone"
                     dataKey="Completed" 
                     name="Completed"
                     stroke="#FFD66B" 
@@ -558,30 +475,32 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                 )}
               </ComposedChart>
             </ResponsiveContainer>
+            {chartIsEmpty && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 bg-white/90 dark:bg-[#121621]/90 px-4 py-2 rounded-xl">
+                  {isRtl ? 'هنوز وظیفه‌ای در این بازه تکمیل نشده است.' : 'No tasks completed in this range yet.'}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Premium Bottom Legend Bar */}
           <div className="border-t border-neutral-100 dark:border-white/5 pt-3 mt-3 flex flex-wrap items-center justify-between text-xs font-bold text-neutral-500 dark:text-neutral-400 gap-4">
             <div className="flex items-center gap-6">
-              <button 
-                onClick={() => setVisibleSeries(p => ({ ...p, productivity: !p.productivity }))}
-                className={`flex items-center gap-2 cursor-pointer transition-opacity ${visibleSeries.productivity ? 'opacity-100' : 'opacity-35'}`}
+              <button
+                onClick={() => setVisibleSeries(p => ({ ...p, onTime: !p.onTime }))}
+                className={`flex items-center gap-2 cursor-pointer transition-opacity ${visibleSeries.onTime ? 'opacity-100' : 'opacity-35'}`}
               >
                 <span className="w-2.5 h-2.5 rounded-full bg-[#5B7CFF] shadow-[0_0_8px_rgba(91,124,255,0.4)]" />
-                <span>{isRtl ? 'راندمان عملکرد پروژه' : 'Productivity Index'}</span>
+                <span>{isRtl ? 'تحویل به‌موقع (٪)' : 'On-time delivery (%)'}</span>
               </button>
-              <button 
+              <button
                 onClick={() => setVisibleSeries(p => ({ ...p, completed: !p.completed }))}
                 className={`flex items-center gap-2 cursor-pointer transition-opacity ${visibleSeries.completed ? 'opacity-100' : 'opacity-35'}`}
               >
                 <span className="w-2.5 h-2.5 rounded-full bg-[#FFD66B] shadow-[0_0_8px_rgba(255,214,107,0.4)]" />
-                <span>{isRtl ? 'تسک‌های پایان یافته' : 'Completed Scale'}</span>
+                <span>{isRtl ? 'وظایف تکمیل‌شده' : 'Completed tasks'}</span>
               </button>
-            </div>
-
-            <div className="flex items-center gap-2 bg-neutral-100 dark:bg-white/5 px-3.5 py-1.5 rounded-full text-[10px] font-sans">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse" />
-              <span>{isRtl ? 'مستقیماً متصل به پایگاه داده کلاینت' : 'Synchronized with active client nodes'}</span>
             </div>
           </div>
 
@@ -706,8 +625,8 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                         <PremiumCounter value={overallProgress} suffix="%" />
                       </span>
                       <span className="text-xs text-slate-500 dark:text-slate-300 font-medium mt-1 leading-none">
-                        {isRtl 
-                          ? `${stats.completed} از ${stats.total} تسک` 
+                        {isRtl
+                          ? `${faDigits(stats.completed)} از ${faDigits(stats.total)} وظیفه`
                           : `${stats.completed} / ${stats.total} Tasks`}
                       </span>
                     </motion.div>
@@ -760,7 +679,7 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ring.color, boxShadow: `0 0 6px ${ring.color}` }} />
                     <span className="text-neutral-600 dark:text-neutral-400 text-[10px] whitespace-nowrap">{ring.label}</span>
                   </div>
-                  <span className="font-mono text-neutral-900 dark:text-white text-[10px]">{ring.count}</span>
+                  <span className="font-bold text-neutral-900 dark:text-white text-[10px]">{isRtl ? faDigits(ring.count) : ring.count}</span>
                 </div>
               );
             })}

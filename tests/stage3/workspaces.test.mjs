@@ -110,4 +110,16 @@ test('workspace services enforce actual membership and invitation authority', as
     assert.ok((await call(c)).body.workspaces.some(workspace => workspace.id === 'workspace_a'));
     assert.equal(c.accountStatus, 'ACTIVE'); assert.equal(c.systemRole, 'USER');
   });
+  await t.test('member removal is limited to managers and never touches the owner or the account', async () => {
+    assert.equal((await call(c, '/members/' + b.id + '?workspaceId=workspace_a', undefined, 'DELETE')).status, 403);
+    assert.equal((await call(b, '/members/' + a.id + '?workspaceId=workspace_a', undefined, 'DELETE')).status, 403);
+    assert.equal((await call(b, '/members/' + b.id + '?workspaceId=workspace_a', undefined, 'DELETE')).status, 403);
+    const removed = await call(b, '/members/' + c.id + '?workspaceId=workspace_a', undefined, 'DELETE');
+    assert.equal(removed.status, 200);
+    assert.ok(!removed.body.workspace.members.some(member => member.userId === c.id && member.isActive !== false));
+    assert.ok(!(await call(c)).body.workspaces.some(workspace => workspace.id === 'workspace_a'));
+    assert.equal(c.accountStatus, 'ACTIVE');
+    assert.equal((await call(b, '/members/' + c.id + '?workspaceId=workspace_a', undefined, 'DELETE')).status, 404);
+    assert.equal(state.auditLogs[0].action, 'WORKSPACE_MEMBER_REMOVED');
+  });
 });

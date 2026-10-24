@@ -33,6 +33,8 @@ test('compiled file and portal routes preserve real bytes, identity, history and
   const identities=state(data).users;workspace=identities.find(row=>row.email==='asset-owner@example.test').personalWorkspaceId;const memberUser=identities.find(row=>row.email==='asset-member@example.test');memberWorkspace=memberUser.personalWorkspaceId;
   ok(await request('/api/workspaces/members',{workspaceId:workspace,targetUserId:memberUser.id,role:'MEMBER'}));
   project=ok(await request('/api/projects',{title:'Actual file project',budget:'private budget',isBudgetConfidential:true}),201);other=ok(await request('/api/projects',{title:'Other portal project'}),201);portal=project.portalToken;
+  assert.equal(project.clientPortalEnabled,false);assert.equal((await request('/api/public/portal/'+portal,undefined,'GET','public')).status,404);
+  for(const row of [project,other])ok(await request('/api/projects/'+row.id+'/portal',{enabled:true},'PUT'));
   task=ok(await request('/api/tasks',{title:'File-linked task',projectId:project.id}),201);
 
   await t.test('raw JSON uploads reach the file parser and atomically attach server-owned metadata',async()=>{

@@ -1,8 +1,9 @@
 import { LocalImage } from '../common/LocalImage';
 import React from 'react';
-import { AlertCircle, CheckCircle2, Check, CornerUpLeft, Clock, ArrowRight } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Check, CornerUpLeft, Clock } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { Task } from '../../types';
+import { assignedIds } from '../../lib/domain';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === undefined || n === null) return '';
@@ -45,17 +46,20 @@ export const ProjectBlockersReviewWidget: React.FC<ProjectBlockersReviewWidgetPr
     updateTaskStatus(taskId, 'inprogress');
   };
 
-  const getProjectTitle = (projectId: string) => {
-    const proj = projects.find((p) => p.id === projectId);
-    return proj ? proj.title : 'پروژه داروماپک';
+  const getProjectTitle = (projectId: string) => projects.find((p) => p.id === projectId)?.title || '';
+
+  const getMemberDetails = (task: Task) => {
+    const ids = assignedIds(task);
+    const member = teamMembers.find((m) => ids.includes(m.id)) || teamMembers.find((m) => m.name === task.assignedTo);
+    const name = member?.name || task.assignedTo || '';
+    return { name: name || 'بدون مسئول', avatar: member?.avatar || '', hasOwner: !!name };
   };
 
-  const getMemberDetails = (memberName: string) => {
-    const member = teamMembers.find((m) => m.name === memberName);
-    return {
-      name: memberName || 'عضو تیم',
-      avatar: member?.avatar || '/avatars/avatar-1.svg',
-    };
+  // Whole days since the task entered its current status (status history), else since its last update.
+  const daysInStatus = (task: Task) => {
+    const entry = [...((task as any).statusHistory || [])].reverse().find((item: any) => item?.newStatus === task.status);
+    const since = new Date(entry?.timestamp || (task as any).updatedAt || '');
+    return Number.isNaN(since.getTime()) ? undefined : Math.max(0, Math.floor((Date.now() - since.getTime()) / 86400000));
   };
 
   const containerClasses = borderless
@@ -73,12 +77,12 @@ export const ProjectBlockersReviewWidget: React.FC<ProjectBlockersReviewWidgetPr
           <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
           <div>
             <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
-              پایش گلوگاهها و تسکهای در انتظار بررسی
+              وظایف در انتظار بررسی یا متوقف‌شده
             </h3>
             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block mt-0.5">
               {stuckTasks.length > 0
-                ? `${toPersianDigits(stuckTasks.length)} موارد در صف اقدام و تایید`
-                : 'تمامی گلوگاه‌های عملیاتی برطرف شده‌اند'}
+                ? `${toPersianDigits(stuckTasks.length)} مورد نیاز به اقدام دارد`
+                : 'موردی در انتظار اقدام نیست'}
             </span>
           </div>
         </div>
@@ -88,7 +92,7 @@ export const ProjectBlockersReviewWidget: React.FC<ProjectBlockersReviewWidgetPr
           onClick={handleNavigate}
           className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0"
         >
-          <span>مشاهده همه تسکها</span>
+          <span>مشاهدهٔ همهٔ وظایف</span>
         </button>
       </div>
 
@@ -98,20 +102,20 @@ export const ProjectBlockersReviewWidget: React.FC<ProjectBlockersReviewWidgetPr
         <div className="py-8 px-4 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
           <CheckCircle2 className="w-8 h-8 text-emerald-500 shrink-0" />
           <p className="text-xs font-bold text-slate-600 dark:text-slate-300 leading-relaxed max-w-xs">
-            هیچ تسکی در انتظار بررسی نیست؛ تمام گلوگاهها آزاد هستند.
+            هیچ وظیفه‌ای در انتظار بررسی یا متوقف‌شده نیست.
           </p>
         </div>
       ) : (
         /* TASK LIST */
         <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
-          {stuckTasks.map((task, index) => {
-            const member = getMemberDetails(task.assignedTo);
+          {stuckTasks.map((task) => {
+            const member = getMemberDetails(task);
             const projTitle = getProjectTitle(task.projectId);
             const isBlocked = task.status === 'blocked';
-
-            // Waiting duration calculated or assigned for presentation
-            const daysWaiting = (index % 3) + 1;
-            const waitingText = `⏱ ${toPersianDigits(daysWaiting)} روز در انتظار تایید`;
+            const days = daysInStatus(task);
+            const waitingText = days === undefined ? '' : days === 0
+              ? (isBlocked ? 'از امروز متوقف' : 'از امروز در انتظار بررسی')
+              : `${toPersianDigits(days)} روز ${isBlocked ? 'متوقف' : 'در انتظار بررسی'}`;
 
             return (
               <div
@@ -134,9 +138,11 @@ export const ProjectBlockersReviewWidget: React.FC<ProjectBlockersReviewWidgetPr
                       <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
                         {task.title}
                       </span>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50">
-                        {projTitle}
-                      </span>
+                      {projTitle && (
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50">
+                          {projTitle}
+                        </span>
+                      )}
                       {isBlocked && (
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/50">
                           متوقف شده
@@ -146,9 +152,11 @@ export const ProjectBlockersReviewWidget: React.FC<ProjectBlockersReviewWidgetPr
 
                     <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400 font-bold">
                       <span>مسئول: {member.name}</span>
-                      <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-mono">
-                        {waitingText}
-                      </span>
+                      {waitingText && (
+                        <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                          <Clock size={11} /> {waitingText}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -159,21 +167,21 @@ export const ProjectBlockersReviewWidget: React.FC<ProjectBlockersReviewWidgetPr
                     type="button"
                     onClick={() => handleRevision(task.id)}
                     className="px-2.5 py-1.5 bg-slate-200/80 dark:bg-slate-700/80 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-[10px] font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1"
-                    title="ارجاع جهت اصلاح"
                   >
                     <CornerUpLeft size={12} />
-                    <span>ارجاع جهت اصلاح</span>
+                    <span>{isBlocked ? 'ادامهٔ کار' : 'ارجاع جهت اصلاح'}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleApprove(task.id)}
-                    className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all cursor-pointer shadow-2xs flex items-center gap-1"
-                    title="تایید و تکمیل"
-                  >
-                    <Check size={12} />
-                    <span>تایید و تکمیل</span>
-                  </button>
+                  {!isBlocked && (
+                    <button
+                      type="button"
+                      onClick={() => handleApprove(task.id)}
+                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black rounded-lg transition-all cursor-pointer shadow-2xs flex items-center gap-1"
+                    >
+                      <Check size={12} />
+                      <span>تأیید و تکمیل</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );

@@ -1,3 +1,4 @@
+import { formatJalaliDate } from '../../lib/dates';
 import { LocalImage } from '../common/LocalImage';
 import React, { useState, useMemo } from 'react';
 import { 
@@ -315,7 +316,7 @@ export const MyProjectsView: React.FC = () => {
                       {/* Due Date */}
                       <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-semibold font-mono">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{toPersianDigits(project.deadline || project.dueDate || '1405/04/15')}</span>
+                        <span>{formatJalaliDate((project as any).deadlineCanonical || project.deadline || project.dueDate) || 'بدون سررسید'}</span>
                       </div>
 
                       {/* Overlapping Members */}

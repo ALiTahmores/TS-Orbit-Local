@@ -98,13 +98,13 @@ export const PageLoadingBoundary: React.FC<PageLoadingBoundaryProps> = ({
         )}
       </AnimatePresence>
 
-      {/* PAGE CONTENT CONTAINER WITH SMOOTH REVEAL */}
+      {/* PAGE CONTENT CONTAINER WITH SMOOTH REVEAL — opacity only: a transform or
+          filter here becomes the containing block of every fixed-position modal
+          inside the page, which then opens off-centre or below the fold. */}
       <motion.div
         initial={false}
         animate={{
-          opacity: shouldDisplayLoader ? 0.2 : 1,
-          filter: shouldDisplayLoader ? 'blur(1px)' : 'none',
-          y: shouldDisplayLoader ? 2 : 0
+          opacity: shouldDisplayLoader ? 0.2 : 1
         }}
         transition={{ duration: 0.22, ease: 'easeOut' }}
         className={cn(

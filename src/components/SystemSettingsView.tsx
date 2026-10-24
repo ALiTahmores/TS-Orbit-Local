@@ -25,7 +25,27 @@ import {
   ArrowRight,
   ArrowLeft
 } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { ActiveSessions } from './settings/ActiveSessions';
+
+/** A square 256px WebP data URL cropped from the centre of the chosen image. */
+const resizeAvatar = (file: File) => new Promise<string>((resolve, reject) => {
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+  image.onload = () => {
+    URL.revokeObjectURL(url);
+    const size = 256, side = Math.min(image.naturalWidth, image.naturalHeight);
+    const canvas = Object.assign(document.createElement('canvas'), { width: size, height: size });
+    const context = canvas.getContext('2d');
+    if (!context || !side) return reject(new Error('image'));
+    context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+    const webp = canvas.toDataURL('image/webp', 0.85);
+    resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.85));
+  };
+  image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+  image.src = url;
+});
+
+const SETTINGS_CATEGORY_IDS =new Set(['appearance', 'localization', 'notifications', 'profile', 'organization', 'security', 'modules']);
 
 export const SystemSettingsView: React.FC = () => {
   const { 
@@ -40,10 +60,17 @@ export const SystemSettingsView: React.FC = () => {
     updateProfile,
     fetchTeamMembers,
     activeWorkspaceId,
-    resetDatabaseToZero
+    workspaces,
+    setWorkspaces,
+    activeSubTab,
+    setActiveSubTab
   } = useProject();
 
-  const [activeCategory, setActiveCategory] = useState<string>('appearance');
+  // The sidebar and the page tabs select a category through activeSubTab; the
+  // in-page menu writes it back so all three stay on the same section.
+  const [activeCategory, setActiveCategoryState] = useState<string>(() => SETTINGS_CATEGORY_IDS.has(activeSubTab) ? activeSubTab : 'appearance');
+  const setActiveCategory = (id: string) => { setActiveCategoryState(id); setActiveSubTab(id); };
+  useEffect(() => { if (SETTINGS_CATEGORY_IDS.has(activeSubTab)) setActiveCategoryState(activeSubTab); }, [activeSubTab]);
   const [successMsg, setSuccessMsg] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
 
@@ -78,13 +105,16 @@ export const SystemSettingsView: React.FC = () => {
   const [timezone, setTimezone] = useState('Asia/Tehran');
   const [dashboardPref, setDashboardPref] = useState('standard');
 
-  // Local state for Organization settings (persists in localStorage scoped by org)
-  const orgKey = `orgSettings:${currentUser?.id || ''}:${activeWorkspaceId || ''}`;
-  const [orgName, setOrgName] = useState('آژانس طراحی و سئو وب‌سیما');
-  const [orgLogo, setOrgLogo] = useState('/avatars/avatar-4.svg');
-  const [orgInfo, setOrgInfo] = useState('پیشرو در ارائه خدمات سئو تکنیکال و توسعه وردپرس اختصاصی برای برندهای برتر کشور');
-  const [orgDefaultProjectStatus, setOrgDefaultProjectStatus] = useState('pending');
-  const [orgDefaultTaskPriority, setOrgDefaultTaskPriority] = useState('medium');
+  // Organization settings are the active workspace's name and description, stored on the server.
+  const activeWorkspace: any = workspaces.find(workspace => workspace.id === activeWorkspaceId);
+  const canManageOrg = userRole === 'OWNER' || userRole === 'ADMIN';
+  const [orgName, setOrgName] = useState('');
+  const [orgInfo, setOrgInfo] = useState('');
+  const [savingOrg, setSavingOrg] = useState(false);
+  useEffect(() => {
+    setOrgName(activeWorkspace?.name || '');
+    setOrgInfo(activeWorkspace?.description || '');
+  }, [activeWorkspace?.id, activeWorkspace?.name, activeWorkspace?.description]);
 
   // Local state for Security settings
   const [currentPassword, setCurrentPassword] = useState('');
@@ -114,23 +144,8 @@ export const SystemSettingsView: React.FC = () => {
           console.error(e);
         }
       }
-
-      // Load Org settings
-      const savedOrg = localStorage.getItem(orgKey);
-      if (savedOrg) {
-        try {
-          const parsedOrg = JSON.parse(savedOrg);
-          if (parsedOrg.orgName) setOrgName(parsedOrg.orgName);
-          if (parsedOrg.orgLogo) setOrgLogo(parsedOrg.orgLogo);
-          if (parsedOrg.orgInfo) setOrgInfo(parsedOrg.orgInfo);
-          if (parsedOrg.defaultProjectStatus) setOrgDefaultProjectStatus(parsedOrg.defaultProjectStatus);
-          if (parsedOrg.defaultTaskPriority) setOrgDefaultTaskPriority(parsedOrg.defaultTaskPriority);
-        } catch (e) {
-          console.error(e);
-        }
-      }
     }
-  }, [currentUser, orgKey]);
+  }, [currentUser]);
 
   useEffect(() => {
     if (currentUser?.systemRole === "ADMIN") { void fetchSystemUsers(); } else setSystemUsers([]);
@@ -231,23 +246,26 @@ export const SystemSettingsView: React.FC = () => {
     }
   };
 
-  const handleSaveOrgSettings = () => {
-    // Only OWNER or PROJECT_MANAGER can edit org details
-    if (userRole !== 'OWNER' && userRole !== 'PROJECT_MANAGER') {
-      triggerToast(locale === 'fa' ? 'خطا: شما دسترسی لازم جهت ویرایش تنظیمات سازمان را ندارید.' : 'Error: Unauthorized to modify organization settings.', true);
+  const handleSaveOrgSettings = async () => {
+    if (!canManageOrg || !activeWorkspace) return;
+    if (!orgName.trim()) {
+      triggerToast(locale === 'fa' ? 'نام فضای کاری نمی‌تواند خالی باشد.' : 'Workspace name is required.', true);
       return;
     }
-
-    const updatedOrg = {
-      orgName,
-      orgLogo,
-      orgInfo,
-      defaultProjectStatus: orgDefaultProjectStatus,
-      defaultTaskPriority: orgDefaultTaskPriority
-    };
-
-    localStorage.setItem(orgKey, JSON.stringify(updatedOrg));
-    triggerToast(locale === 'fa' ? 'تنظیمات آژانس و سازمان با موفقیت به‌روزرسانی شد.' : 'Organization settings saved successfully.');
+    setSavingOrg(true);
+    try {
+      const response = await apiFetch(`/api/workspaces/${encodeURIComponent(activeWorkspace.id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: orgName.trim(), description: orgInfo.trim() })
+      });
+      const result = await response.json();
+      if (result.workspace) setWorkspaces(workspaces.map(workspace => workspace.id === result.workspace.id ? { ...workspace, ...result.workspace } : workspace));
+      triggerToast(locale === 'fa' ? 'مشخصات فضای کاری ذخیره شد.' : 'Workspace details saved.');
+    } catch {
+      triggerToast(locale === 'fa' ? 'ذخیرهٔ مشخصات فضای کاری انجام نشد.' : 'Saving workspace details failed.', true);
+    } finally {
+      setSavingOrg(false);
+    }
   };
 
   const handleChangePasswordSubmit = async (e: React.FormEvent) => {
@@ -257,7 +275,7 @@ export const SystemSettingsView: React.FC = () => {
       return;
     }
     if (newPassword.length < 12 || new TextEncoder().encode(newPassword).length > 72) {
-      triggerToast(locale === 'fa' ? 'رمز عبور جدید باید حداقل ۱۲ کاراکتر و حداکثر ۷۲ بایت باشد.' : 'New password must be at least 12 characters and no more than 72 UTF-8 bytes.', true);
+      triggerToast(locale === 'fa' ? 'رمز عبور جدید باید حداقل ۱۲ کاراکتر باشد (حداکثر ۷۲ حرف لاتین).' : 'New password must be at least 12 characters and no more than 72 UTF-8 bytes.', true);
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -290,9 +308,8 @@ export const SystemSettingsView: React.FC = () => {
     { id: 'localization', label: t('cat_localization'), icon: Globe, roles: [] },
     { id: 'notifications', label: t('cat_notifications'), icon: Bell, roles: [] },
     { id: 'profile', label: t('cat_profile'), icon: User, roles: [] },
-    { id: 'organization', label: t('cat_organization'), icon: Building2, roles: ['OWNER', 'PROJECT_MANAGER'] },
+    { id: 'organization', label: t('cat_organization'), icon: Building2, roles: ['OWNER', 'ADMIN'] },
     { id: 'security', label: t('cat_security'), icon: ShieldCheck, roles: [] },
-    { id: 'database', label: 'دیتابیس و حافظه', icon: LucideIcons.Database, roles: [] },
     { id: 'modules', label: t('cat_modules'), icon: Sliders, roles: ['OWNER'] },
   ];
 
@@ -332,10 +349,7 @@ export const SystemSettingsView: React.FC = () => {
         </div>
         <div className="flex items-center gap-2.5">
           <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
-            {t('profile_status')}: {currentUser?.role === 'OWNER' ? t('system_owner') : (getRoleLabel ? getRoleLabel(currentUser?.role || 'USER') : 'کاربر')}
-          </span>
-          <span className="text-[10px] bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-mono px-3 py-1 rounded-full font-bold">
-            TS Orbit Platform v4.2
+            {t('profile_status')}: {getRoleLabel(currentUser?.role)}
           </span>
         </div>
       </div>
@@ -522,7 +536,7 @@ export const SystemSettingsView: React.FC = () => {
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 p-4 rounded-xl space-y-1.5">
-                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block">پشتیبانی جهت و ترازبندی (RTL/LTR Layout Switch)</span>
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block">پشتیبانی جهت و ترازبندی</span>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
                     با کلیک بر روی زبان انگلیسی، بدنه کل نرم‌افزار به صورت خودکار چپ‌چین شده و ترازهای متنی تغییر می‌کنند تا کارفرمایان یا کاربران بین‌المللی تجربه کاربری یکپارچه‌ای کسب نمایند.
                   </p>
@@ -602,28 +616,31 @@ export const SystemSettingsView: React.FC = () => {
                 {/* Profile Photo / Avatar Editor */}
                 <div className="bg-slate-50/50 dark:bg-[#0d0d0f]/50 border border-slate-150/55 dark:border-zinc-800/80 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-5">
                   <div className="relative w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-xl border-4 border-white dark:border-zinc-950 shadow-md overflow-hidden shrink-0">
-                    {profileAvatar ? (
-                      <LocalImage src={profileAvatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    ) : (
-                      profileName ? profileName.substring(0, 1) : 'U'
-                    )}
+                    <LocalImage src={profileAvatar} alt={profileName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
                   <div className="space-y-2 flex-1 w-full text-right sm:text-right">
-                    <label className="text-[10px] font-black text-slate-450 dark:text-slate-400 block">آواتار و تصویر پروفایل</label>
-                    <div className="flex flex-wrap gap-2.5 mt-1">
-                      {/* Avatar Presets */}
-                      {[
-                        '/avatars/avatar-0.svg',
-                        '/avatars/avatar-3.svg',
-                        '/avatars/avatar-0.svg',
-                        '/avatars/avatar-3.svg',
-                        '/avatars/avatar-3.svg',
-                      ].map((presetUrl, idx) => (
+                    <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">تصویر پروفایل</span>
+                    <div className="flex flex-wrap items-center gap-2.5 mt-1" role="radiogroup" aria-label="انتخاب تصویر پروفایل">
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={!profileAvatar || profileAvatar.startsWith('data:image/svg')}
+                        aria-label="حروف اول نام"
+                        title="حروف اول نام"
+                        onClick={() => setProfileAvatar('')}
+                        className={`w-8 h-8 rounded-full overflow-hidden border-2 transition-all cursor-pointer ${!profileAvatar || profileAvatar.startsWith('data:image/svg') ? 'border-blue-600 scale-110 shadow-sm' : 'border-transparent opacity-75 hover:opacity-100'}`}
+                      >
+                        <LocalImage src="" alt={profileName} className="w-full h-full object-cover" />
+                      </button>
+                      {Array.from({ length: 8 }, (_, index) => `/avatars/avatar-${index}.svg`).map((presetUrl, index) => (
                         <button
-                          key={idx}
+                          key={presetUrl}
                           type="button"
+                          role="radio"
+                          aria-checked={profileAvatar === presetUrl}
+                          aria-label={`تصویر آماده ${(index + 1).toLocaleString('fa-IR')}`}
                           onClick={() => setProfileAvatar(presetUrl)}
-                          className={`w-8 h-8 rounded-full overflow-hidden border-2 transition-all ${
+                          className={`w-8 h-8 rounded-full overflow-hidden border-2 transition-all cursor-pointer ${
                             profileAvatar === presetUrl ? 'border-blue-600 scale-110 shadow-sm' : 'border-transparent opacity-75 hover:opacity-100'
                           }`}
                         >
@@ -631,25 +648,23 @@ export const SystemSettingsView: React.FC = () => {
                         </button>
                       ))}
                     </div>
-                    {/* Custom URL Input */}
-                    <div className="flex gap-2 items-center mt-2.5">
-                      <input
-                        type="text"
-                        placeholder="یا لینک تصویر اختصاصی خود را وارد نمایید..."
-                        value={profileAvatar}
-                        onChange={e => setProfileAvatar(e.target.value)}
-                        className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl text-xs font-mono text-slate-700 dark:text-slate-300 focus:outline-none focus:border-blue-500"
-                        style={{ direction: 'ltr' }}
-                      />
-                      {profileAvatar && (
-                        <button
-                          type="button"
-                          onClick={() => setProfileAvatar('')}
-                          className="text-[10px] text-rose-500 font-bold hover:underline shrink-0"
-                        >
-                          حذف تصویر
-                        </button>
-                      )}
+                    <div className="flex flex-wrap gap-2 items-center mt-2.5">
+                      <label className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 hover:border-blue-400 cursor-pointer">
+                        بارگذاری تصویر از رایانه
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="sr-only"
+                          onChange={async event => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (!file) return;
+                            try { setProfileAvatar(await resizeAvatar(file)); }
+                            catch { triggerToast(locale === 'fa' ? 'این تصویر قابل استفاده نیست؛ یک فایل PNG، JPG یا WebP انتخاب کنید.' : 'This image cannot be used; choose a PNG, JPG or WebP file.', true); }
+                          }}
+                        />
+                      </label>
+                      <span className="text-[10px] text-slate-400">تصویر به اندازهٔ ۲۵۶ پیکسل کوچک می‌شود. برای اعمال، «ذخیره» را بزنید.</span>
                     </div>
                   </div>
                 </div>
@@ -719,7 +734,7 @@ export const SystemSettingsView: React.FC = () => {
                 <div className="h-px bg-slate-100 dark:bg-slate-800 my-2" />
 
                 <div className="space-y-4">
-                  <h3 className="font-bold text-xs text-slate-700 dark:text-slate-300">تنظیمات زمانی و قالب‌ها (Preferences)</h3>
+                  <h3 className="font-bold text-xs text-slate-700 dark:text-slate-300">تنظیمات زمانی و قالب‌ها</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 block mb-1">{t('time_format')}</label>
@@ -876,80 +891,43 @@ export const SystemSettingsView: React.FC = () => {
                   <p className="text-[11px] text-slate-450 dark:text-slate-400 mt-1.5">{t('org_settings')}</p>
                 </div>
 
-                {(userRole === 'OWNER' || userRole === 'PROJECT_MANAGER') ? (
+                {canManageOrg ? (
                   <div className="space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="md:col-span-2">
-                        <label className="text-[10px] font-black text-slate-450 dark:text-slate-400 block mb-1">{t('org_name')}</label>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label htmlFor="org-name" className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">{t('org_name')}</label>
                         <input
+                          id="org-name"
                           type="text"
+                          maxLength={120}
                           value={orgName}
                           onChange={e => setOrgName(e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-150 focus:outline-none focus:border-blue-500"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500"
                         />
                       </div>
-                      <div className="md:col-span-2">
-                        <label className="text-[10px] font-black text-slate-450 dark:text-slate-400 block mb-1">{t('org_logo')}</label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={orgLogo}
-                            onChange={e => setOrgLogo(e.target.value)}
-                            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3.5 py-2 rounded-xl text-xs text-slate-600 dark:text-slate-300 font-mono focus:outline-none focus:border-blue-500"
-                          />
-                          <div className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100 shrink-0">
-                            <LocalImage src={orgLogo} alt="Org Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="text-[10px] font-black text-slate-450 dark:text-slate-400 block mb-1">{t('org_info')}</label>
+                      <div>
+                        <label htmlFor="org-info" className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">{t('org_info')}</label>
                         <textarea
+                          id="org-info"
                           rows={3}
+                          maxLength={2000}
                           value={orgInfo}
                           onChange={e => setOrgInfo(e.target.value)}
+                          placeholder="توضیح کوتاهی دربارهٔ تیم یا کسب‌وکار شما"
                           className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 leading-relaxed font-sans"
                         />
                       </div>
                     </div>
 
-                    <div className="bg-slate-50/50 dark:bg-slate-850/40 p-4 border border-slate-150 dark:border-slate-800 rounded-2xl space-y-3">
-                      <h3 className="font-extrabold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5">🎯 الگوهای پیکربندی پیش‌فرض سیستم</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 block mb-1">وضعیت اولیه پروژه‌های جدید</label>
-                          <CustomSelect
-                            options={[
-                              { value: 'pending', label: 'در انتظار تخصیص' },
-                              { value: 'active', label: 'در حال توسعه' },
-                              { value: 'completed', label: 'تکمیل شده' },
-                            ]}
-                            value={orgDefaultProjectStatus}
-                            onChange={val => setOrgDefaultProjectStatus(val)}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 block mb-1">اولویت پیش‌فرض تسک‌های جدید</label>
-                          <CustomSelect
-                            options={[
-                              { value: 'low', label: 'کم (Low)' },
-                              { value: 'medium', label: 'متوسط (Medium)' },
-                              { value: 'high', label: 'فوری (High)' },
-                            ]}
-                            value={orgDefaultTaskPriority}
-                            onChange={val => setOrgDefaultTaskPriority(val)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
                     <div className="pt-4 border-t border-slate-150 dark:border-slate-800/60 flex justify-end">
                       <button
-                        onClick={handleSaveOrgSettings}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                        type="button"
+                        onClick={() => void handleSaveOrgSettings()}
+                        disabled={savingOrg}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-60"
                       >
                         <Save size={13} />
-                        <span>{t('save')}</span>
+                        <span>{savingOrg ? 'در حال ذخیره…' : t('save')}</span>
                       </button>
                     </div>
                   </div>
@@ -1027,93 +1005,8 @@ export const SystemSettingsView: React.FC = () => {
                   <div className="space-y-4">
                     <h3 className="font-bold text-xs text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 pb-1.5">{t('sec_active_sessions')}</h3>
                     
-                    <div className="space-y-2.5">
-                      <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-xl flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-right">
-                          <Laptop className="text-blue-600" size={18} />
-                          <div>
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block">Chrome Browser (Windows 11)</span>
-                            <span className="text-[9.5px] text-slate-400">{t('sec_current_device')}</span>
-                          </div>
-                        </div>
-                        <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-bold">Active</span>
-                      </div>
-
-                      <div className="p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 rounded-xl flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 text-right">
-                          <Smartphone className="text-slate-500" size={18} />
-                          <div>
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Safari Browser (iPhone 15 Pro)</span>
-                            <span className="text-[9.5px] text-slate-400">اطلاعات مکانی و IP ثبت نشده</span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => triggerToast(locale === 'fa' ? 'نشست مورد نظر قطع گردید.' : 'Session terminated.')}
-                          className="text-[9px] text-rose-600 dark:text-rose-400 hover:underline"
-                        >
-                          Revoke
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-50 dark:bg-slate-800/30 p-3.5 border border-slate-100 dark:border-slate-800 rounded-xl space-y-1.5">
-                      <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
-                        <Activity size={12} className="text-slate-400" /> آخرین فعالیت‌های حساب کاربری (Logs)
-                      </span>
-                      <div className="space-y-1 text-[9.5px] text-slate-450 dark:text-slate-400 font-mono">
-                        <div className="flex justify-between">
-                          <span>Local account sign-in</span>
-                          <span className="text-slate-400">امروز ۱۰:۴۷</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Updated WordPress active checklist</span>
-                          <span className="text-slate-400">دیروز ۱۷:۱۴</span>
-                        </div>
-                      </div>
-                    </div>
-
+                    <ActiveSessions onNotice={triggerToast} />
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* CATEGORY: DATABASE & MEMORY RESET */}
-            {activeCategory === 'database' && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-sm font-black text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
-                    <LucideIcons.Database size={16} className="text-blue-600" /> مدیریت دیتابیس و پاکسازی حافظه
-                  </h2>
-                  <p className="text-[11px] text-slate-400 mt-1.5">
-                    کنترل، بازنشانی داده‌های موقت و صفر کردن کامل دیتابیس پروژه‌ها و تسک‌ها
-                  </p>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-black text-white flex items-center gap-2">
-                      <LucideIcons.Trash2 size={16} className="text-rose-500" />
-                      <span>پاکسازی و صفر کردن کامل دیتابیس (Reset to Zero State)</span>
-                    </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      با این دکمه، داده‌های نمایش و کش مرورگر پاک و دوباره از سرور دریافت می‌شوند. اطلاعات دیتابیس حذف نمی‌شوند.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm('کش نمایش پاک و داده‌ها دوباره از سرور دریافت شوند؟')) {
-                        resetDatabaseToZero?.();
-                        triggerToast('کش نمایش پاک شد؛ داده‌ها دوباره از سرور دریافت می‌شوند.');
-                      }
-                    }}
-                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer inline-flex items-center gap-2 shadow-lg shadow-rose-600/20"
-                  >
-                    <LucideIcons.Trash2 size={15} />
-                    <span>پاکسازی کش و دریافت دوباره از سرور</span>
-                  </button>
                 </div>
               </div>
             )}

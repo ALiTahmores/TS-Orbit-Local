@@ -1,22 +1,8 @@
 import { LocalImage } from './common/LocalImage';
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useProject } from '../context/ProjectContext';
-import { ProjectsView } from './ProjectsView';
-import { TasksGlobalView } from './TasksGlobalView';
-import { TasksAndSchedulingView } from './projects/TasksAndSchedulingView';
-import { ReportsGlobalView } from './ReportsGlobalView';
-import { SystemSettingsView } from './SystemSettingsView';
-import { MessagesView } from './chat/MessagesView';
-import { OrgBuilder } from './OrgBuilder';
-import { OrgPermissions } from './OrgPermissions';
-import { DynamicModuleView } from './DynamicModuleView';
-import { TeamDashboardView } from './TeamDashboardView';
-import { DepartmentReportsView } from './DepartmentReportsView';
-import { DepartmentTechnicalView } from './DepartmentTechnicalView';
-import { ApprovalCenter } from './ApprovalCenter';
-import { PersonalTasksView } from './PersonalTasksView';
-import { ProfileView } from './ProfileView';
-import { NotificationsView } from './NotificationsView';
+import { lazyNamed, preloadWhenIdle } from '../lib/lazy';
+import { StrandsLoader } from './loading/StrandsLoader';
 import { SubmenuScrollContainer } from './SubmenuScrollContainer';
 import { SidebarScrollContainer } from './SidebarScrollContainer';
 import { cn } from '../lib/utils';
@@ -27,15 +13,37 @@ import {
   TeamMember,
   AppNotification
 } from '../types';
-import * as LucideIcons from 'lucide-react';
+import { ArrowLeft, Bell, Briefcase, ChevronDown, LogOut, Menu, MessageSquare, Moon, Search, Settings, Sparkles, Sun, User, UserPlus, X } from 'lucide-react';
+import { iconByName } from '../lib/icons';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { CreateProjectModal } from './projects/CreateProjectModal';
 import { LogoutConfirmModal } from './auth/LogoutConfirmModal';
 import { PageLoadingBoundary } from './loading/PageLoadingBoundary';
 import { useLoading } from '../context/LoadingContext';
 import { WorkspaceSwitcher } from './workspace/WorkspaceSwitcher';
 import { GlobalSyncAndToast } from './common/GlobalSyncAndToast';
+
+// Each view is its own chunk: the shell renders first, a view downloads when it
+// is opened, and the rest are warmed in idle time after the shell has mounted.
+const ProjectsView = lazyNamed(() => import('./ProjectsView'), 'ProjectsView');
+const TasksGlobalView = lazyNamed(() => import('./TasksGlobalView'), 'TasksGlobalView');
+const ReportsGlobalView = lazyNamed(() => import('./ReportsGlobalView'), 'ReportsGlobalView');
+const SystemSettingsView = lazyNamed(() => import('./SystemSettingsView'), 'SystemSettingsView');
+const MessagesView = lazyNamed(() => import('./chat/MessagesView'), 'MessagesView');
+const OrgBuilder = lazyNamed(() => import('./OrgBuilder'), 'OrgBuilder');
+const OrgPermissions = lazyNamed(() => import('./OrgPermissions'), 'OrgPermissions');
+const DynamicModuleView = lazyNamed(() => import('./DynamicModuleView'), 'DynamicModuleView');
+const TeamDashboardView = lazyNamed(() => import('./TeamDashboardView'), 'TeamDashboardView');
+const DepartmentReportsView = lazyNamed(() => import('./DepartmentReportsView'), 'DepartmentReportsView');
+const DepartmentTechnicalView = lazyNamed(() => import('./DepartmentTechnicalView'), 'DepartmentTechnicalView');
+const ApprovalCenter = lazyNamed(() => import('./ApprovalCenter'), 'ApprovalCenter');
+const PersonalTasksView = lazyNamed(() => import('./PersonalTasksView'), 'PersonalTasksView');
+const ProfileView = lazyNamed(() => import('./ProfileView'), 'ProfileView');
+const NotificationsView = lazyNamed(() => import('./NotificationsView'), 'NotificationsView');
+const CreateProjectModal = lazyNamed(() => import('./projects/CreateProjectModal'), 'CreateProjectModal');
+const idleViews = [ProjectsView, TasksGlobalView, MessagesView, PersonalTasksView, NotificationsView, ReportsGlobalView,
+  DepartmentTechnicalView, ProfileView, CreateProjectModal, ApprovalCenter, SystemSettingsView, OrgBuilder, OrgPermissions,
+  TeamDashboardView, DepartmentReportsView, DynamicModuleView];
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -52,18 +60,18 @@ const navigationGroups = [
   },
   {
     id: 'dept_tech',
-    label: { fa: 'گزارش‌دهی هوشمند', en: 'Smart Reporting & Analytics' },
+    label: { fa: 'گزارش‌ها', en: 'Reports' },
     icon: 'Sparkles',
     tabs: [
-      { id: 'analytics', name: { fa: 'ماتریس و تحلیل عملکرد', en: 'Executive Analytics & KPI Matrix' }, icon: 'BarChart3' },
-      { id: 'roadmap', name: { fa: 'رودمپ و جریان اجرای پروژه', en: 'Interactive Roadmap & Dependency Graph' }, icon: 'Network' },
-      { id: 'bottlenecks', name: { fa: 'پایش گلوگاه‌ها و موانع', en: 'Bottleneck Radar & Critical Path' }, icon: 'AlertTriangle' },
-      { id: 'timeline', name: { fa: 'تایملاین و فازبندی اجرایی', en: 'Phase Timeline & Milestones' }, icon: 'Calendar' }
+      { id: 'analytics', name: { fa: 'تحلیل عملکرد', en: 'Performance' }, icon: 'BarChart3' },
+      { id: 'roadmap', name: { fa: 'نقشهٔ راه پروژه', en: 'Project roadmap' }, icon: 'Network' },
+      { id: 'bottlenecks', name: { fa: 'موانع و تأخیرها', en: 'Blockers & delays' }, icon: 'AlertTriangle' },
+      { id: 'timeline', name: { fa: 'زمان‌بندی وظایف', en: 'Task schedule' }, icon: 'Calendar' }
     ]
   },
   {
     id: 'projects',
-    label: { fa: 'مدیریت طرح‌ها و پروژه‌ها', en: 'Projects Management' },
+    label: { fa: 'پروژه‌ها', en: 'Projects' },
     icon: 'FolderGit',
     tabs: [
       { id: 'overview', name: { fa: 'همه پروژه‌ها', en: 'All Projects' }, icon: 'Folder' },
@@ -75,7 +83,7 @@ const navigationGroups = [
   },
   {
     id: 'tasks',
-    label: { fa: 'مدیریت وظایف و تسک‌ها', en: 'Tasks & Team Workflow' },
+    label: { fa: 'وظایف', en: 'Tasks' },
     icon: 'CheckSquare',
     tabs: [
       { id: 'kanban_board', name: { fa: 'برد کانبان وظایف', en: 'Kanban Board' }, icon: 'Trello' },
@@ -93,7 +101,7 @@ const navigationGroups = [
   },
   {
     id: 'teams',
-    label: { fa: 'لیست متخصصین', en: 'Teams & Staff' },
+    label: { fa: 'تیم', en: 'Team' },
     icon: 'Users',
     tabs: [
       { id: 'team', name: { fa: 'پرسنل و متخصصین سازمانی', en: 'Specialists' }, icon: 'Users' },
@@ -122,7 +130,7 @@ const navigationGroups = [
   },
   {
     id: 'settings',
-    label: { fa: 'تنظیمات سیستم', en: 'Settings' },
+    label: { fa: 'تنظیمات', en: 'Settings' },
     icon: 'Settings',
     tabs: [
       { id: 'appearance', name: { fa: 'ظاهر و تم پوسته', en: 'Appearance Mode' }, icon: 'Palette' },
@@ -179,25 +187,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   } = useProject();
 
   const { isPageLoading, pageMessage, isNavigating } = useLoading();
-  const [isWorkspaceTransitioning, setIsWorkspaceTransitioning] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const prevNavKeyRef = useRef<string | null>(null);
+  // Mount the create-project modal (and download its chunk) only once it is first opened.
+  const [hasOpenedNewProjectModal, setHasOpenedNewProjectModal] = useState(false);
+  useEffect(() => { if (isNewProjectModalOpen) setHasOpenedNewProjectModal(true); }, [isNewProjectModalOpen]);
+  useEffect(() => preloadWhenIdle(idleViews), []);
 
-  useEffect(() => {
-    const currentNavKey = `${activeTab}__${activeSubTab}`;
-    if (prevNavKeyRef.current === null) {
-      prevNavKeyRef.current = currentNavKey;
-      return;
-    }
-    if (prevNavKeyRef.current !== currentNavKey) {
-      prevNavKeyRef.current = currentNavKey;
-      setIsWorkspaceTransitioning(true);
-      const timer = setTimeout(() => {
-        setIsWorkspaceTransitioning(false);
-      }, 700);
-      return () => clearTimeout(timer);
-    }
-  }, [activeTab, activeSubTab]);
 
   const computedNavigationGroups = useMemo(() => {
     const list = [
@@ -211,13 +206,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       },
       {
         id: 'dept_tech',
-        label: { fa: 'گزارش‌دهی هوشمند', en: 'Smart Reporting & Analytics' },
+        label: { fa: 'گزارش‌ها', en: 'Reports' },
         icon: 'Sparkles',
         tabs: [
-          { id: 'analytics', name: { fa: 'ماتریس و تحلیل عملکرد', en: 'Executive Analytics & KPI Matrix' }, icon: 'BarChart3' },
-          { id: 'roadmap', name: { fa: 'رودمپ و جریان اجرای پروژه', en: 'Interactive Roadmap & Dependency Graph' }, icon: 'Network' },
-          { id: 'bottlenecks', name: { fa: 'پایش گلوگاه‌ها و موانع', en: 'Bottleneck Radar & Critical Path' }, icon: 'AlertTriangle' },
-          { id: 'timeline', name: { fa: 'تایملاین و فازبندی اجرایی', en: 'Phase Timeline & Milestones' }, icon: 'Calendar' }
+          { id: 'analytics', name: { fa: 'تحلیل عملکرد', en: 'Performance' }, icon: 'BarChart3' },
+          { id: 'roadmap', name: { fa: 'نقشهٔ راه پروژه', en: 'Project roadmap' }, icon: 'Network' },
+          { id: 'bottlenecks', name: { fa: 'موانع و تأخیرها', en: 'Blockers & delays' }, icon: 'AlertTriangle' },
+          { id: 'timeline', name: { fa: 'زمان‌بندی وظایف', en: 'Task schedule' }, icon: 'Calendar' }
         ]
       }
     ];
@@ -273,7 +268,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     list.push(
       {
         id: 'projects',
-        label: { fa: 'مدیریت طرح‌ها و پروژه‌ها', en: 'Projects Management' },
+        label: { fa: 'پروژه‌ها', en: 'Projects' },
         icon: 'FolderGit',
         tabs: [
           { id: 'overview', name: { fa: 'همه پروژه‌ها', en: 'All Projects' }, icon: 'Folder' },
@@ -284,7 +279,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       },
       {
         id: 'tasks',
-        label: { fa: 'مدیریت وظایف و تسک‌ها', en: 'Tasks & Team Workflow' },
+        label: { fa: 'وظایف', en: 'Tasks' },
         icon: 'CheckSquare',
         tabs: [
           { id: 'kanban_board', name: { fa: 'برد کانبان وظایف', en: 'Kanban Board' }, icon: 'Trello' },
@@ -302,7 +297,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       },
       {
         id: 'teams',
-        label: { fa: 'لیست متخصصین', en: 'Teams & Staff' },
+        label: { fa: 'تیم', en: 'Team' },
         icon: 'Users',
         tabs: [
           { id: 'team', name: { fa: 'پرسنل و متخصصین سازمانی', en: 'Specialists' }, icon: 'Users' },
@@ -319,7 +314,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       },
       {
         id: 'org_builder',
-        label: { fa: 'ساختار سازمانی', en: 'Organization Structure' },
+        label: { fa: 'ساختار سازمانی', en: 'Organization' },
         icon: 'Cpu',
         tabs: [
           { id: 'org_builder_main', name: { fa: 'سازنده دپارتمان و ماژول', en: 'Department & Modules' }, icon: 'Settings2' },
@@ -331,7 +326,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (currentUser?.systemRole === 'ADMIN') {
       list.push({
         id: 'approvals',
-        label: { fa: 'مدیریت و تایید اعضا', en: 'Identity & Approvals' },
+        label: { fa: 'تأیید اعضا', en: 'Approvals' },
         icon: 'UserCheck',
         tabs: [
           { id: 'approval_queue', name: { fa: 'صف درخواست‌های عضویت', en: 'Approval Queue' }, icon: 'UserCheck' },
@@ -344,7 +339,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     list.push(
       {
         id: 'notifications',
-        label: { fa: 'اعلان‌های سیستم', en: 'System Notifications' },
+        label: { fa: 'اعلان‌ها', en: 'Notifications' },
         icon: 'Bell',
         tabs: [
           { id: 'all_notifications', name: { fa: 'اعلان‌های سیستم', en: 'System Notifications' }, icon: 'Bell' }
@@ -352,12 +347,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       },
       {
         id: 'settings',
-        label: { fa: 'تنظیمات سیستم', en: 'Settings' },
+        label: { fa: 'تنظیمات', en: 'Settings' },
         icon: 'Settings',
         tabs: [
           { id: 'appearance', name: { fa: 'ظاهر و تم پوسته', en: 'Appearance Mode' }, icon: 'Palette' },
           { id: 'profile', name: { fa: 'پروفایل پرسنلی', en: 'My profile' }, icon: 'User' },
-          { id: 'organization', name: { fa: 'هویت برند آژانس', en: 'Agency Profile' }, icon: 'Building2' },
+          { id: 'organization', name: { fa: 'مشخصات فضای کاری', en: 'Workspace' }, icon: 'Building2' },
           { id: 'security', name: { fa: 'امنیت و گذرواژه', en: 'Security Guard' }, icon: 'Lock' }
         ]
       }
@@ -619,7 +614,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const renderIcon = (name: string, size = 15, className = "") => {
-    const IconComp = (LucideIcons as any)[name] || LucideIcons.Sparkles;
+    const IconComp = iconByName(name, Sparkles);
     return <IconComp size={size} className={className} />;
   };
 
@@ -883,9 +878,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 title={sidebarMode === 'personal' ? 'Switch to Business Mode' : 'Switch to Personal Mode'}
               >
                 {sidebarMode === 'personal' ? (
-                  <LucideIcons.User size={13} className="text-[#155DFC]" />
+                  <User size={13} className="text-[#155DFC]" />
                 ) : (
-                  <LucideIcons.Briefcase size={13} className="text-[#27C93F]" />
+                  <Briefcase size={13} className="text-[#27C93F]" />
                 )}
               </button>
             </div>
@@ -902,8 +897,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   { id: 'my_files', label: { fa: 'فایل‌های من', en: 'My Files' }, icon: 'Files' },
                   { id: 'activity-feed', label: { fa: 'فعالیت‌های من', en: 'My Activity' }, icon: 'Activity' },
                   { id: 'messages', label: { fa: 'پیام‌ها', en: 'Messages' }, icon: 'MessageSquare' },
-                  { id: 'performance', label: { fa: 'عملکرد و امتیاز', en: 'Performance & XP' }, icon: 'Award' },
-                  { id: 'profile', label: { fa: 'رزومه و پروفایل', en: 'Resume & Profile' }, icon: 'UserCheck' },
+                  { id: 'performance', label: { fa: 'عملکرد من', en: 'My Performance' }, icon: 'Award' },
+                  { id: 'profile', label: { fa: 'پروفایل من', en: 'My Profile' }, icon: 'UserCheck' },
                 ];
 
                 return (
@@ -970,17 +965,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               const sections = [
                 {
                   key: 'workspace',
-                  label: { fa: 'بخش ۱: فضای کاری', en: 'Workspace' },
+                  label: { fa: 'فضای کاری', en: 'Workspace' },
                   groups: filteredGroups.filter(g => g.id.startsWith('dept_') || ['dashboard', 'dept_tech'].includes(g.id))
                 },
                 {
                   key: 'projects_mgmt',
-                  label: { fa: 'بخش ۲: مدیریت طرح‌ها', en: 'Projects Management' },
+                  label: { fa: 'پروژه‌ها و وظایف', en: 'Projects & tasks' },
                   groups: filteredGroups.filter(g => ['projects', 'tasks'].includes(g.id))
                 },
                 {
                   key: 'collaboration',
-                  label: { fa: 'بخش ۳: همکاری تیمی', en: 'Team Collaboration' },
+                  label: { fa: 'همکاری تیمی', en: 'Team' },
                   groups: filteredGroups.filter(g => ['teams', 'chat'].includes(g.id))
                 },
                 {
@@ -1075,7 +1070,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                         transition={{ duration: 0.2 }}
                                         className="text-slate-400 dark:text-slate-500"
                                       >
-                                        <LucideIcons.ChevronDown size={12} />
+                                        <ChevronDown size={12} />
                                       </motion.div>
                                     )}
                                   </div>
@@ -1224,10 +1219,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
                   <div className="text-right">
                     <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                      {currentUser?.name || 'علی طهمورث'}
+                      {currentUser?.name || ''}
                     </h4>
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block">
-                      {currentUser?.role === 'OWNER' ? 'مدیر سیستم' : currentUser?.role || 'کاربر سیستم'}
+                      {getRoleLabel(currentUser?.role)}
                     </span>
                   </div>
                 </div>
@@ -1242,7 +1237,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   }}
                   className="p-1.5 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                 >
-                  <LucideIcons.LogOut className="w-4 h-4 rtl:rotate-180"/>
+                  <LogOut className="w-4 h-4 rtl:rotate-180"/>
                 </button>
               </div>
             ) : (
@@ -1280,7 +1275,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
                   title={isRtl ? 'خروج' : 'Logout'}
                 >
-                  <LucideIcons.LogOut className="w-4 h-4 rtl:rotate-180" />
+                  <LogOut className="w-4 h-4 rtl:rotate-180" />
                 </button>
               </div>
             )}
@@ -1300,7 +1295,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className="p-1.5 rounded-xl text-text-secondary hover:bg-hover-overlay transition-all cursor-pointer shrink-0 hidden lg:flex"
                 title={isMenuCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
               >
-                <LucideIcons.Menu size={15} />
+                <Menu size={15} />
               </button>
 
               {/* Profile Identity Badge */}
@@ -1316,21 +1311,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className={`min-w-0 ${isRtl ? 'text-right' : 'text-left'}`}>
                   <h4 className="text-[9px] font-black text-text-primary dark:text-white truncate max-w-[70px] leading-tight">{currentUser?.name || 'User'}</h4>
                   <span className="text-[7.5px] text-[#155DFC] font-black block mt-0.5 leading-none">
-                    {currentUser?.role === 'OWNER' ? (isRtl ? 'مدیر سیستم' : 'Owner') : (isRtl ? 'کارشناس فنی' : 'Specialist')}
+                    {getRoleLabel(currentUser?.role)}
                   </span>
                 </div>
                 <div className="w-7 h-7 rounded-lg bg-[#155DFC] text-white flex items-center justify-center font-black text-[11px] overflow-hidden shrink-0 border border-[#155DFC]/25 shadow-sm">
                   {currentUser?.avatar ? (
                     <LocalImage src={currentUser.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    <span className="font-bold">{currentUser?.name ? currentUser?.name.substring(0, 1) : 'U'}</span>
+                    <span className="font-bold">{currentUser?.name ? Array.from(currentUser.name.trim())[0] : ''}</span>
                   )}
                 </div>
               </div>
 
               {/* Live Search Input box */}
               <div ref={searchContainerRef} className="hidden md:block relative w-56 lg:w-72">
-                <LucideIcons.Search className={`absolute top-3 text-text-secondary ${isRtl ? 'right-3.5' : 'left-3.5'}`} size={12} />
+                <Search className={`absolute top-3 text-text-secondary ${isRtl ? 'right-3.5' : 'left-3.5'}`} size={12} />
                 <input 
                   type="text" 
                   placeholder={t('search_placeholder')}
@@ -1400,7 +1395,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white transition-all relative cursor-pointer shadow-sm active:scale-95"
                   title={isRtl ? 'اعلان‌ها' : 'Notifications'}
                 >
-                  <LucideIcons.Bell size={16} />
+                  <Bell size={16} />
                   {unreadNotifsCount > 0 && (
                     <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
                   )}
@@ -1467,7 +1462,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         className="w-full text-center text-[10px] font-black text-[#155DFC] dark:text-blue-400 hover:bg-[#155DFC]/10 py-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
                       >
                         <span>{isRtl ? 'مشاهده همه اعلان‌ها' : 'View All Notifications'}</span>
-                        <LucideIcons.ArrowLeft size={12} className={isRtl ? 'rotate-0' : 'rotate-180'} />
+                        <ArrowLeft size={12} className={isRtl ? 'rotate-0' : 'rotate-180'} />
                       </button>
                     </div>
                   </div>
@@ -1484,7 +1479,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white transition-all relative cursor-pointer shadow-sm active:scale-95"
                   title={isRtl ? 'پیام‌های خوانده‌نشده (PV)' : 'Unread Messages'}
                 >
-                  <LucideIcons.MessageSquare size={16} />
+                  <MessageSquare size={16} />
                   {(unreadMessages || []).filter(m => m && !m.read).length > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse">
                       {(unreadMessages || []).filter(m => m && !m.read).length}
@@ -1498,7 +1493,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   }`} style={{ minWidth: '300px' }}>
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-[#1e2338] pb-2">
                       <span className="font-extrabold text-[11px] text-slate-800 dark:text-white block flex items-center gap-1.5">
-                        <LucideIcons.MessageSquare size={13} className="text-blue-500" />
+                        <MessageSquare size={13} className="text-blue-500" />
                         <span>{isRtl ? 'پیام‌های خوانده‌نشده (PV)' : 'Unread Messages'}</span>
                       </span>
                       <span className="text-[9px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full font-mono">
@@ -1535,7 +1530,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                               <div className="mt-1.5 flex justify-end">
                                 <span className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
                                   <span>{isRtl ? 'مشاهده و پاسخ' : 'View & Reply'}</span>
-                                  <LucideIcons.ArrowLeft size={10} className={isRtl ? 'rotate-0' : 'rotate-180'} />
+                                  <ArrowLeft size={10} className={isRtl ? 'rotate-0' : 'rotate-180'} />
                                 </span>
                               </div>
                             </div>
@@ -1565,7 +1560,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className="md:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
                 title={isRtl ? 'جستجو در کارگاه' : 'Search'}
               >
-                <LucideIcons.Search size={16} />
+                <Search size={16} />
               </button>
 
               {/* 3. Theme Switcher (Light / Dark Mode) */}
@@ -1575,9 +1570,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 title={isRtl ? 'تغییر تم رنگی' : 'Toggle Theme'}
               >
                 {theme === 'dark' ? (
-                  <LucideIcons.Sun size={16} className="text-amber-400" />
+                  <Sun size={16} className="text-amber-400" />
                 ) : (
-                  <LucideIcons.Moon size={16} className="text-slate-600 dark:text-slate-300" />
+                  <Moon size={16} className="text-slate-600 dark:text-slate-300" />
                 )}
               </button>
 
@@ -1628,7 +1623,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {/* SCOPED PAGE CONTENT LOADING BOUNDARY WITH STRANDS */}
             <PageLoadingBoundary
-              isLoading={isWorkspaceTransitioning || isNavigating || isPageLoading}
+              isLoading={isNavigating || isPageLoading}
               message={pageMessage}
               variant="workspace"
             >
@@ -1644,7 +1639,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     className="space-y-6 text-right"
                     style={{ direction: isRtl ? 'rtl' : 'ltr' }}
                   >
-                    <MessagesView />
+                    <Suspense fallback={<StrandsLoader variant="workspace" />}>
+                      <MessagesView />
+                    </Suspense>
                   </motion.div>
                 ) : (
                   /* Dynamic rendering of other views */
@@ -1656,6 +1653,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     transition={{ duration: 0.15, ease: "easeOut" }}
                     className="h-full"
                   >
+                    <Suspense fallback={<StrandsLoader variant="workspace" />}>
                     {activeTab === 'dashboard' && children}
                     {activeTab === 'dept_tech' && <DepartmentTechnicalView />}
                     {activeTab === 'projects' && <ProjectsView />}
@@ -1686,10 +1684,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     )}
 
                     {activeTab.startsWith('dept_') && activeSubTab.startsWith('dept_reports_') && (
-                      <DepartmentReportsView 
-                        deptId={activeTab.replace('dept_', '')} 
+                      <DepartmentReportsView
+                        deptId={activeTab.replace('dept_', '')}
                       />
                     )}
+                    </Suspense>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1774,7 +1773,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         onClick={() => setIsMobileProfileOpen(false)}
                         className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-pointer transition-all shrink-0"
                       >
-                        <LucideIcons.X size={16} className="stroke-[2.5]" />
+                        <X size={16} className="stroke-[2.5]" />
                       </button>
                     </div>
 
@@ -1824,8 +1823,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                               { id: 'activity-feed', label: { fa: 'فعالیت‌ها', en: 'Activity Feed' }, icon: 'Activity' },
                               { id: 'my-files', label: { fa: 'فایل‌های من', en: 'My Files' }, icon: 'Files' },
                               { id: 'pv-messages', label: { fa: 'پیام‌ها', en: 'Messages' }, icon: 'MessageSquare' },
-                              { id: 'performance-score', label: { fa: 'عملکرد و امتیاز', en: 'Performance & Score' }, icon: 'Award' },
-                              { id: 'resume-profile', label: { fa: 'رزومه و پروفایل', en: 'Resume & Profile' }, icon: 'UserCheck' },
+                              { id: 'performance-score', label: { fa: 'عملکرد من', en: 'My Performance' }, icon: 'Award' },
+                              { id: 'resume-profile', label: { fa: 'پروفایل من', en: 'My Profile' }, icon: 'UserCheck' },
                               { id: 'personal-settings', label: { fa: 'تنظیمات شخصی', en: 'Personal Settings' }, icon: 'Sliders' },
                             ].map((item) => {
                               const isItemActive = activeTab === 'personal_tasks' && 
@@ -1917,7 +1916,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                           transition={{ duration: 0.2 }}
                                           className="text-slate-400 dark:text-slate-500"
                                         >
-                                          <LucideIcons.ChevronDown size={12} />
+                                          <ChevronDown size={12} />
                                         </motion.div>
                                       )}
                                     </div>
@@ -1984,7 +1983,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       }}
                       className="flex-1 flex items-center justify-center gap-1.5 min-h-[38px] rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
                     >
-                      <LucideIcons.Settings size={14} />
+                      <Settings size={14} />
                       <span>{isRtl ? 'تنظیمات' : 'Settings'}</span>
                     </button>
                     <button
@@ -1995,7 +1994,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       }}
                       className="flex-1 py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-sm bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200/60 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-500 cursor-pointer shrink-0"
                     >
-                      <LucideIcons.UserPlus size={15} />
+                      <UserPlus size={15} />
                       <span>{isRtl ? 'دعوت اعضای تیم' : 'Invite Team'}</span>
                     </button>
                   </div>
@@ -2030,7 +2029,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               <div className="flex justify-between items-center border-b border-border-primary/50 dark:border-white/5 pb-2.5">
                 <h3 className="text-xs font-black text-text-primary dark:text-white flex items-center gap-1.5">
-                  <LucideIcons.Search size={14} className="text-brand-accent" />
+                  <Search size={14} className="text-brand-accent" />
                   {isRtl ? 'جستجو در کارگاه' : 'Search Workspace'}
                 </h3>
                 <button 
@@ -2043,7 +2042,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
               {/* Search input field */}
               <div className="relative">
-                <LucideIcons.Search className={`absolute top-3.5 text-text-secondary ${isRtl ? 'right-3.5' : 'left-3.5'}`} size={13} />
+                <Search className={`absolute top-3.5 text-text-secondary ${isRtl ? 'right-3.5' : 'left-3.5'}`} size={13} />
                 <input 
                   type="text"
                   autoFocus
@@ -2186,10 +2185,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </nav>
 
       {/* GLOBAL CREATE PROJECT MODAL */}
-      <CreateProjectModal 
-        isOpen={isNewProjectModalOpen} 
-        onClose={() => setIsNewProjectModalOpen(false)} 
-      />
+      {hasOpenedNewProjectModal && (
+        <Suspense fallback={null}>
+          <CreateProjectModal
+            isOpen={isNewProjectModalOpen}
+            onClose={() => setIsNewProjectModalOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* LOGOUT CONFIRMATION MODAL */}
       <LogoutConfirmModal

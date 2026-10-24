@@ -224,7 +224,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       label: isRtl ? 'تعیین گذرواژه' : 'Create Password',
       title: isRtl ? 'تعیین گذرواژه' : 'Create Password',
       placeholder: '••••••••',
-      description: isRtl ? 'حداقل ۱۲ کاراکتر و حداکثر ۷۲ بایت امنیتی شامل حروف بزرگ، کوچک، عدد و نماد' : 'Must meet all security criteria'
+      description: isRtl ? 'حداقل ۱۲ کاراکتر (حداکثر ۷۲ حرف لاتین)، شامل حروف بزرگ و کوچک، عدد و نماد' : 'Must meet all security criteria'
     }
   ];
 

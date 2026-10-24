@@ -66,7 +66,7 @@ async function main() {
     const username = email.split('@')[0].replace(/[^a-z0-9_]/g, '_') + '_' + randomBytes(3).toString('hex');
     const user = { id, name, fullName: name, email, username, phone, role: 'OWNER', systemRole: 'ADMIN', status: 'ACTIVE', accountStatus: 'ACTIVE',
       approvalStatus: 'approved', approvedRole: 'OWNER', isActive: true, localPasswordRequired: false,
-      passwordHash: bcryptjs.hashSync(password, 12), avatar: localAvatar(id), emailVerified: false,
+      passwordHash: bcryptjs.hashSync(password, 12), avatar: localAvatar(name), emailVerified: false,
       personalWorkspaceId: workspaceId, workspace: workspaceId,
       memberships: [{ workspaceId, workspaceName: `فضای کاری ${name}`, role: 'OWNER', permissions: ['*'], joinedAt }] };
     state.users.push(user);

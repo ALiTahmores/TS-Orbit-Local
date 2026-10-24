@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import * as LucideIcons from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface SubmenuScrollContainerProps {
   children: React.ReactNode;
@@ -84,7 +84,7 @@ export const SubmenuScrollContainer: React.FC<SubmenuScrollContainerProps> = ({ 
                 transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
                 className="text-slate-400/80 dark:text-slate-500/80 shadow-glow"
               >
-                <LucideIcons.ChevronUp size={11} className="stroke-[3]" />
+                <ChevronUp size={11} className="stroke-[3]" />
               </motion.div>
             </motion.div>
           </>
@@ -124,7 +124,7 @@ export const SubmenuScrollContainer: React.FC<SubmenuScrollContainerProps> = ({ 
                 transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
                 className="text-slate-400/80 dark:text-slate-500/80 shadow-glow"
               >
-                <LucideIcons.ChevronDown size={11} className="stroke-[3]" />
+                <ChevronDown size={11} className="stroke-[3]" />
               </motion.div>
             </motion.div>
           </>

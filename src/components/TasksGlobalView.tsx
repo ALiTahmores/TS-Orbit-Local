@@ -1,3 +1,4 @@
+import { formatJalaliDate } from '../lib/dates';
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useProject } from '../context/ProjectContext';
@@ -38,12 +39,12 @@ const priorityFormOptions: CustomSelectOption[] = [
 ];
 
 const statusFormOptions: CustomSelectOption[] = [
-  { value: 'pending', label: 'در انتظار (Pending)' },
-  { value: 'inprogress', label: 'در جریان (In Progress)' },
-  { value: 'review', label: 'در بررسی (Review)' },
-  { value: 'completed', label: 'تکمیل شده (Completed)' },
-  { value: 'blocked', label: 'مسدود شده (Blocked)' },
-  { value: 'cancelled', label: 'لغوشده (Cancelled)' },
+  { value: 'pending', label: 'در انتظار' },
+  { value: 'inprogress', label: 'در جریان' },
+  { value: 'review', label: 'در بررسی' },
+  { value: 'completed', label: 'تکمیل شده' },
+  { value: 'blocked', label: 'مسدود شده' },
+  { value: 'cancelled', label: 'لغوشده' },
 ];
 import { motion, AnimatePresence } from 'motion/react';
 import { TeamTaskMatrixView } from './TeamTaskMatrixView';
@@ -80,7 +81,8 @@ export const TasksGlobalView: React.FC = () => {
     createTask, 
     selectedProject,
     activeSubTab,
-    setActiveSubTab
+    setActiveSubTab,
+    getRoleLabel
   } = useProject();
   
   // Search and Filter states
@@ -447,8 +449,8 @@ export const TasksGlobalView: React.FC = () => {
       </div>
 
       {/* KANBAN BOARD WRAPPER */}
-      <div className="overflow-x-auto pb-4 -mx-6 px-6 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
-        <div className="flex gap-5 min-w-max pb-2">
+      <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
+        <div className="grid grid-flow-col auto-cols-[minmax(15rem,1fr)] gap-4 pb-2">
           
           {columns.map(col => {
             const colTasks = filteredTasks.filter(t => t.status === col.id);
@@ -460,7 +462,7 @@ export const TasksGlobalView: React.FC = () => {
                 onDragOver={(e) => handleDragOver(e, col.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, col.id)}
-                className={`w-72 md:w-80 shrink-0 flex flex-col rounded-2xl border p-4 transition-all duration-200 ${col.colorClass} ${
+                className={`min-w-0 flex flex-col rounded-2xl border p-3.5 transition-all duration-200 ${col.colorClass} ${
                   isDraggingOver 
                     ? 'border-blue-500 bg-blue-500/10 dark:border-blue-500/30 ring-2 ring-blue-500/10' 
                     : 'border-slate-200/60 dark:border-slate-700/60 bg-slate-100/70 dark:bg-slate-800/50 shadow-xs'
@@ -469,18 +471,13 @@ export const TasksGlobalView: React.FC = () => {
                 
                 {/* Column Header Design */}
                 <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-slate-700/60 pb-3 mb-4">
-                  <div className="space-y-0.5">
-                    <span className="text-[9px] font-mono font-bold tracking-wider text-slate-400 dark:text-slate-400 block">
-                      {col.subtitle}
-                    </span>
-                    <h3 className="font-extrabold text-[13px] text-slate-800 dark:text-slate-100">
-                      {col.title}
-                    </h3>
-                  </div>
+                  <h3 className="font-extrabold text-[13px] text-slate-800 dark:text-slate-100">
+                    {col.title}
+                  </h3>
 
                   {/* Task counter */}
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${col.badgeClass}`}>
-                    {String(colTasks.length).padStart(2, '0')} وظیفه
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${col.badgeClass}`}>
+                    {colTasks.length.toLocaleString('fa-IR')} وظیفه
                   </span>
                 </div>
 
@@ -588,7 +585,7 @@ export const TasksGlobalView: React.FC = () => {
                               {/* Deadline */}
                               <div className="flex items-center gap-1 text-[10px] text-rose-600 dark:text-rose-400 font-mono font-bold">
                                 <Clock size={11} />
-                                <span>{task.deadline}</span>
+                                <span>{formatJalaliDate((task as any).deadlineCanonical || task.deadline) || task.deadline}</span>
                               </div>
                             </div>
 
@@ -659,17 +656,12 @@ export const TasksGlobalView: React.FC = () => {
         </div>
       </div>
 
-      {/* CREATE TASK MODAL (FULL VIEWPORT PORTAL) */}
-      <CreateTaskModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        defaultStatus={selectedStatusForNewTask}
-      />
-
-      {/* EDIT TASK MODAL */}
-      <AnimatePresence>
-        {showModal && typeof document !== 'undefined' && createPortal(
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" dir="rtl">
+      {/* EDIT TASK MODAL — AnimatePresence lives inside the portal: it drops
+          non-element children, so wrapping the portal itself rendered nothing. */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showModal && (
+          <div key="task-edit-modal" className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" dir="rtl">
             <div 
               onClick={() => setShowModal(false)}
               className="fixed inset-0 z-0 bg-black/[0.05] dark:bg-black/[0.3] backdrop-blur-[0.5px] transition-opacity duration-200 animate-in fade-in cursor-pointer"
@@ -762,7 +754,7 @@ export const TasksGlobalView: React.FC = () => {
                     <CustomSelect
                       options={
                         teamMembers && teamMembers.length > 0
-                          ? teamMembers.map(m => ({ value: (m as any).userId || m.id, label: `${m.name} (${m.role})` }))
+                          ? teamMembers.map(m => ({ value: (m as any).userId || m.id, label: `${m.name} — ${getRoleLabel(m.role)}` }))
                           : []
                       }
                       value={formAssignee}
@@ -848,13 +840,20 @@ export const TasksGlobalView: React.FC = () => {
               </form>
 
             </motion.div>
-          </div>,
-          document.body
-        )}
-      </AnimatePresence>
+          </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
       </>
       )}
 
+      {/* CREATE TASK MODAL: available from every sub-view (board, matrix, calendar) */}
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        defaultStatus={selectedStatusForNewTask}
+      />
     </div>
   );
 };

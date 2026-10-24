@@ -85,7 +85,8 @@ export const OverviewTab: React.FC = () => {
     currentUser, 
     createTask, 
     setActiveTab,
-    t
+    t,
+    getRoleLabel
   } = useProject();
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -441,7 +442,7 @@ export const OverviewTab: React.FC = () => {
                     key={m.id || idx}
                     src={m.avatar || '/avatars/avatar-7.svg'}
                     alt={m.name}
-                    title={`${m.name} (${m.role})`}
+                    title={`${m.name} — ${getRoleLabel(m.role)}`}
                     className="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 object-cover shadow-2xs"
                   />
                 ))
@@ -472,7 +473,7 @@ export const OverviewTab: React.FC = () => {
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <Layers size={18} className="text-blue-600 dark:text-blue-400" />
-              <span>مراحل و فازهای اصلی پروژه (Roadmap)</span>
+              <span>مراحل و فازهای اصلی پروژه</span>
             </h3>
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
               {toPersianDigits(phases.length)} فاز کلیدی

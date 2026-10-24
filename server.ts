@@ -7,6 +7,7 @@ import { createChatRouter } from './server/chat/router.ts';
 import { createNotificationService, createNotificationRouter } from './server/notifications/index.ts';
 import { requestAudit } from './server/http/audit.ts';
 import { requestFailure } from './server/http/errors.ts';
+import { securityHeaders, clientApp } from './server/http/hosting.ts';
 import { createAuth } from './server/auth/index.ts';
 import { createWorkspaceRouter } from './server/workspaces/router.ts';
 import { createSystemRouter } from './server/system/router.ts';
@@ -29,6 +30,9 @@ import { PersistenceCoordinator } from './server/persistence.ts';
 import { localAvatar } from './src/lib/localAssets.ts';
 const app = express();
 app.enable('case sensitive routing');
+app.disable('x-powered-by');
+app.set('trust proxy', config.trustProxy);
+app.use(securityHeaders({ production: process.env.NODE_ENV === 'production', appOrigin: config.appOrigin, secureOrigin: config.secureOrigin }));
 const PORT = config.port;
 const parseJson = express.json({ limit: '1mb', verify: (req: any, _res, buffer) => { req.rawBody = buffer.toString('utf8'); } });
 app.use((req, res, next) => {
@@ -462,6 +466,8 @@ const files = createFileService({scoped, dataDir: config.dataDir, persistence, b
 files.collectDeleted();
 const notifications = createNotificationService({scoped,broadcast,broadcastWorkspace:realtime.broadcastWorkspace});
 chat = new ChatService({scoped,files,broadcast,broadcastRoom,presence:realtime.presence,notify: input => notifications.notify(input),recordActivity: input => notifications.recordActivity(input)});
+// Password hashing runs before the serialized storage queue (see prepareCredentials).
+app.use('/api/auth', auth.prepareCredentials);
 app.use(persistence.middleware);
 app.use(requestAudit(RAW));
 app.use((req, _res, next) => {
@@ -878,11 +884,7 @@ async function startServer() {
     }
     else {
         console.log("Staging production mode. Hosting compiled bundle...");
-        const distPath = config.clientDir;
-        app.use(express.static(distPath));
-        app.get('*', (req, res) => {
-            res.sendFile(path.join(distPath, 'index.html'));
-        });
+        app.use(...clientApp(config.clientDir));
     }
     httpServer.listen(PORT, config.host, () => {
         console.log(`TS-Orbit local server: ${config.appOrigin}`);

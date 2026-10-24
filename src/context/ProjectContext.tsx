@@ -56,6 +56,8 @@ import {
 } from '../data/mockData';
 import { INITIAL_USERS, INITIAL_WORKSPACES } from '../services/db';
 import { Locale, getTranslation } from '../lib/i18n';
+import { roleLabel } from '../lib/roles';
+import { localAvatar } from '../lib/localAssets';
 export { INITIAL_USERS, INITIAL_WORKSPACES } from '../services/db';
 
 export function getStorageItem<T>(key: string, fallback: T): T {
@@ -181,6 +183,7 @@ interface ProjectContextType {
   fetchConversations: () => Promise<void>;
   fetchMessages: (convId: string) => Promise<void>;
   fetchChatUsers: () => Promise<void>;
+  fetchTeamMembers: () => Promise<void>;
   fetchChatRequests: () => Promise<void>;
   sendChatMessage: (convId: string, content: string, attachments?: any[], replyToId?: string,extra?:Record<string,unknown>) => Promise<any>;
   createConversation: (recipientId?: string, title?: string, isGroup?: boolean, teamId?: string,memberIds?:string[]) => Promise<any>;
@@ -335,8 +338,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const list = Array.isArray(raw) ? raw : [];
     return list.map(p => ({
       ...p,
-      isPortalActive: p.isPortalActive !== undefined ? p.isPortalActive : (p.clientPortalEnabled !== undefined ? p.clientPortalEnabled : true),
-      clientPortalEnabled: p.clientPortalEnabled !== undefined ? p.clientPortalEnabled : true,
+      isPortalActive: p.isPortalActive !== undefined ? p.isPortalActive : p.clientPortalEnabled === true,
+      clientPortalEnabled: p.clientPortalEnabled === true,
       clientPortalToken: p.clientPortalToken || p.portalToken || '',
       portalToken: p.portalToken || p.clientPortalToken || ''
     }));
@@ -669,14 +672,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Periodic Background Data Health & Smart Refresh Check (every 4 minutes)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHasPendingSync(true);
-    }, 4 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+  // No timer-based "new data" prompt: server changes arrive as socket
+  // invalidations and are refetched automatically, so a periodic flag only
+  // announced updates that did not exist.
 
   const [apiLogs, setApiLogs] = useState<ApiLog[]>([]);
 
@@ -1134,20 +1132,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (isAuthenticated && activeWorkspaceId) fetchWpHub();
   }, [isAuthenticated,activeWorkspaceId]);
 
-  const getRoleLabel = (r: string) => {
-    switch (r) {
-      case 'OWNER': return 'مالک فضای کاری';
-      case 'ADMIN': return 'مدیر سیستم (Admin)';
-      case 'PROJECT_MANAGER': return 'مدیر پروژه (Project Manager)';
-      case 'DEVELOPER': return 'توسعه‌دهنده (Developer)';
-      case 'CLIENT': return 'کارفرما (Client)';
-      case 'USER': return 'کاربر معمولی (User)';
-      // Fallbacks
-      case 'SUPER_ADMIN': return 'صاحب سیستم (Owner)';
-      case 'WORDPRESS_DEVELOPER': return 'توسعه‌دهنده (Developer)';
-      default: return r || 'کاربر معمولی (User)';
-    }
-  };
+  const getRoleLabel = (r: string) => roleLabel(r, locale === 'en' ? 'en' : 'fa');
 
   const setUserRole = (_role: string) => {
     reportApiError(new ApiError(403,'ROLE_SWITCH_DISABLED','نقش کاربری تنها توسط سرور و عضویت فضای کاری تعیین می‌شود.'));
@@ -1218,12 +1203,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('session_last_active', Date.now().toString());
       if (data.token) localStorage.setItem('token', data.token);
+      // Same as sign-in: select the new personal workspace and its owner role, so
+      // the first project can be created without reloading the page.
+      acceptSession(data.user, data.workspace?.id || data.user.personalWorkspaceId);
 
       logApiAction('POST', '/api/auth/register', 201, { success: true }, { email, name, phone, username, role: requestedRole });
       setIsLoading(false);
-      fetchProjects();
-      fetchTasks();
-      fetchTeamMembers();
       return { success: true, pendingApproval: false, user: userObj };
     } catch {
       setIsLoading(false);
@@ -1682,7 +1667,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const requireAssetIdentity=(identity:string)=>{if(identity!==assetIdentity())throw new ApiError(0,'STALE_REQUEST','نشست یا فضای کاری تغییر کرده است.');};
   const fetchFiles = async()=>{const identity=assetIdentity(),sequence=++fileFetchSequence.current;const response=await apiFetch('/api/files');const files=await response.json();requireAssetIdentity(identity);if(sequence===fileFetchSequence.current)setFiles(files);};
   useEffect(()=>{fileFetchSequence.current++;if(!isAuthenticated||!activeWorkspaceId)return;void fetchFiles().catch(()=>{});const refresh=()=>{void fetchFiles().catch(()=>{});};window.addEventListener('orbit:assets-updated',refresh);const socket=getSocket();socket?.on('app_files_updated',refresh);return()=>{fileFetchSequence.current++;window.removeEventListener('orbit:assets-updated',refresh);socket?.off('app_files_updated',refresh);};},[isAuthenticated,currentUser?.id,activeWorkspaceId]);
-  const uploadFile = async(input:any)=>{if(!(input.file instanceof Blob))throw new Error('فایل واقعی را انتخاب کنید.');const identity=assetIdentity();await uploadAsset(input.file,{name:input.name,projectId:input.projectId || (selectedProject?.id!=='no_project'?selectedProject?.id:undefined),category:input.category,tag:input.tag});requireAssetIdentity(identity);await fetchFiles();};
+  const uploadFile = async(input:any)=>{if(!(input.file instanceof Blob))throw new Error('یک فایل انتخاب کنید.');const identity=assetIdentity();await uploadAsset(input.file,{name:input.name,projectId:input.projectId || (selectedProject?.id!=='no_project'?selectedProject?.id:undefined),category:input.category,tag:input.tag});requireAssetIdentity(identity);await fetchFiles();};
   const deleteFileAsset = async(id:string)=>{const identity=assetIdentity();await apiFetch('/api/files/'+encodeURIComponent(id),{method:'DELETE'});requireAssetIdentity(identity);await fetchFiles();requireAssetIdentity(identity);window.dispatchEvent(new Event('orbit:assets-updated'));};
   const refreshFeedback = async(projectId:string)=>{const identity=assetIdentity();const response=await apiFetch('/api/projects/'+encodeURIComponent(projectId)+'/feedbacks');const feedback=await response.json();requireAssetIdentity(identity);setProjects(previous=>previous.map(project=>project.id===projectId?{...project,clientFeedbacks:feedback}:project));setSelectedProjectState(previous=>previous.id===projectId?{...previous,clientFeedbacks:feedback}:previous);return feedback;};
   const submitClientFeedback = async(clientId:string,feedbackContent:string)=>{const identity=assetIdentity();await apiFetch('/api/client-feedback',{method:'POST',body:JSON.stringify({clientId,feedbackContent})});requireAssetIdentity(identity);await fetchProjects();};
@@ -1751,8 +1736,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const token = newProj.portalToken || newProj.clientPortalToken || '';
       newProj = {
         ...newProj,
-        clientPortalEnabled: newProj.clientPortalEnabled !== undefined ? newProj.clientPortalEnabled : true,
-        isPortalActive: newProj.isPortalActive !== undefined ? newProj.isPortalActive : true,
+        clientPortalEnabled: newProj.clientPortalEnabled === true,
+        isPortalActive: newProj.isPortalActive === true,
         clientPortalToken: token,
         portalToken: token
       };
@@ -1905,7 +1890,7 @@ triggerSuccessEvent(
         themeName: siteInput.activeTheme || "Flatsome",
         themeVersion: "3.18.3",
         serverType: "Nginx",
-        sslStatus: "فعال (Let's Encrypt)"
+        sslStatus: "فعال"
       };
       const res = await apiFetch('/api/sites/connect', {
         method: 'POST',
@@ -2391,8 +2376,8 @@ triggerSuccessEvent(
         if (Array.isArray(list)&&sequence===projectFetchSequence.current) {
           const formatted = list.map(p => ({
             ...p,
-            isPortalActive: p.isPortalActive !== undefined ? p.isPortalActive : (p.clientPortalEnabled !== undefined ? p.clientPortalEnabled : true),
-            clientPortalEnabled: p.clientPortalEnabled !== undefined ? p.clientPortalEnabled : true,
+            isPortalActive: p.isPortalActive !== undefined ? p.isPortalActive : p.clientPortalEnabled === true,
+            clientPortalEnabled: p.clientPortalEnabled === true,
             clientPortalToken: p.clientPortalToken || p.portalToken || '',
             portalToken: p.portalToken || p.clientPortalToken || ''
           }));
@@ -2447,7 +2432,10 @@ triggerSuccessEvent(
             name: u.name,
             role: u.role,
             department: u.role === 'SUPER_ADMIN' || u.role === 'OWNER' || u.role === 'ADMIN' ? 'management' : 'wp_dev',
-            avatar: u.name ? u.name.substring(0, 1) : 'ک',
+            // The list endpoint carries no image; use the same local initials avatar everywhere.
+            avatar: localAvatar(u.name || 'TS Orbit'),
+            email: u.email,
+            phone: u.phone,
             taskCount: 0,
             completedCount: 0,
             status: u.status || 'offline'
@@ -2946,6 +2934,7 @@ triggerSuccessEvent(
       fetchConversations,
       fetchMessages,
       fetchChatUsers,
+      fetchTeamMembers,
       fetchChatRequests,
       sendChatMessage,
       createConversation,

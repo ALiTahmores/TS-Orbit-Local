@@ -28,7 +28,7 @@ import {
   Sparkles,
   Info
 } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { iconByName } from '../lib/icons';
 
 export const TabManager: React.FC = () => {
   const { 
@@ -62,14 +62,14 @@ export const TabManager: React.FC = () => {
   ];
 
   const availableRoles = [
-    { key: 'OWNER', label: 'مدیر سیستم (Owner)' },
-    { key: 'PROJECT_MANAGER', label: 'مدیر پروژه (Project Manager)' },
-    { key: 'DEVELOPER', label: 'توسعه‌دهنده / سئو (Developer)' },
-    { key: 'CLIENT', label: 'کارفرما (Client)' }
+    { key: 'OWNER', label: 'مدیر سیستم' },
+    { key: 'PROJECT_MANAGER', label: 'مدیر پروژه' },
+    { key: 'DEVELOPER', label: 'توسعه‌دهنده / سئو' },
+    { key: 'CLIENT', label: 'کارفرما' }
   ];
 
   const renderIcon = (iconName: string) => {
-    const IconComp = (LucideIcons as any)[iconName] || Sparkles;
+    const IconComp = iconByName(iconName, Sparkles);
     return <IconComp size={16} className="text-blue-600" />;
   };
 

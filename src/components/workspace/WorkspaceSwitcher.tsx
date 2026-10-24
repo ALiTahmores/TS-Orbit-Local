@@ -69,7 +69,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ isRtl = tr
     id: 'ws_default',
     name: isRtl ? 'فضای کاری اصلی' : 'Main Workspace',
     ownerId: currentUser?.id,
-    inviteCode: 'WPMASTER'
+    inviteCode: ''
   };
 
   const handleSelectWorkspace = (wsId: string) => {

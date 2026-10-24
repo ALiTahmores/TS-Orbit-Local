@@ -22,7 +22,7 @@ export function assetMetadata(input:Record<string,any>){
   return Object.fromEntries(Object.entries(input).filter(([key,value])=>allowed.includes(key)&&value!==undefined&&value!==''));
 }
 export async function uploadAsset(file:File,metadata:Record<string,any>={},versionOf?:string,portalToken?:string,signal?:AbortSignal):Promise<ManagedAsset>{
-  if(!(file instanceof Blob))throw new Error('فایل واقعی را انتخاب کنید.');
+  if(!(file instanceof Blob))throw new Error('یک فایل انتخاب کنید.');
   const isPublic=portalToken!==undefined;
   const path=isPublic?publicBase(portalToken):versionOf!==undefined?'/api/files/'+resourceId(versionOf,'شناسه فایل')+'/versions':'/api/files';
   if(isPublic&&versionOf!==undefined)throw new ApiError(422,'PUBLIC_VERSION_DENIED','نسخه جدید فایل از مدیریت پروژه ثبت می‌شود.');
@@ -36,7 +36,7 @@ export async function uploadAsset(file:File,metadata:Record<string,any>={},versi
   } finally {operations.delete(controller);}
 }
 async function consumeAssetBytes<T>(asset:ManagedAsset,versionId:string|undefined,portalToken:string|undefined,signal:AbortSignal|undefined,consume:(blob:Blob)=>T):Promise<T>{
-  if(asset.contentAvailable===false)throw new Error('محتوای این فایل قدیمی موجود نیست؛ یک نسخه واقعی بارگذاری کنید.');
+  if(asset.contentAvailable===false)throw new Error('محتوای این فایل در دسترس نیست؛ نسخهٔ جدیدی بارگذاری کنید.');
   const isPublic=portalToken!==undefined;
   const base=isPublic?publicBase(portalToken)+'/':'/api/files/';
   const path=base+resourceId(asset.id,'شناسه فایل')+(versionId!==undefined?'/versions/'+resourceId(versionId,'شناسه نسخه'):'')+'/download';

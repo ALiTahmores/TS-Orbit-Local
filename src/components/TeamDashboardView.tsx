@@ -1,7 +1,8 @@
 import {MessagesView} from './chat/MessagesView';
 import React from 'react';
 import { useProject } from '../context/ProjectContext';
-import * as LucideIcons from 'lucide-react';
+import { Users } from 'lucide-react';
+import { iconByName } from '../lib/icons';
 
 interface TeamDashboardViewProps {
   teamId: string;
@@ -14,7 +15,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({ teamId, de
   const dept = departments.find((d: any) => d.id === deptId);
 
   const renderIcon = (name: string, size = 16, className = "") => {
-    const IconComp = (LucideIcons as any)[name] || LucideIcons.Users;
+    const IconComp = iconByName(name, Users);
     return <IconComp size={size} className={className} />;
   };
 
@@ -45,8 +46,8 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({ teamId, de
 
           <div className="pt-3 border-t border-border-primary/50 text-[10.5px] text-text-secondary space-y-2">
             <div className="flex justify-between">
-              <span>شناسه تیمی:</span>
-              <span className="font-mono text-text-primary">{team.id}</span>
+              <span>تعداد اعضا:</span>
+              <span className="text-text-primary">{((team as any).memberIds || []).length.toLocaleString('fa-IR')}</span>
             </div>
           </div>
         </div>

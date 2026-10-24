@@ -1,3 +1,4 @@
+import { formatJalaliDate } from '../../lib/dates';
 import {AssetManager} from '../assets/AssetManager';
 import { LocalImage } from '../common/LocalImage';
 import React, { useState } from 'react';
@@ -91,14 +92,14 @@ export const TaskQuickDetailModal: React.FC<TaskQuickDetailModalProps> = ({
   };
 
   const statusMap: Record<string, { label: string; color: string; bg: string }> = {
-    'TODO': { label: 'در انتظار (To Do)', color: 'text-slate-700 dark:text-slate-300', bg: 'bg-slate-100 dark:bg-slate-800' },
-    'pending': { label: 'در انتظار (To Do)', color: 'text-slate-700 dark:text-slate-300', bg: 'bg-slate-100 dark:bg-slate-800' },
-    'IN_PROGRESS': { label: 'در حال انجام (In Progress)', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-50 dark:bg-blue-950/60' },
-    'inprogress': { label: 'در حال انجام (In Progress)', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-50 dark:bg-blue-950/60' },
-    'UNDER_REVIEW': { label: 'در حال بررسی (Review)', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-950/60' },
-    'review': { label: 'در حال بررسی (Review)', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-950/60' },
-    'COMPLETED': { label: 'تکمیل شده (Done)', color: 'text-emerald-700 dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-950/60' },
-    'completed': { label: 'تکمیل شده (Done)', color: 'text-emerald-700 dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-950/60' }
+    'TODO': { label: 'در انتظار', color: 'text-slate-700 dark:text-slate-300', bg: 'bg-slate-100 dark:bg-slate-800' },
+    'pending': { label: 'در انتظار', color: 'text-slate-700 dark:text-slate-300', bg: 'bg-slate-100 dark:bg-slate-800' },
+    'IN_PROGRESS': { label: 'در حال انجام', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-50 dark:bg-blue-950/60' },
+    'inprogress': { label: 'در حال انجام', color: 'text-blue-700 dark:text-blue-300', bg: 'bg-blue-50 dark:bg-blue-950/60' },
+    'UNDER_REVIEW': { label: 'در حال بررسی', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-950/60' },
+    'review': { label: 'در حال بررسی', color: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-950/60' },
+    'COMPLETED': { label: 'تکمیل شده', color: 'text-emerald-700 dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-950/60' },
+    'completed': { label: 'تکمیل شده', color: 'text-emerald-700 dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-950/60' }
   };
 
   const curStatus = statusMap[task.status] || statusMap['TODO'];
@@ -167,7 +168,7 @@ export const TaskQuickDetailModal: React.FC<TaskQuickDetailModalProps> = ({
               <span className="text-[10px] text-slate-400 font-bold block mb-1">{isRtl ? 'مهلت تحویل' : 'Due Date'}</span>
               <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200 font-mono">
                 <Calendar className="w-3.5 h-3.5 text-slate-400"/>
-                <span>{toPersianDigits(task.deadline || task.dueDate || '—')}</span>
+                <span>{formatJalaliDate((task as any).deadlineCanonical || task.deadline || task.dueDate) || '—'}</span>
               </div>
             </div>
 

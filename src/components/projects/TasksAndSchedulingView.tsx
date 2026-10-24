@@ -1,3 +1,4 @@
+import { formatJalaliDate } from '../../lib/dates';
 import { LocalImage } from '../common/LocalImage';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -6,6 +7,7 @@ import { Project, Task, TaskStatus, TaskPriority } from '../../types';
 import { CustomSelect, CustomSelectOption } from '../common/CustomSelect';
 import { CreateTaskModal } from './CreateTaskModal';
 import { SmsReminderModal } from './SmsReminderModal';
+import { TaskDetailModal } from '../tasks/TaskDetailModal';
 import { 
   CheckSquare, 
   Clock, 
@@ -76,6 +78,7 @@ export const TasksAndSchedulingView: React.FC = () => {
 
   // Active sub-view tab: 'table' | 'time'
   const [activeTasksView, setActiveTasksView] = useState<'table' | 'time'>('table');
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
   
   // Search and status filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -433,9 +436,13 @@ export const TasksAndSchedulingView: React.FC = () => {
                                                 >
                                                   {isCompleted && <Check size={12} className="stroke-[3]" />}
                                                 </button>
-                                                <span className={isCompleted ? 'line-through text-slate-400' : ''}>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setDetailTask(t)}
+                                                  className={`text-right hover:text-blue-600 hover:underline cursor-pointer ${isCompleted ? 'line-through text-slate-400' : ''}`}
+                                                >
                                                   {t.title}
-                                                </span>
+                                                </button>
                                               </div>
 
                                               <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
@@ -450,7 +457,7 @@ export const TasksAndSchedulingView: React.FC = () => {
 
                                                 <button
                                                   type="button"
-                                                  onClick={() => deleteTask(t.id)}
+                                                  onClick={() => { if (confirm('آیا از حذف این وظیفه مطمئن هستید؟')) void deleteTask(t.id); }}
                                                   className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                                                   title="حذف تسک"
                                                 >
@@ -652,7 +659,7 @@ export const TasksAndSchedulingView: React.FC = () => {
               <div>
                 <h3 className="font-black text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
                   <Timer size={20} className="text-emerald-600" />
-                  <span>پایش ددلاین‌ها و سیستم یادآوری هوشمند (Deadline & Smart Reminder Hub)</span>
+                  <span>پایش ددلاین‌ها و سیستم یادآوری هوشمند</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   پایش زمان‌بندی تحویل پروژه‌ها، محاسبه شمارش معکوس و ارسال یادآوری خودکار SMS و پنل.
@@ -702,9 +709,9 @@ export const TasksAndSchedulingView: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-3">
                         {/* Dates */}
                         <div className="text-xs font-bold text-slate-500 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-3">
-                          <span>شروع: <strong className="font-mono text-slate-700 dark:text-slate-200">{project.startDate || '۱۴۰۵/۰۴/۰۱'}</strong></span>
+                          <span>شروع: <strong className="font-mono text-slate-700 dark:text-slate-200">{formatJalaliDate(project.startDate) || '—'}</strong></span>
                           <span className="text-slate-300">|</span>
-                          <span>ددلاین: <strong className="font-mono text-emerald-600 dark:text-emerald-400">{project.deadline || '۱۴۰۵/۰۵/۲۰'}</strong></span>
+                          <span>ددلاین: <strong className="font-mono text-emerald-600 dark:text-emerald-400">{formatJalaliDate(project.deadline) || '—'}</strong></span>
                         </div>
 
                         {/* Reminder Status Badge or Button */}
@@ -770,6 +777,8 @@ export const TasksAndSchedulingView: React.FC = () => {
         onClose={() => setIsTaskModalOpen(false)}
         defaultProjectId={selectedProjectIdForTask}
       />
+
+      <TaskDetailModal task={detailTask} isOpen={!!detailTask} onClose={() => setDetailTask(null)} />
 
       {/* SMS Reminder Modal */}
       <SmsReminderModal

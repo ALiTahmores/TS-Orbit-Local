@@ -1,6 +1,6 @@
 import {uploadAsset,type ManagedAsset} from '../../lib/assets';
 import { LocalImage } from '../common/LocalImage';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, 
@@ -25,6 +25,8 @@ import {
 import { useProjectContext } from '../../context/ProjectContext';
 import { Task, SubTask, TaskPriority, TaskStatus } from '../../types';
 import { cn } from '../../lib/utils';
+import { priorityLabel, statusLabel } from '../../lib/taskLabels';
+import { JalaliDateInput } from '../common/JalaliDateInput';
 
 export interface CreateTaskModalProps {
   isOpen: boolean;
@@ -47,13 +49,15 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
     currentUser, 
     projects, 
     teamMembers, 
-    createTask, 
-    activeWorkspaceId, 
+    createTask,
+    activeWorkspaceId,
     language,
-    locale 
+    locale,
+    tasks
   } = useProjectContext();
 
   const isRtl = (language === 'fa' || locale !== 'en');
+  const labelLocale = isRtl ? 'fa' : 'en';
 
   // Form State
   const [title, setTitle] = useState('');
@@ -73,14 +77,14 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
     setStatus(key === 'inprogress' || key === 'in_progress' ? 'IN_PROGRESS' : key === 'review' || key === 'under_review' ? 'UNDER_REVIEW' : key === 'completed' ? 'COMPLETED' : key === 'blocked' ? 'BLOCKED' : key === 'cancelled' ? 'CANCELLED' : 'TODO');
   }, [isOpen, defaultStatus]);
   const [dueDate, setDueDate] = useState('');
-  const [priority, setPriority] = useState<'Urgent' | 'High' | 'Medium' | 'Low'>('Urgent');
+  const [priority, setPriority] = useState<'Urgent' | 'High' | 'Medium' | 'Low'>('Medium');
   
   // Selected Assignees (Chips with remove)
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>(currentUser?.id ? [currentUser.id] : []);
   const [isAssigneePickerOpen, setIsAssigneePickerOpen] = useState(false);
 
-  // Tags
-  const availableTags = ['Dashboard', 'Frontend', 'UI/UX', 'Mobile App', 'API', 'Branding', 'QA'];
+  // Tags: suggest the ones this workspace already uses; new ones are typed in.
+  const availableTags = useMemo(() => [...new Set((tasks || []).flatMap((task: any) => Array.isArray(task.tags) ? task.tags : []).map((tag: any) => String(tag).trim()).filter(Boolean))].slice(0, 12), [tasks]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [customTagInput, setCustomTagInput] = useState('');
@@ -100,7 +104,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
   const attachmentScope=useRef(0);
   useEffect(()=>{attachmentScope.current++;setDraftAssets([]);setUploading(false);setIsSubmitting(false);return()=>{attachmentScope.current++;};},[isOpen,projectId]);
   const [submitError, setSubmitError] = useState('');
-  useEffect(() => { if(isOpen) { setProjectId(defaultProjectId || projects[0]?.id || ''); setTitle(''); setDescription(''); setDueDate(''); setSections([]); setDraftAssets([]); setCommentsList([]); setSelectedTags([]); setSelectedAssigneeIds(currentUser?.id ? [currentUser.id] : []); setSubmitError(''); } },[isOpen,defaultProjectId]);
+  useEffect(() => { if(isOpen) { setProjectId(defaultProjectId || projects[0]?.id || ''); setTitle(''); setDescription(''); setDueDate(''); setPriority('Medium'); setSections([]); setDraftAssets([]); setCommentsList([]); setSelectedTags([]); setSelectedAssigneeIds(currentUser?.id ? [currentUser.id] : []); setSubmitError(''); } },[isOpen,defaultProjectId]);
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -148,10 +152,10 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
       ...prev,
       {
         id: `cm_${Date.now()}`,
-        author: currentUser?.name || 'Ali Tahmores',
-        avatar: currentUser?.avatar || '/avatars/avatar-7.svg',
+        author: currentUser?.name || '',
+        avatar: currentUser?.avatar || '',
         text: commentText.trim(),
-        time: 'Just now'
+        time: isRtl ? 'هم‌اکنون' : 'Just now'
       }
     ]);
     setCommentText('');
@@ -209,7 +213,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
-                {isRtl ? 'ثبت وظیفه جدید (Create Task)' : 'Create Task'}
+                {isRtl ? 'ثبت وظیفه جدید' : 'Create Task'}
               </h2>
               <p className="text-[11px] text-slate-400">
                 {isRtl ? 'تنظیمات و جزئیات تسک پروژه' : 'Configure task properties, assignees & milestones'}
@@ -238,7 +242,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={isRtl ? "مثال: ABC Dashboard یا طراحی وایرفریم" : "e.g. ABC Dashboard"}
+              placeholder={isRtl ? "مثال: طراحی صفحهٔ اصلی" : "e.g. Design the home page"}
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/80 text-slate-800 dark:text-slate-100 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
           </div>
@@ -246,16 +250,16 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           {/* Status Selector Pills */}
           <div>
             <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-              {isRtl ? 'وضعیت (Status)' : 'Status'}
+              {isRtl ? 'وضعیت' : 'Status'}
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {[
-                { id: 'TODO', label: 'To-do', bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700' },
-                { id: 'IN_PROGRESS', label: 'On Progress', bg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border-blue-300 dark:border-blue-800' },
-                { id: 'UNDER_REVIEW', label: 'In Review', bg: 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400 border-amber-300 dark:border-amber-800' },
-                { id: 'COMPLETED', label: 'Completed', bg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800' },
-                { id: 'BLOCKED', label: isRtl ? 'مسدود' : 'Blocked', bg: 'bg-rose-50 text-rose-600 border-rose-300 dark:bg-rose-950/60' },
-                { id: 'CANCELLED', label: isRtl ? 'لغوشده' : 'Cancelled', bg: 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800' },
+                { id: 'TODO', label: statusLabel('pending', labelLocale), bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700' },
+                { id: 'IN_PROGRESS', label: statusLabel('inprogress', labelLocale), bg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border-blue-300 dark:border-blue-800' },
+                { id: 'UNDER_REVIEW', label: statusLabel('review', labelLocale), bg: 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400 border-amber-300 dark:border-amber-800' },
+                { id: 'COMPLETED', label: statusLabel('completed', labelLocale), bg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800' },
+                { id: 'BLOCKED', label: statusLabel('blocked', labelLocale), bg: 'bg-rose-50 text-rose-600 border-rose-300 dark:bg-rose-950/60' },
+                { id: 'CANCELLED', label: statusLabel('cancelled', labelLocale), bg: 'bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800' },
               ].map(st => (
                 <button
                   type="button"
@@ -279,32 +283,23 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Due Date */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-                {isRtl ? 'سررسید (Due Date)' : 'Due Date'}
+              <label htmlFor="task-due-date" className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
+                {isRtl ? 'سررسید' : 'Due Date'}
               </label>
-              <div className="relative">
-                <Calendar className="w-3.5 h-3.5 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  placeholder="Feb 02, 2027"
-                  className="w-full ps-9 pe-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/80 text-slate-800 dark:text-slate-100 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
-              </div>
+              <JalaliDateInput id="task-due-date" value={dueDate} onChange={setDueDate} placeholder="بدون سررسید" />
             </div>
 
             {/* Priority Pill */}
             <div>
               <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-                {isRtl ? 'اولویت (Priority)' : 'Priority'}
+                {isRtl ? 'اولویت' : 'Priority'}
               </label>
               <div className="flex items-center gap-1.5">
                 {[
-                  { id: 'Urgent', label: 'Urgent', color: 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800' },
-                  { id: 'High', label: 'High', color: 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800' },
-                  { id: 'Medium', label: 'Medium', color: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800' },
-                  { id: 'Low', label: 'Low', color: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' }
+                  { id: 'Urgent', label: priorityLabel('critical', labelLocale), color: 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800' },
+                  { id: 'High', label: priorityLabel('high', labelLocale), color: 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800' },
+                  { id: 'Medium', label: priorityLabel('medium', labelLocale), color: 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800' },
+                  { id: 'Low', label: priorityLabel('low', labelLocale), color: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' }
                 ].map(pr => (
                   <button
                     type="button"
@@ -328,7 +323,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                {isRtl ? 'مسئولین تسک (Assignees)' : 'Assignees'}
+                {isRtl ? 'مسئولین تسک' : 'Assignees'}
               </label>
               <span className="text-[10px] text-slate-400">
                 {selectedMembers.length} {isRtl ? 'نفر انتخاب شده' : 'selected'}
@@ -398,13 +393,14 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           {/* Tags Selector */}
           <div>
             <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-              {isRtl ? 'برچسب‌ها (Tags)' : 'Tags'}
+              {isRtl ? 'برچسب‌ها' : 'Tags'}
             </label>
             <div className="flex flex-wrap items-center gap-1.5">
-              {availableTags.map(tag => (
+              {[...availableTags, ...selectedTags.filter(tag => !availableTags.includes(tag))].map(tag => (
                 <button
                   type="button"
                   key={tag}
+                  aria-pressed={selectedTags.includes(tag)}
                   onClick={() => toggleTag(tag)}
                   className={cn(
                     "px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer border",
@@ -443,7 +439,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           {/* Description Box */}
           <div>
             <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-              {isRtl ? 'شرح و توضیحات (Description)' : 'Description'}
+              {isRtl ? 'شرح و توضیحات' : 'Description'}
             </label>
             <textarea
               rows={2}
@@ -458,7 +454,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                {isRtl ? 'زیرتسک‌ها و بخش‌ها (Subsections)' : 'Subsections & Milestones'}
+                {isRtl ? 'زیرتسک‌ها و بخش‌ها' : 'Subsections & Milestones'}
               </span>
               {!isAddingSection && (
                 <button
@@ -467,7 +463,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
                   className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>+ Add Section</span>
+                  <span>{isRtl ? '+ افزودن زیرکار' : '+ Add subtask'}</span>
                 </button>
               )}
             </div>
@@ -520,12 +516,20 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
             )}
           </div>
 
-          <label className="block text-xs">پیوست واقعی<input aria-label="پیوست وظیفه" type="file" disabled={uploading||isSubmitting||!projectId} onChange={async event=>{const element=event.target,file=element.files?.[0];if(!file)return;const generation=attachmentScope.current;setUploading(true);setSubmitError('');try{const saved=await uploadAsset(file,{name:file.name,projectId});if(generation===attachmentScope.current){setDraftAssets(previous=>[...previous,saved]);element.value='';}}catch(error){if(generation===attachmentScope.current)setSubmitError(error instanceof Error?error.message:'فایل ذخیره نشد.');}finally{if(generation===attachmentScope.current)setUploading(false);}}}/></label>
-          {draftAssets.map(file=><p key={file.id} className="text-xs">{file.name}<button type="button" onClick={()=>setDraftAssets(previous=>previous.filter(item=>item.id!==file.id))}>حذف از وظیفه</button></p>)}
+          <div className="space-y-2">
+            <span className="block text-[11px] font-bold text-slate-600 dark:text-slate-300">پیوست‌ها</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {draftAssets.map(file=><span key={file.id} className="inline-flex items-center gap-1.5 h-8 pl-1.5 pr-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 max-w-[220px]"><span className="truncate" dir="auto">{file.name}</span><button type="button" aria-label={`برداشتن ${file.name}`} onClick={()=>setDraftAssets(previous=>previous.filter(item=>item.id!==file.id))} className="p-0.5 rounded text-slate-400 hover:text-rose-500 cursor-pointer"><X size={12}/></button></span>)}
+              <label className={cn('inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600 cursor-pointer', (uploading||isSubmitting||!projectId) && 'opacity-50 pointer-events-none')}>
+                <Paperclip size={13}/>{uploading?'در حال بارگذاری…':'افزودن فایل'}
+                <input aria-label="افزودن پیوست به وظیفه" type="file" className="sr-only" disabled={uploading||isSubmitting||!projectId} onChange={async event=>{const element=event.target,file=element.files?.[0];if(!file)return;const generation=attachmentScope.current;setUploading(true);setSubmitError('');try{const saved=await uploadAsset(file,{name:file.name,projectId});if(generation===attachmentScope.current){setDraftAssets(previous=>[...previous,saved]);element.value='';}}catch(error){if(generation===attachmentScope.current)setSubmitError(error instanceof Error?error.message:'فایل ذخیره نشد.');}finally{if(generation===attachmentScope.current)setUploading(false);}}}/>
+              </label>
+            </div>
+          </div>
           {/* Live Comment Input Box with User Avatar */}
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
             <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-              {isRtl ? 'یادداشت یا کامنت اولیه (Comment)' : 'Initial Note / Comment'}
+              {isRtl ? 'یادداشت یا کامنت اولیه' : 'Initial Note / Comment'}
             </label>
             <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
               <LocalImage 

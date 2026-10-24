@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import fs from 'node:fs';
+import net from 'node:net';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
@@ -9,7 +10,8 @@ import { DatabaseSync } from 'node:sqlite';
 const rootDir = path.resolve(process.env.PROJECT_ROOT || process.cwd());
 dotenv.config({ path: path.join(rootDir, '.env'), quiet: true });
 const host = process.env.HOST || '127.0.0.1';
-if (!['127.0.0.1', 'localhost', '::1'].includes(host) && !(host === '0.0.0.0' && process.env.ALLOW_NETWORK_ACCESS === 'true')) {
+const networkAccess = process.env.ALLOW_NETWORK_ACCESS === 'true';
+if (!['127.0.0.1', 'localhost', '::1'].includes(host) && !(host === '0.0.0.0' && networkAccess)) {
   throw new Error('HOST must be loopback; 0.0.0.0 requires explicit ALLOW_NETWORK_ACCESS=true.');
 }
 const portValue = process.env.PORT || '3000';
@@ -20,9 +22,24 @@ const port = Number(portValue);
 const expectedOrigin = `http://${host === '::1' ? '[::1]' : host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`;
 const appOrigin = process.env.APP_ORIGIN || expectedOrigin;
 const originUrl = new URL(appOrigin);
-if (!['http:', 'https:'].includes(originUrl.protocol) || !['127.0.0.1', 'localhost', '[::1]'].includes(originUrl.hostname) || originUrl.origin !== appOrigin) {
-  throw new Error('APP_ORIGIN must be an exact loopback HTTP(S) origin without a path.');
+const loopbackOrigin = ['127.0.0.1', 'localhost', '[::1]'].includes(originUrl.hostname);
+// A public origin means a deployment behind a TLS-terminating reverse proxy: it must be
+// HTTPS and explicitly allowed, so a stray value cannot expose a local installation.
+if (!['http:', 'https:'].includes(originUrl.protocol) || originUrl.origin !== appOrigin ||
+    (!loopbackOrigin && !(networkAccess && originUrl.protocol === 'https:'))) {
+  throw new Error('APP_ORIGIN must be an exact loopback HTTP(S) origin without a path, or an HTTPS origin with ALLOW_NETWORK_ACCESS=true.');
 }
+// Proxies trusted for X-Forwarded-For/-Proto. Never `true`: any client could then pick
+// its own address and slip past the per-address rate limits.
+function parseTrustProxy(value: string): false | number | string[] {
+  if (value === '' || value === 'false') return false;
+  if (/^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 10) return Number(value);
+  const entries = value.split(',').map(entry => entry.trim()).filter(Boolean);
+  if (entries.length && entries.every(entry => ['loopback', 'linklocal', 'uniquelocal'].includes(entry) ||
+    (net.isIP(entry.split('/')[0]) !== 0 && (!entry.includes('/') || /^\d{1,3}$/.test(entry.split('/')[1]))))) return entries;
+  throw new Error('TRUST_PROXY must be empty, a hop count from 1 to 10, or proxy addresses/subnets (for example loopback or 10.0.0.0/8); "true" is not accepted.');
+}
+const trustProxy = parseTrustProxy((process.env.TRUST_PROXY || '').trim());
 const dataDir = path.resolve(rootDir, process.env.DATA_DIR || 'data');
 export function rejectDataSymlinks(candidate: string): void {
   let current = path.resolve(candidate);
@@ -46,7 +63,8 @@ if (contains(dataDir, rootDir) || contains(publicDir, dataDir)) {
 if (dataDir.toLowerCase() === distDir.toLowerCase() || dataDir.toLowerCase().startsWith(distDir.toLowerCase() + path.sep)) {
   throw new Error('DATA_DIR must be outside the build output.');
 }
-export const config = Object.freeze({ rootDir, host, port, appOrigin, dataDir,
+export const config = Object.freeze({ rootDir, host, port, appOrigin, dataDir, trustProxy,
+  secureOrigin: originUrl.protocol === 'https:' && !loopbackOrigin,
   dbPath: path.join(dataDir, 'db.json'), legacyDbPath: path.join(dataDir, 'db.json'),
   sqlitePath: path.join(dataDir, 'orbit.sqlite'), clientDir: path.join(distDir, 'client') });
 

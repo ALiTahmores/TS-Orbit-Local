@@ -85,6 +85,23 @@ export function createWorkspaceRouter(options: { state: DatabaseSchema; authenti
     res.json({ success: true, member, workspace: projection(workspace, req.user) });
   });
 
+  // Removal revokes the membership (and its mirror on the account); tasks and history stay intact.
+  router.delete('/members/:userId', (req: any, res) => {
+    const workspace = getWorkspace(req, typeof req.query.workspaceId === 'string' ? req.query.workspaceId : undefined);
+    if (!workspace || !canAccess(workspace, req.user)) return fail(res, 404, 'WORKSPACE_NOT_FOUND', 'فضای کاری یافت نشد.');
+    const member = memberOf(workspace, req.params.userId);
+    if (!member || !isAccountActive(member)) return fail(res, 404, 'MEMBER_NOT_FOUND', 'این کاربر عضو فعال فضای کاری نیست.');
+    if (req.params.userId === workspace.ownerId) return fail(res, 403, 'CANNOT_REMOVE_OWNER', 'مالک فضای کاری قابل حذف نیست.');
+    if (req.params.userId === req.user.id || !canAssign(workspace, req.user, member.role)) return fail(res, 403, 'FORBIDDEN', 'حذف این عضو مجاز نیست.');
+    const revokedAt = new Date().toISOString();
+    Object.assign(member, { status: 'DEACTIVATED', active: false, isActive: false, revokedAt });
+    const account = state.users.find(user => user.id === member.userId);
+    const mirrored = account?.memberships?.find((membership: any) => membership.workspaceId === workspace.id);
+    if (mirrored) Object.assign(mirrored, { status: 'DEACTIVATED', active: false, isActive: false, revokedAt });
+    audit(req.user.id, 'WORKSPACE_MEMBER_REMOVED', workspace.id);
+    res.json({ success: true, workspace: projection(workspace, req.user) });
+  });
+
   router.post('/invite', (req: any, res) => {
     const parsed = z.object({ workspaceId: z.string().min(1).max(120).optional(), email: z.string().trim().email().max(254).transform(normalizeEmail), role: workspaceRole.default('MEMBER') }).strict().safeParse(req.body);
     if (!parsed.success) return fail(res, 400, 'VALIDATION_FAILED', 'ایمیل و نقش معتبر لازم است.');

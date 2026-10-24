@@ -34,27 +34,19 @@ interface AddMemberModalProps {
 }
 
 const ROLES_LIST = [
-  { id: 'DEVELOPER', labelFa: 'توسعه‌دهنده (Developer)', labelEn: 'Developer', desc: 'دسترسی ایجاد، ویرایش و تحویل تسک‌ها و کدها', icon: Code2 },
-  { id: 'PROJECT_MANAGER', labelFa: 'مدیر پروژه (Project Manager)', labelEn: 'Project Manager', desc: 'مدیریت ددلاین‌ها، تقسیم وظایف و کنترل جریان کار', icon: Briefcase },
-  { id: 'DESIGNER', labelFa: 'طراح رابط/محصول (UI/UX)', labelEn: 'UI/UX Designer', desc: 'طراحی ویژوال، فیگما و بازبینی تجربه کاربری', icon: Palette },
-  { id: 'QA_ENGINEER', labelFa: 'مهندس تضمین کیفیت (QA)', labelEn: 'QA Engineer', desc: 'تست ماژول‌ها، ثبت باگ و راستی‌آزمایی نسخه‌ها', icon: CheckCheck },
-  { id: 'SPECIALIST', labelFa: 'متخصص فنی', labelEn: 'Technical Specialist', desc: 'همکاری تخصصی در پروژه و وظایف فضای کاری', icon: Layers },
-  { id: 'VIEWER', labelFa: 'ناظر / فقط خواندنی (Viewer)', labelEn: 'Viewer', desc: 'مشاهده گزارش‌ها و داشبورد بدون حق ویرایش', icon: Eye },
-];
-
-const DEPARTMENTS_LIST = [
-  { id: 'wp_dev', label: 'توسعه وب و نرم‌افزار' },
-  { id: 'ui_ux', label: 'طراحی UI/UX و محصول' },
-  { id: 'seo', label: 'سئو و بهینه‌سازی مارکتینگ' },
-  { id: 'content', label: 'تولید و مدیریت محتوا' },
-  { id: 'qa', label: 'تضمین کیفیت و تست QA' }
+  { id: 'DEVELOPER', labelFa: 'توسعه‌دهنده', labelEn: 'Developer', desc: 'ایجاد، ویرایش و تحویل وظایف', icon: Code2 },
+  { id: 'PROJECT_MANAGER', labelFa: 'مدیر پروژه', labelEn: 'Project Manager', desc: 'تقسیم وظایف و پیگیری سررسیدها', icon: Briefcase },
+  { id: 'DESIGNER', labelFa: 'طراح', labelEn: 'Designer', desc: 'طراحی و بازبینی تجربهٔ کاربری', icon: Palette },
+  { id: 'QA_ENGINEER', labelFa: 'کنترل کیفیت', labelEn: 'QA Engineer', desc: 'تست، ثبت خطا و تأیید نسخه‌ها', icon: CheckCheck },
+  { id: 'SPECIALIST', labelFa: 'متخصص', labelEn: 'Specialist', desc: 'همکاری در پروژه‌ها و وظایف', icon: Layers },
+  { id: 'VIEWER', labelFa: 'فقط مشاهده', labelEn: 'Viewer', desc: 'دیدن گزارش‌ها بدون امکان ویرایش', icon: Eye },
 ];
 
 export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const { locale, addTeamMember, currentUser } = useProject();
+  const { locale, fetchTeamMembers, fetchChatUsers, triggerSuccessEvent, departments, departmentMembers, fetchOrgData } = useProject();
   const isRtl = locale === 'fa';
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,7 +56,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
   const [matchedWorkspace, setMatchedWorkspace] = useState<any | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<WorkspaceRole>('DEVELOPER');
-  const [selectedDept, setSelectedDept] = useState<string>('wp_dev');
+  const [selectedDept, setSelectedDept] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -76,7 +68,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
       setMatchedWorkspace(null);
       setSearchError(null);
       setSelectedRole('DEVELOPER');
-      setSelectedDept('wp_dev');
+      setSelectedDept('');
       setIsSubmitting(false);
       setSuccessMessage(null);
     }
@@ -139,8 +131,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
         body: JSON.stringify({
           workspaceId: activeWorkspaceId,
           targetUserId: foundUser.id,
-          role: selectedRole,
-          department: selectedDept
+          role: selectedRole
         })
       });
 
@@ -149,27 +140,22 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
         throw new Error(data.message || 'خطا در افزودن عضو به فضای کاری');
       }
 
-      // Add to local team members state for instant UI update without reload
-      await addTeamMember({
-        id: foundUser.id,
-        name: foundUser.name || 'همکار جدید',
-        role: selectedRole,
-        department: selectedDept,
-        avatar: foundUser.avatar || '/avatars/avatar-7.svg',
-        taskCount: 0,
-        completedCount: 0,
-        status: 'online',
-        rating: '۱۰',
-        email: foundUser.email,
-        phone: foundUser.phone || '',
-        skills: ['همکاری تیمی', 'توسعه تخصصی']
-      });
+      // Department membership lives in the organisation model, not on the workspace member.
+      if (selectedDept) {
+        const memberIds = [...new Set([...(departmentMembers || []).filter((row: any) => row.departmentId === selectedDept).map((row: any) => row.userId), foundUser.id])];
+        const assigned = await apiFetch(`/api/org/departments/${encodeURIComponent(selectedDept)}/members`, { method: 'PUT', body: JSON.stringify({ memberIds }) });
+        if (!assigned.ok) throw new Error(isRtl ? 'عضو افزوده شد، اما ثبت دپارتمان انجام نشد.' : 'Member added, but the department could not be saved.');
+      }
 
-      setSuccessMessage(
-        isRtl 
-          ? `کاربر «${foundUser.name}» (@${foundUser.username || 'user'}) با نقش «${selectedRole}» به فضای کاری افزوده شد!`
-          : `User ${foundUser.name} added to workspace successfully!`
-      );
+      // Reload the committed member list (team pages and chat contacts) from the server.
+      await Promise.all([fetchTeamMembers(), fetchChatUsers(), selectedDept ? fetchOrgData() : undefined]).catch(() => undefined);
+
+      const roleLabel = ROLES_LIST.find(role => role.id === selectedRole);
+      const message = isRtl
+        ? `«${foundUser.name}» با نقش «${roleLabel?.labelFa || selectedRole}» به فضای کاری افزوده شد.`
+        : `${foundUser.name} was added to the workspace as ${roleLabel?.labelEn || selectedRole}.`;
+      setSuccessMessage(message);
+      triggerSuccessEvent(isRtl ? 'عضو جدید اضافه شد' : 'Member added', message);
 
       setTimeout(() => {
         onClose();
@@ -232,9 +218,6 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                 {isRtl ? 'ایمیل یا نام کاربری همکار' : 'Colleague email or username'}
               </label>
-              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
-                {isRtl ? 'پشتیبانی از جستجوی دوگانه' : 'Dual-Mode Lookup'}
-              </span>
             </div>
 
             <div className="relative flex items-center">
@@ -364,29 +347,31 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                 </div>
               </div>
 
-              {/* Department Selection */}
-              <div className="space-y-1.5 pt-2 border-t border-slate-200/70 dark:border-[#252a42]">
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Layers size={13} className="text-indigo-500" />
-                  <span>{isRtl ? 'دپارتمان سازمانی:' : 'Department:'}</span>
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                  {DEPARTMENTS_LIST.map((dept) => (
-                    <button
-                      key={dept.id}
-                      type="button"
-                      onClick={() => setSelectedDept(dept.id)}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center truncate ${
-                        selectedDept === dept.id
-                          ? 'bg-indigo-600 text-white shadow-xs'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                      }`}
-                    >
-                      {dept.label}
-                    </button>
-                  ))}
+              {/* Department Selection (only departments defined in this workspace) */}
+              {(departments || []).length > 0 && (
+                <div className="space-y-1.5 pt-2 border-t border-slate-200/70 dark:border-[#252a42]">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Layers size={13} className="text-indigo-500" />
+                    <span>{isRtl ? 'دپارتمان (اختیاری):' : 'Department (optional):'}</span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {[{ id: '', name: isRtl ? 'بدون دپارتمان' : 'None' }, ...departments].map((dept: any) => (
+                      <button
+                        key={dept.id || 'none'}
+                        type="button"
+                        onClick={() => setSelectedDept(dept.id)}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center truncate ${
+                          selectedDept === dept.id
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {dept.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Add Member Confirm Action Button */}
               <button

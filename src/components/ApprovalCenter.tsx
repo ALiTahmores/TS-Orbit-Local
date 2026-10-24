@@ -1,3 +1,4 @@
+import { formatJalaliDateTime } from '../lib/dates';
 import { apiFetch } from '../lib/api';
 import React, { useState, useEffect } from 'react';
 import { useProject } from '../context/ProjectContext';
@@ -531,7 +532,7 @@ export const ApprovalCenter: React.FC = () => {
                             </div>
                             <div>
                               <span className="font-black text-slate-800 block">{req.details.fullName}</span>
-                              <span className="text-[10px] text-slate-400 font-mono">{req.userId}</span>
+                              {req.details.username && <span className="text-[10px] text-slate-400" dir="ltr">@{req.details.username}</span>}
                             </div>
                           </div>
                         </td>
@@ -669,7 +670,7 @@ export const ApprovalCenter: React.FC = () => {
                           </span>
                         </td>
                         <td className="p-4 font-mono text-slate-500">{sess.browser}</td>
-                        <td className="p-4 text-slate-600 font-semibold">{sess.lastActivity}</td>
+                        <td className="p-4 text-slate-600 font-semibold">{formatJalaliDateTime(sess.lastActivity)}</td>
                         <td className="p-4 text-center">
                           <button
                             onClick={() => handleTerminateSession(sess)}
@@ -720,7 +721,7 @@ export const ApprovalCenter: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                        <span>زمان: {lh.loginDate} - {lh.loginTime}</span>
+                        <span>زمان: {formatJalaliDateTime(lh.loginTime || lh.loginDate)}</span>
                         <span>IP: {lh.ipAddress}</span>
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono">
@@ -752,7 +753,7 @@ export const ApprovalCenter: React.FC = () => {
                     <div key={log.id} className="p-4 hover:bg-slate-50 transition-colors space-y-1.5">
                       <div className="flex justify-between items-center">
                         <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-mono font-bold">{log.action}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{log.timestamp}</span>
+                        <span className="text-[10px] text-slate-400">{formatJalaliDateTime(log.timestamp)}</span>
                       </div>
                       <p className="text-slate-700 text-xs leading-relaxed font-black">{log.details}</p>
                       <div className="text-[10px] text-slate-400 font-mono">کاربر عامل: {log.userId}</div>

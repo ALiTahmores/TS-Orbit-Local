@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Network, 
   GitBranch, 
@@ -42,8 +42,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
     projects, 
     selectedProject, 
     setSelectedProject, 
-    tasks: globalTasks,
-    updateProject 
+    tasks: globalTasks
   } = useProject();
 
   const currentProject = selectedProject || projects[0] || null;
@@ -76,10 +75,9 @@ export const ProjectRoadmapPlan: React.FC = () => {
         {
           id: 'phase_01',
           phaseNumber: 'فاز ۰۱',
-          title: 'شروع پروژه و کشف نیازمندی‌ها (Kickoff & Discovery)',
+          title: 'شروع پروژه و کشف نیازمندی‌ها',
           description: 'دریافت سند بریف کارفرما، تحلیل اهداف کسب‌وکار، ممیزی هاست و دامنه، و تعیین ساختار تیم و سررسیدها.',
           status: 'completed',
-          teamLead: 'مهندس سهرابی (معمار ارشد زیرساخت)',
           estimatedDays: 4,
           tools: ['DNS', 'Cloudflare', 'SSL', 'GitLab'],
           subtasks: [
@@ -113,13 +111,12 @@ export const ProjectRoadmapPlan: React.FC = () => {
           id: 'phase_02',
           phaseNumber: 'فاز ۰۲',
           title: branch === 'wp' 
-            ? 'تعیین معماری و زیرساخت فنی: پایپ‌لاین وردپرس (Technical Architecture)' 
-            : 'تعیین معماری و زیرساخت فنی: پایپ‌لاین اختصاصی (Technical Architecture)',
+            ? 'تعیین معماری و زیرساخت فنی: پایپ‌لاین وردپرس' 
+            : 'تعیین معماری و زیرساخت فنی: پایپ‌لاین اختصاصی',
           description: branch === 'wp'
             ? 'پیکربندی دیتابیس MySQL، نصب هسته بهینه‌شده وردپرس، سخت‌سازی امنیتی و انتخاب کیت طراحی المنتور پرو / قالب اختصاصی.'
             : 'انتخاب استک مدرن Next.js/React + Node.js، مدلسازی اسکیما در دیتابیس PostgreSQL، معماری REST/GraphQL و سیستم احراز هویت JWT.',
           status: 'in_progress',
-          teamLead: branch === 'wp' ? 'مهندس رضایی (توسعه‌دهنده ارشد وردپرس)' : 'مهندس کاظمی (تک‌لید فول‌استک)',
           estimatedDays: 7,
           tools: branch === 'wp' ? ['WordPress 6.7', 'WooCommerce', 'Elementor Pro', 'Redis Cache'] : ['Next.js 15', 'TypeScript', 'PostgreSQL', 'Docker', 'JWT'],
           subtasks: branch === 'wp' ? [
@@ -133,7 +130,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
             },
             {
               id: 'st_02_wp_2',
-              title: 'نصب هسته، افزونه‌های امنیتی و سخت‌سازی سرور (Security Hardening)',
+              title: 'نصب هسته، افزونه‌های امنیتی و سخت‌سازی سرور',
               description: 'تغییر مسیر ادمین، فعال‌سازی 2FA، فایروال Wordfence و ریدایرکت‌های امنیتی',
               status: 'in_progress',
               required: true,
@@ -159,7 +156,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
             {
               id: 'st_02_cu_2',
               title: 'مدل‌سازی دیتابیس و طراحی مایگریشن‌ها در PostgreSQL/Prisma',
-              description: 'طراحی جداول کاربران، محصولات، تراکنش‌ها، لاگ‌ها و شاخص‌گذاری مناسب (Indexing)',
+              description: 'طراحی جداول کاربران، محصولات، تراکنش‌ها، لاگ‌ها و شاخص‌گذاری مناسب',
               status: 'in_progress',
               required: true,
               tools: ['PostgreSQL', 'Prisma ORM']
@@ -177,10 +174,9 @@ export const ProjectRoadmapPlan: React.FC = () => {
         {
           id: 'phase_03',
           phaseNumber: 'فاز ۰۳',
-          title: 'پیاده‌سازی و توسعه کامل (Execution & Build)',
+          title: 'پیاده‌سازی و توسعه کامل',
           description: 'پیاده‌سازی ماژولار صفحات اصلی، فرم‌های ارتباط و استعلام، فرآیند سبد خرید و درگاه پرداخت شاپرک، سازگاری کامل رسپانسیو.',
           status: 'pending',
-          teamLead: 'مهندس ابراهیمی (مدیر پروژه فرانت‌اند)',
           estimatedDays: 14,
           tools: ['React/UI', 'CSS3', 'درگاه شاپرک', 'SMS API'],
           subtasks: [
@@ -211,7 +207,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
             {
               id: 'st_03_4',
               title: 'تست جامع رسپانسیو روی موبایل، تبلت و نمایشگرهای فوق‌عریض',
-              description: 'بهبود تجربه لمسی در اسمارت‌فون‌ها، مگامنوهای کشویی و منوی چسبان (Sticky)',
+              description: 'بهبود تجربه لمسی در اسمارت‌فون‌ها، مگامنوهای کشویی و منوی چسبان',
               status: 'pending',
               required: true,
               tools: ['BrowserStack', 'Chrome DevTools']
@@ -221,16 +217,15 @@ export const ProjectRoadmapPlan: React.FC = () => {
         {
           id: 'phase_04',
           phaseNumber: 'فاز ۰۴',
-          title: 'کنترل کیفیت یکپارچه (QA & Accessibility)',
+          title: 'کنترل کیفیت یکپارچه',
           description: 'آزمون‌های جامع کارایی، امنیت، ممیزی کد، بارگذاری پرفشار و بررسی انطباق استاندارد دسترس‌پذیری بین‌المللی WCAG 2.2 AA.',
           status: 'pending',
-          teamLead: 'خانم مهندس یوسفی (سرپرست تضمین کیفیت QA)',
           estimatedDays: 5,
           tools: ['Lighthouse', 'SonarQube', 'WCAG AA', 'GTmetrix'],
           subtasks: [
             {
               id: 'st_04_1',
-              title: 'تست عملکردی، کارکرد لینک‌ها و تست فرم‌ها (Functional Testing)',
+              title: 'تست عملکردی، کارکرد لینک‌ها و تست فرم‌ها',
               description: 'اطمینان از ذخیره بدون خطای داده‌ها، ارسال صحیح ایمیل‌ها و صحت محاسبات مالی',
               status: 'pending',
               required: true,
@@ -238,7 +233,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
             },
             {
               id: 'st_04_2',
-              title: 'ارزیابی امنیت و آزمون نفوذ پایه (Penetration & Vulnerability Check)',
+              title: 'ارزیابی امنیت و آزمون نفوذ پایه',
               description: 'بررسی هدرهای امنیتی، ممانعت از حملات XSS، SQL Injection و CSRF',
               status: 'pending',
               required: true,
@@ -246,7 +241,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
             },
             {
               id: 'st_04_3',
-              title: 'بهینه‌سازی شاخص‌های حیاتی سرعت (Core Web Vitals) و امتیاز بالای ۹۰',
+              title: 'بهینه‌سازی شاخص‌های حیاتی سرعت و امتیاز بالای ۹۰',
               description: 'بهینه‌سازی LCP, INP, CLS، فشرده‌سازی Gzip/Brotli و مینیفای کردن اسکریپت‌ها',
               status: 'pending',
               required: true,
@@ -265,10 +260,9 @@ export const ProjectRoadmapPlan: React.FC = () => {
         {
           id: 'phase_05',
           phaseNumber: 'فاز ۰۵',
-          title: 'تحویل، انتقال به سرور و لانچ (Deployment & Cutover)',
+          title: 'تحویل، انتقال به سرور و لانچ',
           description: 'انتقال امن از محیط استیجینگ به پروداکشن، سئو پایه On-Page، ثبت در سرچ کنسول گوگل و تحویل مدارک و آموزش پنل به کارفرما.',
           status: 'pending',
-          teamLead: 'مهندس حسینی (مدیر ارشد تحویل پروژه)',
           estimatedDays: 3,
           tools: ['Search Console', 'Google Analytics 4', 'Schema Org', 'کتابچه تحویل'],
           subtasks: [
@@ -317,52 +311,48 @@ export const ProjectRoadmapPlan: React.FC = () => {
           title: 'تحلیل عمیق کسب‌وکار، کیورد ریسرچ و رقبا',
           description: 'استخراج کلمات کلیدی درآمدزا، بررسی حجم سرچ، تحلیل گپ محتوایی رقبا و تدوین استراتژی موضوعی.',
           status: 'completed',
-          teamLead: 'سینا رحیمی (استراتژیست ارشد سئو)',
           estimatedDays: 10,
           tools: ['Ahrefs', 'SEMrush', 'KWFinder', 'Google Sheets'],
           subtasks: [
             { id: 'seo_1_1', title: 'تحلیل معماری سایت رقبا و شناسایی نقاط ضعف آن‌ها', status: 'completed', required: true },
-            { id: 'seo_1_2', title: 'استخراج درخت کلمات کلیدی (Keyword Mapping) با اینتنت خرید', status: 'completed', required: true },
+            { id: 'seo_1_2', title: 'استخراج درخت کلمات کلیدی با اینتنت خرید', status: 'completed', required: true },
             { id: 'seo_1_3', title: 'تدوین تقویم محتوایی سه‌ماهه اول', status: 'completed', required: true }
           ]
         },
         {
           id: 'seo_02',
           phaseNumber: 'فاز ۰۲',
-          title: 'ممیزی جامع سئو تکنیکال (Technical SEO Audit)',
+          title: 'ممیزی جامع سئو تکنیکال',
           description: 'بررسی بودجه خزش، ارزیابی ساختار URLها، برطرف کردن خطاهای 4xx و ریدایرکت‌های زنجیره‌ای.',
           status: 'in_progress',
-          teamLead: 'نیلوفر مهدوی (متخصص سئو فنی)',
           estimatedDays: 8,
           tools: ['Screaming Frog', 'Search Console', 'PageSpeed Insights'],
           subtasks: [
-            { id: 'seo_2_1', title: 'حل خطاهای ایندکس و کرال در سرچ کنسول (Page Indexing Issues)', status: 'completed', required: true },
-            { id: 'seo_2_2', title: 'پیاده‌سازی اسکیماهای ساختاریافته (Article, FAQ, Product, Breadcrumbs)', status: 'in_progress', required: true },
+            { id: 'seo_2_1', title: 'حل خطاهای ایندکس و کرال در سرچ کنسول', status: 'completed', required: true },
+            { id: 'seo_2_2', title: 'پیاده‌سازی اسکیماهای ساختاریافته', status: 'in_progress', required: true },
             { id: 'seo_2_3', title: 'بهینه‌سازی بودجه خزش و اصلاح فایل‌های Sitemap و Robots.txt', status: 'pending', required: true }
           ]
         },
         {
           id: 'seo_03',
           phaseNumber: 'فاز ۰۳',
-          title: 'بهینه‌سازی درون‌صفحه‌ای (On-Page SEO) و تولید محتوا',
+          title: 'بهینه‌سازی درون‌صفحه‌ای و تولید محتوا',
           description: 'بهینه‌سازی تگ‌های عنوان، توضیحات متا، استراکچر H1-H3 و بارگذاری مقالات عمیق هدفمند.',
           status: 'pending',
-          teamLead: 'آرش شریفی (سرپرست تیم محتوا)',
           estimatedDays: 15,
           tools: ['Yoast SEO', 'Grammarly', 'SurferSEO'],
           subtasks: [
             { id: 'seo_3_1', title: 'بهینه‌سازی عنوان و متادیسکریپشن صفحات لندینگ کلیدی', status: 'pending', required: true },
-            { id: 'seo_3_2', title: 'لینک‌سازی داخلی خوشه‌ای (Topic Cluster & Pillar Pages)', status: 'pending', required: true },
+            { id: 'seo_3_2', title: 'لینک‌سازی داخلی خوشه‌ای', status: 'pending', required: true },
             { id: 'seo_3_3', title: 'تولید ۱۰ مقاله تخصصی بر اساس گایدلاین‌های سئو معنایی', status: 'pending', required: true }
           ]
         },
         {
           id: 'seo_04',
           phaseNumber: 'فاز ۰۴',
-          title: 'سئو برون‌صفحه‌ای (Off-Page SEO) و لینک‌سازی کلاه‌سفید',
+          title: 'سئو برون‌صفحه‌ای و لینک‌سازی کلاه‌سفید',
           description: 'رپرتاژ آگهی در رسانه‌های مرجع، ایجاد بک‌لینک‌های پروفایلی معتبر و مدیریت برند منشن‌ها.',
           status: 'pending',
-          teamLead: 'مهدی کریمی (مدیر کمپین‌های سئو)',
           estimatedDays: 20,
           tools: ['تسمینو', 'تریبون', 'Disavow Tool'],
           subtasks: [
@@ -378,10 +368,9 @@ export const ProjectRoadmapPlan: React.FC = () => {
         {
           id: 'ui_01',
           phaseNumber: 'فاز ۰۱',
-          title: 'تحقیقات کاربری و معماری اطلاعات (Information Architecture)',
-          description: 'مصاحبه با ذی‌نفعان، ترسیم پرسونای مشتریان، تدوین سفر کاربر (User Journey) و ساختار درختی سایت.',
+          title: 'تحقیقات کاربری و معماری اطلاعات',
+          description: 'مصاحبه با ذی‌نفعان، ترسیم پرسونای مشتریان، تدوین سفر کاربر و ساختار درختی سایت.',
           status: 'completed',
-          teamLead: 'مریم عسگری (طراح ارشد تجربه کاربری)',
           estimatedDays: 6,
           tools: ['Miro', 'FigJam', 'Notion'],
           subtasks: [
@@ -392,10 +381,9 @@ export const ProjectRoadmapPlan: React.FC = () => {
         {
           id: 'ui_02',
           phaseNumber: 'فاز ۰۲',
-          title: 'وایرفریم‌های کم‌دقت (Low-Fidelity Wireframes)',
+          title: 'وایرفریم‌های کم‌دقت',
           description: 'ترسیم وایرفریم‌های اولیه چیدمان محتوا، هدایت چشم کاربر و تست ساختار در تیم محصول.',
           status: 'in_progress',
-          teamLead: 'پارسا درخشان (طراح محصول)',
           estimatedDays: 8,
           tools: ['Figma Wireframing', 'Balsamiq'],
           subtasks: [
@@ -407,14 +395,13 @@ export const ProjectRoadmapPlan: React.FC = () => {
         {
           id: 'ui_03',
           phaseNumber: 'فاز ۰۳',
-          title: 'دیزاین سیستم و طراحی باکیفیت (High-Fidelity UI)',
+          title: 'دیزاین سیستم و طراحی باکیفیت',
           description: 'تدوین دیزاین سیستم کامل (پالت رنگی، تایپوگرافی، آیکون‌ها، دکمه‌ها و استیت‌ها) و طراحی پیکسلی صفحات.',
           status: 'pending',
-          teamLead: 'مریم عسگری',
           estimatedDays: 12,
           tools: ['Figma Components', 'AutoLayout 5.0'],
           subtasks: [
-            { id: 'ui_3_1', title: 'تدوین راهنمای سبک بصری (Style Guide) و کتابخانه المان‌ها', status: 'pending', required: true },
+            { id: 'ui_3_1', title: 'تدوین راهنمای سبک بصری و کتابخانه المان‌ها', status: 'pending', required: true },
             { id: 'ui_3_2', title: 'طراحی فاینال نسخه دسکتاپ تمام صفحات اصلی و فرعی', status: 'pending', required: true },
             { id: 'ui_3_3', title: 'طراحی نسخه موبایل استاندارد و منوهای ناوبری واکنش‌گرا', status: 'pending', required: true }
           ]
@@ -422,10 +409,9 @@ export const ProjectRoadmapPlan: React.FC = () => {
         {
           id: 'ui_04',
           phaseNumber: 'فاز ۰۴',
-          title: 'پروتوتایپ تعاملی و آماده‌سازی برای دولوپرها (Dev Handoff)',
+          title: 'پروتوتایپ تعاملی و آماده‌سازی برای دولوپرها',
           description: 'پیاده‌سازی انیمیشن‌های میکرو، نمونه اولیه قابل کلیک و اکسپورت فایل‌ها و توکن‌های طراحی برای تیم توسعه.',
           status: 'pending',
-          teamLead: 'پارسا درخشان',
           estimatedDays: 5,
           tools: ['Figma Prototype', 'Zeplin / DevMode'],
           subtasks: [
@@ -442,9 +428,8 @@ export const ProjectRoadmapPlan: React.FC = () => {
         id: 'gen_01',
         phaseNumber: 'فاز ۰۱',
         title: 'کشف هویت برند و کانسپت‌های بصری اولیه',
-        description: 'بررسی رقبای بصری، تعریف پالت هویت، ارزش‌های سازمانی و تدوین بورد الهام‌بخش (Moodboard).',
+        description: 'بررسی رقبای بصری، تعریف پالت هویت، ارزش‌های سازمانی و تدوین بورد الهام‌بخش.',
         status: 'completed',
-        teamLead: 'الناز تقوی (مدیر هنری)',
         estimatedDays: 5,
         tools: ['Pinterest', 'Illustrator', 'Photoshop'],
         subtasks: [
@@ -458,7 +443,6 @@ export const ProjectRoadmapPlan: React.FC = () => {
         title: 'طراحی نشانه، لوگوتایپ و اقلام ست اداری',
         description: 'طراحی اتودهای اولیه لوگو، بازبینی کانسپت‌ها، ترسیم مهندسی نشانه و طراحی کارت ویزیت و سربرگ.',
         status: 'in_progress',
-        teamLead: 'الناز تقوی',
         estimatedDays: 10,
         tools: ['Adobe Illustrator', 'Vector Math'],
         subtasks: [
@@ -470,10 +454,9 @@ export const ProjectRoadmapPlan: React.FC = () => {
       {
         id: 'gen_03',
         phaseNumber: 'فاز ۰۳',
-        title: 'تدوین دفترچه راهنمای هویت بصری برند (Brand Book)',
+        title: 'تدوین دفترچه راهنمای هویت بصری برند',
         description: 'قوانین استفاده از لوگو، فضای تنفس، کاربردهای مجاز و غیرمجاز، پالت رنگی چاپی CMYK و فرمت‌های خروجی.',
         status: 'pending',
-        teamLead: 'رضا کمالی',
         estimatedDays: 7,
         tools: ['InDesign', 'PDF Interactive'],
         subtasks: [
@@ -484,14 +467,22 @@ export const ProjectRoadmapPlan: React.FC = () => {
     ];
   };
 
+  // The phases are a suggested template: every step starts open and nobody is pre-assigned.
+  const templateTasks = (domain: DomainType, branch: 'wp' | 'custom'): AgentPlanTask[] =>
+    getInitialTasks(domain, branch).map(task => ({
+      ...task,
+      status: 'pending' as AgentPlanStatus,
+      subtasks: task.subtasks.map(subtask => ({ ...subtask, status: 'pending' as AgentPlanStatus })),
+    }));
+
   // State of the tasks in the current view
-  const [tasks, setTasks] = useState<AgentPlanTask[]>(() => 
-    getInitialTasks(activeDomain, webBranch)
+  const [tasks, setTasks] = useState<AgentPlanTask[]>(() =>
+    templateTasks(activeDomain, webBranch)
   );
 
   // Update tasks whenever activeDomain or webBranch changes
   useEffect(() => {
-    setTasks(getInitialTasks(activeDomain, webBranch));
+    setTasks(templateTasks(activeDomain, webBranch));
   }, [activeDomain, webBranch]);
 
   // Handle task status changes from AgentPlan
@@ -565,17 +556,9 @@ export const ProjectRoadmapPlan: React.FC = () => {
     ? Math.round((completedSubtasksCount / totalSubtasks) * 100) 
     : 0;
 
-  // Sync with project context if project exists
-  useEffect(() => {
-    if (currentProject && updateProject) {
-      // Keep project progress updated smoothly
-      if (Math.abs((currentProject.progress || 0) - overallProgressPercentage) > 3) {
-        updateProject(currentProject.id, {
-          progress: overallProgressPercentage
-        });
-      }
-    }
-  }, [overallProgressPercentage, currentProject, updateProject]);
+  // The checklist above is a planning template kept in this view only. It must
+  // never write the project: the server derives progress from real tasks, so a
+  // write here was rejected, re-rendered and retried in an endless loop.
 
   return (
     <div dir="rtl" className="w-full text-right font-vazirmatn">
@@ -623,7 +606,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
-                <span>وردپرس (WordPress)</span>
+                <span>وردپرس</span>
               </button>
 
               <button
@@ -635,7 +618,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
                 }`}
               >
                 <Code size={13} />
-                <span>توسعه اختصاصی (Custom Code)</span>
+                <span>توسعه اختصاصی</span>
               </button>
             </div>
           )}
@@ -653,11 +636,12 @@ export const ProjectRoadmapPlan: React.FC = () => {
                   <Layers size={18} />
                 </span>
                 <div>
-                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                    {`جریان و رودمپ اجرایی: ${DOMAIN_OPTIONS.find(d => d.id === activeDomain)?.label || 'توسعه وب‌سایت'}`}
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    {`الگوی پیشنهادی مراحل: ${DOMAIN_OPTIONS.find(d => d.id === activeDomain)?.label || 'توسعه وب‌سایت'}`}
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200/70 dark:border-amber-800/60">الگو</span>
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
-                    فازهای متوالی پروژه با قابلیت گسترش، تیک‌زدن وظایف، محاسبه خودکار پیشرفت و مانیتورینگ متولیان
+                    یک چک‌لیست راهنما برای برنامه‌ریزی. تیک‌ها فقط در همین صفحه نگه داشته می‌شوند و پیشرفت واقعی پروژه از وظایف آن محاسبه می‌شود.
                   </p>
                 </div>
               </div>
@@ -666,9 +650,9 @@ export const ProjectRoadmapPlan: React.FC = () => {
             {/* Overall Progress Meter */}
             <div className="flex items-center gap-3 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 shrink-0 self-start lg:self-auto">
               <div className="text-left">
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 block font-medium">پیشرفت کلی</span>
-                <span className="text-xs font-black font-mono text-slate-800 dark:text-slate-100">
-                  {overallProgressPercentage}٪
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block font-medium">پیشرفت چک‌لیست</span>
+                <span className="text-xs font-black text-slate-800 dark:text-slate-100">
+                  {String(overallProgressPercentage).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)])}٪
                 </span>
               </div>
               <div className="w-24 sm:w-32 h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
@@ -714,12 +698,12 @@ export const ProjectRoadmapPlan: React.FC = () => {
               </span>
 
               <button
-                onClick={() => setTasks(getInitialTasks(activeDomain, webBranch))}
+                onClick={() => setTasks(templateTasks(activeDomain, webBranch))}
                 className="inline-flex items-center gap-1 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer mr-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900/40"
-                title="بازنشانی فازها به حالت پیش‌فرض"
+                title="پاک کردن همهٔ تیک‌ها"
               >
                 <RotateCcw size={12} />
-                <span>بازنشانی پیش‌فرض</span>
+                <span>پاک کردن تیک‌ها</span>
               </button>
             </div>
           </div>

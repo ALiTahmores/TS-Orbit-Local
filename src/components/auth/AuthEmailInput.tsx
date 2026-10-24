@@ -63,7 +63,7 @@ export const AuthEmailInput: React.FC<AuthEmailInputProps> = ({
           autoFocus
           value={emailHandle}
           onChange={(e) => setEmailHandle(e.target.value.replace(/\s+/g, ''))}
-          placeholder={isRtl ? "مثال: alitahmores" : "e.g. username"}
+          placeholder={isRtl ? "ایمیل یا نام کاربری" : "Email or username"}
           className="flex-1 h-full px-3 bg-transparent text-slate-100 placeholder-slate-500 text-xs font-mono outline-none text-left border-none focus:outline-none focus:ring-0"
           dir="ltr"
         />

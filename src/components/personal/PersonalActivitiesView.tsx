@@ -29,6 +29,7 @@ export const PersonalActivitiesView: React.FC = () => {
   const activityLogs = projectContext?.activityLogs || [];
   const locale = projectContext?.locale || 'fa';
   const isRtl = locale === 'fa';
+  const getRoleLabel = projectContext.getRoleLabel;
 
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'task' | 'comment' | 'system'>('all');
 
@@ -121,7 +122,7 @@ export const PersonalActivitiesView: React.FC = () => {
           </div>
           <div className="text-xs">
             <div className="font-bold text-slate-900 dark:text-slate-100">{currentUser?.name || 'کاربر سیستم'}</div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400">{currentUser?.role || 'عضو تیم'}</div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400">{getRoleLabel(currentUser?.role)}</div>
           </div>
         </div>
       </div>
@@ -131,7 +132,7 @@ export const PersonalActivitiesView: React.FC = () => {
         <div className="flex justify-between items-center text-xs font-black text-slate-800 dark:text-slate-100">
           <span className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-500" />
-            {isRtl ? 'نمودار فعالیت‌های اخیر من (Activity Intensity)' : 'Recent Activity Heatmap'}
+            {isRtl ? 'نمودار فعالیت‌های اخیر من' : 'Recent Activity Heatmap'}
           </span>
           <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[11px] bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
             {toPersianDigits(myActivities.length)} {isRtl ? 'فعالیت ثبتی اخیر' : 'total logs'}

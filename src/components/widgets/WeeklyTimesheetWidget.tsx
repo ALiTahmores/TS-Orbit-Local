@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, Play, Calendar, ChevronLeft, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Clock, ArrowUpRight } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 
 const toPersianDigits = (n: string | number): string => {
@@ -7,17 +7,43 @@ const toPersianDigits = (n: string | number): string => {
   return n.toString().replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d, 10)]);
 };
 
+const DAY = 24 * 60 * 60 * 1000;
+const WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
+const formatHours = (hours: number) => {
+  const minutes = Math.round(hours * 60);
+  return toPersianDigits(`${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`);
+};
+
 export interface WeeklyTimesheetWidgetProps {
   className?: string;
   borderless?: boolean;
 }
 
+/** Hours logged on this workspace's tasks during the current week (Saturday to Friday). */
 export const WeeklyTimesheetWidget: React.FC<WeeklyTimesheetWidgetProps> = ({
   className = '',
   borderless = false,
 }) => {
-  const { setActiveTab, setActiveSubTab, locale } = useProject();
+  const { setActiveTab, setActiveSubTab, locale, tasks } = useProject();
   const isRtl = locale === 'fa';
+
+  const week = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const start = new Date(today.getTime() - ((today.getDay() + 1) % 7) * DAY); // Saturday
+    const days = Array.from({ length: 7 }, () => 0);
+    for (const task of tasks || []) for (const entry of (task as any)?.timeEntries || []) {
+      const at = new Date(entry?.createdAt || entry?.date || '');
+      const hours = Number(entry?.hours) || 0;
+      if (Number.isNaN(at.getTime()) || hours <= 0) continue;
+      const index = Math.floor((at.getTime() - start.getTime()) / DAY);
+      if (index >= 0 && index < 7) days[index] += hours;
+    }
+    const total = days.reduce((sum, hours) => sum + hours, 0);
+    const elapsed = Math.min(7, Math.floor((today.getTime() - start.getTime()) / DAY) + 1);
+    const label = (date: Date) => date.toLocaleDateString('fa-IR', { day: 'numeric', month: 'long' });
+    return { days, total, average: total / elapsed, max: Math.max(...days, 0), range: `${label(start)} تا ${label(new Date(start.getTime() + 6 * DAY))}`, todayIndex: elapsed - 1 };
+  }, [tasks]);
 
   const containerClasses = borderless
     ? `bg-transparent border-0 p-0 shadow-none font-sans flex flex-col justify-between space-y-4 w-full ${className}`
@@ -25,86 +51,53 @@ export const WeeklyTimesheetWidget: React.FC<WeeklyTimesheetWidgetProps> = ({
 
   return (
     <div className={containerClasses} dir={isRtl ? 'rtl' : 'ltr'}>
-      {/* HEADER */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
         <div className="flex items-center gap-2.5">
           <Clock className="w-5 h-5 text-blue-500 shrink-0" />
           <div>
-            <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
-              کارکرد و تایمشیت هفته
-            </h3>
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block mt-0.5">
-              هفته جاری ({toPersianDigits('۱۰')} تا {toPersianDigits('۱۶')} مرداد ۱۴۰۵)
-            </span>
+            <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">کارکرد ثبت‌شدهٔ این هفته</h3>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block mt-0.5">{week.range}</span>
           </div>
         </div>
-
         <button
           type="button"
-          onClick={() => {
-            setActiveTab('tasks');
-            setActiveSubTab('timeline');
-          }}
-          className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/50 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0"
+          onClick={() => { setActiveTab('tasks'); setActiveSubTab('kanban_board'); }}
+          className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1 shrink-0"
         >
-          <span>مشاهده گزارش</span>
+          <span>وظایف</span>
           <ArrowUpRight size={13} />
         </button>
       </div>
 
-      {/* METRICS SUMMARY */}
-      <div className="space-y-3">
-        {/* Main Hour Badge */}
-        <div className="p-3.5 rounded-xl bg-gradient-to-br from-blue-50/80 to-indigo-50/50 dark:from-blue-950/30 dark:to-slate-800/60 border border-blue-100 dark:border-blue-900/40 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">
-              مجموع کارکرد ثبت شده
-            </span>
-            <div className="text-lg font-black text-blue-600 dark:text-blue-400 font-mono mt-0.5">
-              {toPersianDigits('۴۲:۳۰')} <span className="text-xs font-sans font-bold">ساعت</span>
-            </div>
-          </div>
-
-          <div className="text-left font-mono">
-            <span className="text-[10px] font-bold text-slate-400 block">میانگین روزانه</span>
-            <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300">
-              {toPersianDigits('۸:۳۰')} ساعت/روز
-            </span>
+      <div className="p-3.5 rounded-xl bg-gradient-to-br from-blue-50/80 to-indigo-50/50 dark:from-blue-950/30 dark:to-slate-800/60 border border-blue-100 dark:border-blue-900/40 flex items-center justify-between">
+        <div>
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">مجموع ثبت‌شده</span>
+          <div className="text-lg font-black text-blue-600 dark:text-blue-400 font-mono mt-0.5">
+            {formatHours(week.total)} <span className="text-xs font-sans font-bold">ساعت</span>
           </div>
         </div>
-
-        {/* ACTIVE TIMER STATUS */}
-        <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-            </span>
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              تایمر فعال: کدنویسی ماژول پرداخت
-            </span>
-          </div>
-
-          <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/60">
-            {toPersianDigits('۰۱:۴۵:۱۲')}
-          </span>
-        </div>
-
-        {/* DAILY BREAKDOWN PROGRESS MINI BARS */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex justify-between text-[10px] font-bold text-slate-400">
-            <span>توزیع روزانه کارکرد:</span>
-            <span className="font-mono text-slate-600 dark:text-slate-300">شن - چ‍ه</span>
-          </div>
-          <div className="grid grid-cols-5 gap-1.5 h-7 items-end bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-lg">
-            <div className="bg-blue-500 h-[80%] rounded-xs" title="شنبه: ۸ ساعت" />
-            <div className="bg-blue-500 h-[95%] rounded-xs" title="یکشنبه: ۹.۵ ساعت" />
-            <div className="bg-blue-500 h-[70%] rounded-xs" title="دوشنبه: ۷ ساعت" />
-            <div className="bg-blue-500 h-[90%] rounded-xs" title="سه‌شنبه: ۹ ساعت" />
-            <div className="bg-emerald-500 h-[100%] rounded-xs animate-pulse" title="چهارشنبه (در حال ثبت)" />
-          </div>
+        <div className="text-left">
+          <span className="text-[10px] font-bold text-slate-400 block">میانگین روزانه</span>
+          <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300">{formatHours(week.average)} ساعت</span>
         </div>
       </div>
+
+      {week.total === 0 ? (
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+          هنوز زمانی در این هفته ثبت نشده است. زمان کار را از بخش «ثبت زمان» در جزئیات هر وظیفه ثبت کنید.
+        </p>
+      ) : (
+        <div className="grid grid-cols-7 gap-1.5 h-12 items-end bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-lg" aria-label="توزیع روزانهٔ کارکرد">
+          {week.days.map((hours, index) => (
+            <div
+              key={WEEKDAYS[index]}
+              title={`${WEEKDAYS[index]}: ${formatHours(hours)} ساعت`}
+              className={`rounded-xs ${index === week.todayIndex ? 'bg-emerald-500' : 'bg-blue-500'} ${hours === 0 ? 'opacity-25' : ''}`}
+              style={{ height: `${week.max ? Math.max(8, hours / week.max * 100) : 8}%` }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

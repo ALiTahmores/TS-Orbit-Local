@@ -100,6 +100,10 @@ export function createAuth(options: AuthOptions) {
   };
   const requireSystemAdmin = (req: any, res: Response, next: NextFunction) => req.user?.systemRole === 'ADMIN' ? next() : fail(res, 403, 'FORBIDDEN', 'این عملیات به مجوز مدیریت سیستم نیاز دارد.');
   const limited = (group: string, maximum: number) => (req: Request, res: Response, next: NextFunction) => {
+    // prepareCredentials and the route both apply the limit; count each request once.
+    const counted: Set<string> = ((req as any).rateLimitGroups ??= new Set());
+    if (counted.has(group)) return next();
+    counted.add(group);
     const now = Date.now(), key = group + ':' + (req.ip || 'local');
     if (limits.size > 1000) for (const [storedKey, value] of limits) if (value.until <= now) limits.delete(storedKey);
     let entry = limits.get(key);
@@ -126,6 +130,48 @@ export function createAuth(options: AuthOptions) {
     const token = jwt.sign({ userId: user.id, sid: id, jti: tokenId }, jwtSecret, { algorithm: 'HS256', subject: user.id, issuer, audience: appOrigin, expiresIn: lifetimeSeconds });
     return token;
   };
+  // Compare unknown accounts against a real bcrypt hash too, reducing timing leakage.
+  const dummyHash = bcrypt.hashSync(randomBytes(32).toString('hex'), 12);
+  // bcrypt at cost 12 takes ~250 ms of CPU. Sign-in and registration do it here, before the
+  // request joins the serialized storage queue and with the async implementation, so one
+  // sign-in no longer stalls every other API request. The route reuses a result only for
+  // the exact password and stored hash it was computed from, and otherwise checks again.
+  // Hashes run one at a time: bcryptjs yields every ~100 ms, and parallel hashes would all
+  // run within the same event-loop turn, stalling other requests for their combined time.
+  let passwordQueue: Promise<unknown> = Promise.resolve(), queuedPasswords = 0;
+  const serially = <T>(task: () => Promise<T>): Promise<T> => {
+    queuedPasswords++;
+    const run = passwordQueue.then(task, task).finally(() => { queuedPasswords--; });
+    passwordQueue = run.catch(() => undefined);
+    return run;
+  };
+  const prepareLogin = async (req: any) => {
+    const parsed = loginInput.safeParse(req.body);
+    if (!parsed.success) return;
+    const user = findUser(parsed.data.identifier || parsed.data.email || parsed.data.username!);
+    const hash = typeof user?.passwordHash === 'string' ? user.passwordHash : dummyHash;
+    req.passwordCheck = { password: parsed.data.password, hash, correct: await serially(() => bcrypt.compare(parsed.data.password, hash)) };
+  };
+  const prepareRegistration = async (req: any) => {
+    const parsed = registerInput.safeParse(req.body);
+    if (!parsed.success || state.users.some(user => identity(user.email || '') === parsed.data.email)) return;
+    req.preparedPassword = { password: parsed.data.password, hash: await serially(() => bcrypt.hash(parsed.data.password, 12)) };
+  };
+  const prepareCredentials = (req: any, res: Response, next: NextFunction) => {
+    if (req.method !== 'POST' || (req.path !== '/login' && req.path !== '/register')) return next();
+    const login = req.path === '/login';
+    limited(login ? 'login' : 'register', login ? 20 : 10)(req, res, () => {
+      // About 15 s of queued hashing; beyond that, ask the client to retry rather than queue.
+      if (queuedPasswords >= 64) { res.setHeader('Retry-After', '5'); return fail(res, 503, 'AUTH_BUSY', 'سرور در حال پردازش ورودهای دیگر است؛ چند لحظه بعد دوباره تلاش کنید.'); }
+      // A failure here only means the route computes the hash itself, as before.
+      (login ? prepareLogin(req) : prepareRegistration(req)).catch(() => undefined).then(() => next());
+    });
+  };
+  const passwordMatches = (req: any, candidate: string, hash: string) => {
+    const check = req.passwordCheck;
+    if (check && check.password === candidate && check.hash === hash) return check.correct === true;
+    return bcrypt.compareSync(candidate, hash);
+  };
 
   router.post('/check-username', limited('lookup', 60), (req, res) => {
     const parsed = z.object({ username }).strict().safeParse(req.body);
@@ -147,7 +193,7 @@ export function createAuth(options: AuthOptions) {
     if (state.users.some(user => identity(user.username || '') === chosenUsername)) return fail(res, 409, 'USERNAME_TAKEN', 'نام کاربری قبلاً ثبت شده است.');
     const id = 'usr_' + randomUUID(), workspaceId = 'ws_' + randomUUID(), createdAt = new Date().toISOString();
     const membership = { workspaceId, workspaceName: `فضای کاری ${input.name}`, role: 'OWNER', permissions: ['*'], joinedAt: createdAt };
-    const user = { id, email: input.email, name: input.name, fullName: input.name, firstName: input.name.split(/\s+/)[0], lastName: input.name.split(/\s+/).slice(1).join(' '), username: chosenUsername, phone: input.phone, passwordHash: bcrypt.hashSync(input.password, 12), role: 'USER', systemRole: 'USER', status: 'ACTIVE', accountStatus: 'ACTIVE', approvalStatus: 'approved', approvedRole: 'USER', requestedRole: 'USER', isActive: true, localPasswordRequired: false, personalWorkspaceId: workspaceId, workspace: workspaceId, memberships: [membership], createdAt, updatedAt: createdAt, avatar: localAvatar(id), emailVerified: false, loginCount: 0 };
+    const user = { id, email: input.email, name: input.name, fullName: input.name, firstName: input.name.split(/\s+/)[0], lastName: input.name.split(/\s+/).slice(1).join(' '), username: chosenUsername, phone: input.phone, passwordHash: (req as any).preparedPassword?.password === input.password ? (req as any).preparedPassword.hash : bcrypt.hashSync(input.password, 12), role: 'USER', systemRole: 'USER', status: 'ACTIVE', accountStatus: 'ACTIVE', approvalStatus: 'approved', approvedRole: 'USER', requestedRole: 'USER', isActive: true, localPasswordRequired: false, personalWorkspaceId: workspaceId, workspace: workspaceId, memberships: [membership], createdAt, updatedAt: createdAt, avatar: localAvatar(input.name), emailVerified: false, loginCount: 0 };
     const workspace = { id: workspaceId, name: membership.workspaceName, ownerId: id, inviteCode: randomBytes(16).toString('hex'), createdAt, members: [{ userId: id, name: user.name, email: user.email, username: user.username, phone: user.phone, avatar: user.avatar, role: 'OWNER', permissions: ['*'], joinedAt: createdAt }] };
     state.users.push(user); state.workspaces.push(workspace);
     state.userProfiles.push({ id: 'prof_' + randomUUID(), userId: id, fullName: input.name, emailAddress: input.email, phoneNumber: input.phone, assignedWorkspace: workspaceId, assignedRole: 'USER', currentStatus: 'ACTIVE', registrationDate: createdAt });
@@ -157,13 +203,11 @@ export function createAuth(options: AuthOptions) {
     const token = issueSession(req, user);
     return res.status(201).json({ token, user: publicUserProjection(user), workspace });
   });
-  // Compare unknown accounts against a real bcrypt hash too, reducing timing leakage.
-  const dummyHash = bcrypt.hashSync(randomBytes(32).toString('hex'), 12);
   router.post('/login', limited('login', 20), (req, res) => {
     const parsed = loginInput.safeParse(req.body);
     if (!parsed.success) return fail(res, 400, 'VALIDATION_FAILED', 'شناسه و رمز عبور معتبر را وارد کنید.');
     const input = parsed.data, user = findUser(input.identifier || input.email || input.username!);
-    const correct = bcrypt.compareSync(input.password, typeof user?.passwordHash === 'string' ? user.passwordHash : dummyHash);
+    const correct = passwordMatches(req, input.password, typeof user?.passwordHash === 'string' ? user.passwordHash : dummyHash);
     if (!correct || !user || user.localPasswordRequired || !isAccountActive(user)) {
       if (user) {
         const history = { id: 'lh_' + randomUUID(), userId: user.id, email: user.email, sessionId: null, loginDate: new Date().toISOString(), loginTime: new Date().toISOString(), loginResult: 'Failed', ipAddress: req.ip || 'local' };
@@ -212,5 +256,5 @@ export function createAuth(options: AuthOptions) {
     res.json({ success: true, user: publicUserProjection(user), requiresLogin: identityChanged });
   });
   router.post(['/forgot-password', '/reset-password', '/verify-email'], limited('recovery', 10), (_req, res) => fail(res, 409, 'LOCAL_RECOVERY_REQUIRED', 'بازیابی حساب فقط روی سیستم میزبان با دستور npm run local:account -- set-password --email EMAIL انجام می‌شود.'));
-  return { router, authenticateToken, requireSystemAdmin, publicUserProjection, verifyAccessToken, revokeSession, revokeUserSessions, isAccountActive };
+  return { router, prepareCredentials, authenticateToken, requireSystemAdmin, publicUserProjection, verifyAccessToken, revokeSession, revokeUserSessions, isAccountActive };
 }

@@ -1,3 +1,4 @@
+import { formatJalaliDateTime } from '../lib/dates';
 import React, { useState, useMemo } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { 
@@ -234,7 +235,7 @@ export const NotificationsView: React.FC = () => {
                   </p>
 
                   <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono pt-0.5">
-                    {notification.timestamp}
+                    {formatJalaliDateTime(notification.timestamp) || notification.timestamp}
                   </div>
                 </div>
               </div>

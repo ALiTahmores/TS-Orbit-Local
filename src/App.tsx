@@ -3,21 +3,38 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import {portalAddress} from './lib/portal';
+import { lazyNamed } from './lib/lazy';
+import { acceptPendingInvite, captureInviteFromUrl } from './lib/pendingInvite';
 import { ProjectProvider, useProject } from './context/ProjectContext';
 import { LoadingProvider } from './components/loading/LoadingProvider';
-import { Layout } from './components/Layout';
-import { DashboardView } from './components/DashboardView';
-import { AuthPortal } from './components/AuthPortal';
-import { ClientPortalPage } from './components/ClientPortalPage';
 import ClickSpark from './components/ui/ClickSpark';
 import { SmartRefreshNotifier } from './components/common/SmartRefreshNotifier';
 import { useSmartRefresh } from './hooks/useSmartRefresh';
 
+// The sign-in page, the public client portal and the workspace shell are separate
+// entry points; visitors download only the one they open.
+const Layout = lazyNamed(() => import('./components/Layout'), 'Layout');
+const DashboardView = lazyNamed(() => import('./components/DashboardView'), 'DashboardView');
+const AuthPortal = lazyNamed(() => import('./components/AuthPortal'), 'AuthPortal');
+const ClientPortalPage = lazyNamed(() => import('./components/ClientPortalPage'), 'ClientPortalPage');
+
+const ScreenFallback = () => (
+  <div className="min-h-screen w-full flex items-center justify-center bg-bg-app" role="status" aria-busy="true">
+    <span className="h-8 w-8 rounded-full border-2 border-brand-accent/30 border-t-brand-accent animate-spin" />
+    <span className="sr-only">در حال بارگذاری…</span>
+  </div>
+);
+
 function AppContent() {
   const { isAuthenticated, currentUser, refreshAllData } = useProject();
+  // Captured before the sign-in page renders, so it can tell the visitor about the invite.
+  const [inviteCode] = React.useState(captureInviteFromUrl);
   const [address,setAddress]=React.useState(()=>window.location.href);
+  React.useEffect(() => {
+    if (isAuthenticated && currentUser?.id && inviteCode) void acceptPendingInvite(inviteCode).catch(() => undefined);
+  }, [isAuthenticated, currentUser?.id, inviteCode]);
   React.useEffect(()=>{const changed=()=>setAddress(window.location.href);window.addEventListener('popstate',changed);window.addEventListener('hashchange',changed);return()=>{window.removeEventListener('popstate',changed);window.removeEventListener('hashchange',changed);};},[]);
 
   // Task 2: Smart Data Refresh Notification System
@@ -80,7 +97,9 @@ export default function App() {
   return (
     <LoadingProvider>
       <ProjectProvider>
-        <AppWithSpark />
+        <Suspense fallback={<ScreenFallback />}>
+          <AppWithSpark />
+        </Suspense>
       </ProjectProvider>
     </LoadingProvider>
   );

@@ -225,7 +225,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
           </div>
 
           {/* SECTION 1: Executive KPI Header */}
-          <div class="section-header">بخش ۱: شاخص‌های کلیدی عملکرد ارشد (Executive KPI Summary)</div>
+          <div class="section-header">بخش ۱: شاخص‌های کلیدی عملکرد ارشد</div>
           <div class="kpi-grid">
             <div class="kpi-card">
               <div class="kpi-label">کل پروژه‌های فعال سازمان</div>
@@ -250,7 +250,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
 
           {/* SECTION 2: Active Client Projects Status Matrix */}
           ${rep.clientProjectsMatrix && rep.clientProjectsMatrix.length > 0 ? `
-            <div class="section-header">بخش ۲: ماتریس وضعیت پروژه‌ها و وب‌سایت‌های مشتریان (Client Projects Matrix)</div>
+            <div class="section-header">بخش ۲: ماتریس وضعیت پروژه‌ها و وب‌سایت‌های مشتریان</div>
             <table class="table">
               <thead>
                 <tr>
@@ -269,7 +269,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
                     <td style="text-align: center; font-weight: bold; direction: ltr;">${p.progress}٪</td>
                     <td style="text-align: center;">
                       <span class="status-badge status-${p.status}">
-                        ${p.statusLabel || (p.status === 'on_track' ? 'در مسیر (On-Track)' : p.status === 'at_risk' ? 'در معرض ریسک' : 'دارای تأخیر')}
+                        ${p.statusLabel || (p.status === 'on_track' ? 'در مسیر' : p.status === 'at_risk' ? 'در معرض ریسک' : 'دارای تأخیر')}
                       </span>
                     </td>
                     <td>${p.manager}</td>
@@ -281,7 +281,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
 
           {/* SECTION 3: Departmental Performance Breakdown */}
           ${rep.departmentBreakdown && rep.departmentBreakdown.length > 0 ? `
-            <div class="section-header">بخش ۳: تفکیک راندمان و عملکرد دپارتمان‌ها (Departmental Breakdown)</div>
+            <div class="section-header">بخش ۳: تفکیک راندمان و عملکرد دپارتمان‌ها</div>
             <table class="table">
               <thead>
                 <tr>
@@ -307,7 +307,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
           ` : ''}
 
           {/* SECTION 4: Individual & Workload Bottleneck Analysis */}
-          <div class="section-header" style="color: #b91c1c; border-right-color: #dc2626;">بخش ۴: تحلیل گلوگاه‌ها و انباشت کاری اعضای تیم (Bottlenecks & Overload)</div>
+          <div class="section-header" style="color: #b91c1c; border-right-color: #dc2626;">بخش ۴: تحلیل گلوگاه‌ها و انباشت کاری اعضای تیم</div>
           ${rep.memberBottlenecks && rep.memberBottlenecks.length > 0 ? `
             <table class="table" style="border-color: #fca5a5;">
               <thead>
@@ -344,7 +344,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
 
           {/* SECTION 5: Strategic Recommendations & Action Plan */}
           ${rep.keyTakeaways && rep.keyTakeaways.length > 0 ? `
-            <div class="section-header" style="color: #15803d; border-right-color: #16a34a;">بخش ۵: توصیه‌های استراتژیک و برنامه اقدام مدیران (Action Plan & Takeaways)</div>
+            <div class="section-header" style="color: #15803d; border-right-color: #16a34a;">بخش ۵: توصیه‌های استراتژیک و برنامه اقدام مدیران</div>
             <div class="takeaway-box">
               <ul style="margin: 0; padding-right: 18px;">
                 ${rep.keyTakeaways.map(k => `<li style="margin-bottom: 6px; font-weight: bold;">${k}</li>`).join('')}
@@ -356,15 +356,15 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
             نسخه رسمی گزارش ۳۶۰ درجه هوشمند آژانس - صادر شده جهت تصمیم‌گیری مدیران ارشد و تخصیص منابع
           </div>
         </div>
-        <script>
-          window.onload = function() { window.print(); }
-        </script>
       </body>
       </html>
     `;
 
     printWindow.document.write(html);
     printWindow.document.close();
+    // Printed from here: the Content-Security-Policy blocks inline scripts in the report window.
+    printWindow.focus();
+    printWindow.print();
   };
 
   return (
@@ -609,7 +609,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
                     <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden">
                       <div 
                         className={`h-full rounded-full ${isAgencyScope ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                        style={{ width: `${rep.metrics?.velocity || 100}%` }}
+                        style={{ width: `${Math.min(100, rep.projectSummary?.avgProgress || 0)}%` }}
                       />
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, ArrowUpRight, TrendingUp, Compass, Activity, CheckCircle, Clock } from 'lucide-react';
+import { priorityKey, priorityLabel } from '../lib/taskLabels';
 
 interface ComponentProps {
   children?: React.ReactNode;
@@ -133,22 +134,23 @@ export const ProjectCard: React.FC<ComponentProps & {
 // 4. TaskCard: Modern list task checklist block
 export const TaskCard: React.FC<ComponentProps & {
   title: string;
-  priority?: 'high' | 'medium' | 'low';
+  priority?: string;
   assignedTo?: string;
   onComplete?: () => void;
 }> = ({ title, priority = 'medium', assignedTo, onComplete, className = "", id }) => {
+  const level = priorityKey(priority);
   return (
-    <div 
+    <div
       id={id}
       className={`p-3 bg-surface-primary dark:bg-[#1A1A24] border border-border-primary/85 dark:border-white/5 rounded-xl flex items-center justify-between gap-3 hover:border-brand-accent/25 transition-all group ${className}`}
     >
       <div className="flex items-center gap-2">
         <span className={`text-[8.5px] font-black px-1.5 py-0.5 rounded ${
-          priority === 'high' 
-            ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400' 
+          level === 'critical' || level === 'high'
+            ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400'
             : 'bg-blue-500/10 text-blue-500 dark:text-blue-400'
         }`}>
-          {priority === 'high' ? 'فوری' : 'عادی'}
+          {priorityLabel(priority)}
         </span>
         {assignedTo && (
           <span className="text-[9px] text-text-secondary dark:text-slate-400 font-mono">
@@ -180,36 +182,34 @@ export const TeamCard: React.FC<ComponentProps & {
   role: string;
   isOnline?: boolean;
   taskCount?: number;
-}> = ({ name, role, isOnline = true, taskCount = 0, className = "", id }) => {
+}> = ({ name, role, isOnline = false, taskCount = 0, className = "", id }) => {
   return (
-    <div 
+    <div
       id={id}
-      className={`p-3 bg-surface-primary dark:bg-[#1A1A24] border border-border-primary/85 dark:border-white/5 rounded-xl flex items-center justify-between hover:border-brand-accent/15 transition-all ${className}`}
+      className={`p-3 bg-surface-primary dark:bg-[#1A1A24] border border-border-primary/85 dark:border-white/5 rounded-xl flex items-center justify-between gap-2 hover:border-brand-accent/15 transition-all ${className}`}
     >
-      <div className="flex items-center gap-1.5">
-        <span className="text-[9.5px] font-mono text-text-secondary dark:text-slate-400">
-          {taskCount} کار
-        </span>
-      </div>
-
-      <div className="flex items-center gap-2.5">
-        <div className="text-right">
-          <h4 className="text-xs font-black text-text-primary dark:text-white leading-tight">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="relative shrink-0">
+          <div className="w-8 h-8 rounded-full bg-brand-accent/15 dark:bg-[#155DFC]/20 text-text-primary dark:text-white flex items-center justify-center font-bold text-xs border border-border-primary/50">
+            {Array.from(name.trim())[0] || '?'}
+          </div>
+          {isOnline && (
+            <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-surface-primary dark:border-[#1A1A24] rounded-full" />
+          )}
+        </div>
+        <div className="min-w-0">
+          <h4 className="text-xs font-black text-text-primary dark:text-white leading-tight truncate">
             {name}
           </h4>
-          <p className="text-[9px] text-text-secondary dark:text-slate-400 uppercase font-black">
+          <p className="text-[10px] text-text-secondary dark:text-slate-400 font-bold truncate">
             {role}
           </p>
         </div>
-        <div className="relative shrink-0">
-          <div className="w-8 h-8 rounded-full bg-brand-accent/15 dark:bg-[#155DFC]/20 text-text-primary dark:text-white flex items-center justify-center font-bold text-xs border border-border-primary/50">
-            {name.substring(0, 1)}
-          </div>
-          {isOnline && (
-            <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-surface-primary dark:border-[#1A1A24] rounded-full animate-pulse" />
-          )}
-        </div>
       </div>
+
+      <span className="text-[10px] font-bold text-text-secondary dark:text-slate-400 shrink-0">
+        {taskCount ? `${String(taskCount).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)])} وظیفهٔ باز` : 'بدون وظیفهٔ باز'}
+      </span>
     </div>
   );
 };

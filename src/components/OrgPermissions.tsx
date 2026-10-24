@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useProject } from '../context/ProjectContext';
-import * as LucideIcons from 'lucide-react';
+import { Shield } from 'lucide-react';
+import { iconByName } from '../lib/icons';
 
 const ACTIONS_LIST = [
   { id: 'create', label: 'ایجاد تسک/مدرک', icon: 'PlusCircle' },
@@ -26,7 +27,7 @@ export const OrgPermissions: React.FC = () => {
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
 
   const renderIcon = (name: string, size = 14, className = "") => {
-    const IconComp = (LucideIcons as any)[name] || LucideIcons.Shield;
+    const IconComp = iconByName(name, Shield);
     return <IconComp size={size} className={className} />;
   };
 
@@ -138,7 +139,7 @@ export const OrgPermissions: React.FC = () => {
                         </div>
                         <div>
                           <span>{team.name}</span>
-                          <span className="block text-[8px] text-text-secondary font-mono mt-0.5">{team.id}</span>
+                          
                         </div>
                       </td>
                       {ACTIONS_LIST.map(act => {

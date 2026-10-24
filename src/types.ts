@@ -615,7 +615,7 @@ export interface Workspace {
 export interface User {
   id: string;
   name: string;
-  username: string; // Unique Handle (e.g. "tahmores")
+  username: string; // Unique handle (e.g. "sara")
   email: string;
   phone: string; // +98...
   avatar?: string;

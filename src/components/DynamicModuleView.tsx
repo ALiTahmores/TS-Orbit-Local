@@ -1,7 +1,9 @@
+import { formatJalaliDateTime } from '../lib/dates';
 import { apiFetch } from '../lib/api';
 import React, { useState } from 'react';
 import { useProject } from '../context/ProjectContext';
-import * as LucideIcons from 'lucide-react';
+import { Box } from 'lucide-react';
+import { iconByName } from '../lib/icons';
 
 interface DynamicModuleViewProps {
   instanceId: string;
@@ -31,7 +33,7 @@ export const DynamicModuleView: React.FC<DynamicModuleViewProps> = ({ instanceId
   const records: any[] = inst.config?.records || [];
 
   const renderIcon = (name: string, size = 16, className = "") => {
-    const IconComp = (LucideIcons as any)[name] || LucideIcons.Box;
+    const IconComp = iconByName(name, Box);
     return <IconComp size={size} className={className} />;
   };
 
@@ -138,17 +140,17 @@ export const DynamicModuleView: React.FC<DynamicModuleViewProps> = ({ instanceId
                   {fields.map(f => (
                     <th key={f} className="pb-2 text-right">{f}</th>
                   ))}
-                  <th className="pb-2 text-left">کد رهگیری</th><th>عملیات</th>
+                  <th className="pb-2 text-left">عملیات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-primary/30">
                 {records.map((rec: any) => (
                   <tr key={rec.id} className="hover:bg-hover-overlay/40 transition-colors">
-                    <td className="py-3 pr-2 text-text-secondary font-mono text-[10px]">{rec.createdAt}</td>
+                    <td className="py-3 pr-2 text-text-secondary font-mono text-[10px]">{formatJalaliDateTime(rec.createdAt)}</td>
                     {fields.map(f => (
                       <td key={f} className="py-3 text-text-primary font-bold">{rec.data[f] || '—'}</td>
                     ))}
-                    <td className="py-3 text-left font-mono text-[10px] text-text-secondary">{rec.id}</td><td><button type="button" onClick={()=>{setEditingId(rec.id);setRecordForm(rec.data);setIsAdding(true);}} className="p-2 text-blue-600">ویرایش</button><button type="button" onClick={()=>deleteRecord(rec.id)} className="p-2 text-red-600">حذف</button></td>
+                    <td><button type="button" onClick={()=>{setEditingId(rec.id);setRecordForm(rec.data);setIsAdding(true);}} className="p-2 text-blue-600">ویرایش</button><button type="button" onClick={()=>deleteRecord(rec.id)} className="p-2 text-red-600">حذف</button></td>
                   </tr>
                 ))}
               </tbody>

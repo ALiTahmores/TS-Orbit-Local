@@ -336,23 +336,23 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
     });
   }, [projects, searchQuery, statusFilter, categoryFilter, sortField, sortOrder]);
 
+  // Opening a project selects it everywhere and shows its own page.
   const handleSelectAndEnter = (project: Project) => {
     setSelectedProject(project);
     if (onNavigateToOverview) {
       onNavigateToOverview();
+    } else {
+      setSettingProject(project);
     }
   };
 
-  const handleOpenProjectUrlOrNavigate = (project: Project) => {
-    if (project.websiteUrl && project.websiteUrl.trim().length > 0) {
-      let url = project.websiteUrl.trim();
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = `https://${url}`;
-      }
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } else {
-      handleSelectAndEnter(project);
+  const handleOpenProjectUrl = (project: Project) => {
+    let url = (project.websiteUrl || '').trim();
+    if (!url) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `https://${url}`;
     }
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleConfirmDelete = async () => {
@@ -421,6 +421,11 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
         );
     }
   };
+
+  // Entering or leaving a project page starts at its top, not at the list's scroll position.
+  useEffect(() => {
+    document.getElementById('main-scroll-viewport')?.scrollTo({ top: 0 });
+  }, [settingProject?.id]);
 
   if (settingProject) {
     return (
@@ -584,9 +589,13 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                           </div>
                           <div className="min-w-0 flex-1">
                             <Tooltip content={project.title}>
-                              <span className="font-extrabold text-slate-800 dark:text-slate-100 text-xs block max-w-[180px] sm:max-w-[260px] xl:max-w-[320px] truncate cursor-default">
+                              <button
+                                type="button"
+                                onClick={() => handleSelectAndEnter(project)}
+                                className="font-extrabold text-slate-800 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline text-xs block max-w-[180px] sm:max-w-[260px] xl:max-w-[320px] truncate text-right cursor-pointer"
+                              >
                                 {project.title}
-                              </span>
+                              </button>
                             </Tooltip>
                             {project.description && (
                               <Tooltip content={project.description}>
@@ -613,7 +622,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                       <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap text-slate-500 dark:text-slate-400">
                         <div className="flex items-center justify-center gap-1.5">
                           <Calendar size={13} className="text-slate-400 shrink-0" />
-                          <span>{toPersianDigits(project.startDate || '1403/01/01')}</span>
+                          <span>{project.startDate ? toPersianDigits(project.startDate) : '—'}</span>
                         </div>
                       </td>
 
@@ -621,7 +630,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                       <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap text-slate-500 dark:text-slate-400">
                         <div className="flex items-center justify-center gap-1.5">
                           <Clock size={13} className="text-slate-400 shrink-0" />
-                          <span>{toPersianDigits(project.deadline || '1403/12/29')}</span>
+                          <span>{project.deadline ? toPersianDigits(project.deadline) : '—'}</span>
                         </div>
                       </td>
 
@@ -655,12 +664,13 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                       {/* Actions Column */}
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
-                          <button type="button" aria-label={'انتخاب پروژه '+project.title} onClick={()=>handleSelectAndEnter(project)} className="p-1.5 border rounded-xl text-xs text-blue-600">انتخاب</button>
-                          <Tooltip content="مشاهده سایت">
+                          <Tooltip content={project.websiteUrl?.trim() ? 'مشاهده سایت' : 'آدرس وب‌سایت برای این پروژه ثبت نشده است'}>
                             <button
                               type="button"
-                              onClick={() => handleOpenProjectUrlOrNavigate(project)}
-                              className="p-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white dark:bg-blue-950/40 dark:hover:bg-blue-600 text-blue-600 dark:text-blue-400 rounded-xl transition-all cursor-pointer border border-blue-200/80 dark:border-blue-900/40 shrink-0"
+                              disabled={!project.websiteUrl?.trim()}
+                              aria-label={'مشاهده سایت ' + project.title}
+                              onClick={() => handleOpenProjectUrl(project)}
+                              className="p-1.5 bg-blue-50 hover:bg-blue-600 hover:text-white dark:bg-blue-950/40 dark:hover:bg-blue-600 text-blue-600 dark:text-blue-400 rounded-xl transition-all cursor-pointer border border-blue-200/80 dark:border-blue-900/40 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-50 disabled:hover:text-blue-600"
                             >
                               <ExternalLink size={14} />
                             </button>

@@ -1,3 +1,4 @@
+import { formatJalaliDate } from '../../lib/dates';
 import { assignedIds } from '../../lib/domain';
 import { LocalImage } from '../common/LocalImage';
 import React, { useState, useMemo } from 'react';
@@ -29,6 +30,7 @@ import {
 import { useProjectContext } from '../../context/ProjectContext';
 import { Task, SubTask } from '../../types';
 import { cn } from '../../lib/utils';
+import { priorityKey, priorityLabel, statusLabel } from '../../lib/taskLabels';
 import { CreateTaskModal } from '../tasks/CreateTaskModal';
 import { TaskDetailModal } from '../tasks/TaskDetailModal';
 import { TaskFullDetailView } from '../tasks/TaskFullDetailView';
@@ -71,25 +73,25 @@ export const MyTasksView: React.FC = () => {
     { 
       id: 'PENDING', 
       aliases: ['PENDING', 'pending', 'TODO', 'todo', 'To-do'], 
-      title: isRtl ? 'در انتظار (To-do)' : 'To-do', 
+      title: statusLabel('pending', isRtl ? 'fa' : 'en'),
       color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' 
     },
     { 
       id: 'IN_PROGRESS', 
       aliases: ['IN_PROGRESS', 'inprogress', 'in_progress', 'On Progress', 'In Progress'], 
-      title: isRtl ? 'در حال انجام (In Progress)' : 'In Progress', 
+      title: statusLabel('inprogress', isRtl ? 'fa' : 'en'),
       color: 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400' 
     },
     { 
       id: 'UNDER_REVIEW', 
       aliases: ['UNDER_REVIEW', 'review', 'under_review', 'In Review'], 
-      title: isRtl ? 'در حال بازبینی (In Review)' : 'In Review', 
+      title: statusLabel('review', isRtl ? 'fa' : 'en'),
       color: 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400' 
     },
     { 
       id: 'COMPLETED', 
       aliases: ['COMPLETED', 'completed', 'done', 'Done', 'Completed'], 
-      title: isRtl ? 'تکمیل شده (Completed)' : 'Completed', 
+      title: statusLabel('completed', isRtl ? 'fa' : 'en'),
       color: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400' 
     },
     { id: 'BLOCKED', aliases: ['blocked', 'BLOCKED'], title: isRtl ? 'مسدود' : 'Blocked', color: 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' },
@@ -132,7 +134,7 @@ export const MyTasksView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-black text-slate-900 dark:text-slate-100">
-            {isRtl ? 'تسک‌های من (My Tasks)' : 'My Tasks'}
+            {isRtl ? 'تسک‌های من' : 'My Tasks'}
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
             {isRtl ? 'تقویم زمانبندی و بورد مدیریت کلیه وظایف محوله' : 'Interactive Date-Driven Timeline & Kanban Matrix'}
@@ -170,7 +172,7 @@ export const MyTasksView: React.FC = () => {
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-              {isRtl ? 'تقویم و گانت وظایف (Task Calendar)' : 'Task Calendar'}
+              {isRtl ? 'تقویم و گانت وظایف' : 'Task Calendar'}
             </h3>
             {selectedDate && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
@@ -235,7 +237,7 @@ export const MyTasksView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            {isRtl ? 'تمام وظایف (All Tasks)' : 'All Tasks'}
+            {isRtl ? 'تمام وظایف' : 'All Tasks'}
           </h2>
           <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400">
             {displayTasks.length} {isRtl ? 'تسک' : 'tasks'}
@@ -257,7 +259,7 @@ export const MyTasksView: React.FC = () => {
                     : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
                 )}
               >
-                {p === 'ALL' ? (isRtl ? 'همه' : 'All') : p}
+                {p === 'ALL' ? (isRtl ? 'همه' : 'All') : priorityLabel(p, isRtl ? 'fa' : 'en')}
               </button>
             ))}
           </div>
@@ -380,14 +382,14 @@ export const MyTasksView: React.FC = () => {
                           <div className="flex items-center gap-1 mb-2.5">
                             <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                               <Calendar className="w-2.5 h-2.5" />
-                              <span>{task.dueDate || task.deadline || '—'}</span>
+                              <span>{formatJalaliDate((task as any).deadlineCanonical || (task as any).dueDateCanonical || task.dueDate || task.deadline) || '—'}</span>
                             </span>
                             {task.priority && (
                               <span className={cn(
                                 "text-[9px] font-black px-1.5 py-0.5 rounded-md",
-                                task.priority === 'Urgent' ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' : 'bg-slate-100 text-slate-500'
+                                priorityKey(task.priority) === 'critical' ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400' : 'bg-slate-100 text-slate-500'
                               )}>
-                                {task.priority}
+                                {priorityLabel(task.priority, isRtl ? 'fa' : 'en')}
                               </span>
                             )}
                           </div>
@@ -400,7 +402,7 @@ export const MyTasksView: React.FC = () => {
                           {/* Progress Bar with Dynamic % */}
                           <div className="space-y-1 mb-3">
                             <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold">
-                              <span>Progress: {taskProgress}%</span>
+                              <span>{isRtl ? 'پیشرفت' : 'Progress'}: {taskProgress}%</span>
                             </div>
                             <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                               <div 
@@ -475,14 +477,14 @@ export const MyTasksView: React.FC = () => {
                     </td>
                     <td className="p-4">
                       <span className="px-2.5 py-1 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 font-bold text-[11px]">
-                        {task.status || 'To-do'}
+                        {statusLabel(task.status, isRtl ? 'fa' : 'en')}
                       </span>
                     </td>
                     <td className="p-4 font-mono text-slate-500">
-                      {task.dueDate || task.deadline || '—'}
+                      {formatJalaliDate((task as any).deadlineCanonical || (task as any).dueDateCanonical || task.dueDate || task.deadline) || '—'}
                     </td>
                     <td className="p-4 font-bold text-rose-500">
-                      {task.priority || 'Medium'}
+                      {priorityLabel(task.priority, isRtl ? 'fa' : 'en')}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
@@ -537,13 +539,13 @@ export const MyTasksView: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">{t.title}</h4>
-                    <span className="text-[10px] text-slate-400 font-mono">{t.dueDate || 'Feb 14, 2027'}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">{formatJalaliDate((t as any).deadlineCanonical || (t as any).dueDateCanonical || t.dueDate || t.deadline) || (isRtl ? 'بدون سررسید' : 'No due date')}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4">
                   <span className="px-2.5 py-1 rounded-xl bg-slate-200 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                    {t.status || 'To-do'}
+                    {statusLabel(t.status, isRtl ? 'fa' : 'en')}
                   </span>
                   <button 
                     type="button"

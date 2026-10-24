@@ -131,7 +131,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
   const passwordRules = [
     {
       id: 'length',
-      label: isRtl ? 'حداقل ۱۲ کاراکتر و حداکثر ۷۲ بایت' : '12+ characters, up to 72 UTF-8 bytes',
+      label: isRtl ? 'حداقل ۱۲ کاراکتر (حداکثر ۷۲ حرف لاتین)' : '12+ characters, up to 72 UTF-8 bytes',
       valid: currentPassword.length >= 12 && new TextEncoder().encode(currentPassword).length <= 72,
     },
     {
@@ -267,7 +267,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
               <p className={cn('text-xs text-white/60', isRtl ? 'text-right' : 'text-left')}>
                 {currentStep === 1 && (isRtl ? 'نام و شناسه یکتای اختصاصی جهت یافتن شما در فضاهای کاری' : 'Unique identity to discover you across workspaces')}
                 {currentStep === 2 && (isRtl ? 'شماره همراه جهت بازیابی، ورود و جستجوی همکاران' : 'Phone for workspace invites, recovery, and login')}
-                {currentStep === 3 && (isRtl ? 'حداقل ۱۲ کاراکتر و حداکثر ۷۲ بایت امنیتی شامل حروف بزرگ، کوچک، عدد و نماد' : 'Must meet all security criteria below')}
+                {currentStep === 3 && (isRtl ? 'حداقل ۱۲ کاراکتر (حداکثر ۷۲ حرف لاتین)، شامل حروف بزرگ و کوچک، عدد و نماد' : 'Must meet all security criteria below')}
               </p>
 
               {/* ========================================================
@@ -291,7 +291,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
                         id="name_input"
                         type="text"
                         dir={isRtl ? 'rtl' : 'ltr'}
-                        placeholder={isRtl ? 'مثلاً: علی طهمورثی' : 'e.g. John Doe'}
+                        placeholder={isRtl ? 'مثلاً: سارا محمدی' : 'e.g. Sara Mohammadi'}
                         value={formData['name'] || ''}
                         onChange={(e) => onInputChange?.('name', e.target.value)}
                         autoFocus
@@ -347,7 +347,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
                         id="username_input"
                         type="text"
                         dir="ltr"
-                        placeholder={isRtl ? 'alitahmores' : 'username'}
+                        placeholder="username"
                         value={rawUsername}
                         onChange={(e) => {
                           const clean = e.target.value.replace(/^@/, '').replace(/[^a-zA-Z0-9_]/g, '');

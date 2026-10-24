@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { CustomSelect, CustomSelectOption } from './common/CustomSelect';
-import * as LucideIcons from 'lucide-react';
+import { Box, Sparkles } from 'lucide-react';
+import { iconByName } from '../lib/icons';
 
 const MODULE_ICONS_LIST = [
-  { value: 'Box', label: 'ماژول استاندارد (Box)' },
-  { value: 'Layers', label: 'لایه‌ها (Layers)' },
-  { value: 'Database', label: 'پایگاه داده (Database)' },
-  { value: 'Folder', label: 'پوشه (Folder)' },
-  { value: 'FileText', label: 'اسناد (FileText)' },
-  { value: 'CheckSquare', label: 'تسک‌ها (CheckSquare)' },
-  { value: 'Sliders', label: 'تنظیمات (Sliders)' },
-  { value: 'Grid', label: 'جدول (Grid)' },
+  { value: 'Box', label: 'ماژول استاندارد' },
+  { value: 'Layers', label: 'لایه‌ها' },
+  { value: 'Database', label: 'پایگاه داده' },
+  { value: 'Folder', label: 'پوشه' },
+  { value: 'FileText', label: 'اسناد' },
+  { value: 'CheckSquare', label: 'تسک‌ها' },
+  { value: 'Sliders', label: 'تنظیمات' },
+  { value: 'Grid', label: 'جدول' },
 ];
 
 const detectIconByKeywords = (name: string): string => {
@@ -99,7 +100,7 @@ export const OrgBuilder: React.FC = () => {
   const [modIcon, setModIcon] = useState('Box');
   const [modColor, setModColor] = useState('#10B981');
   const [modDesc, setModDesc] = useState('');
-  const [modFields, setModFields] = useState<string>('["عنوان تسک", "توضیحات", "وضعیت"]');
+  const [modFields, setModFields] = useState<string>('عنوان\nتوضیحات\nوضعیت');
 
   // Form States - Module Instantiation
   const [instModDefId, setInstModDefId] = useState('');
@@ -131,7 +132,7 @@ export const OrgBuilder: React.FC = () => {
   };
 
   const renderIcon = (name: string, size = 16, className = "") => {
-    const IconComp = (LucideIcons as any)[name] || LucideIcons.Box;
+    const IconComp = iconByName(name, Box);
     return <IconComp size={size} className={className} />;
   };
 
@@ -158,9 +159,9 @@ export const OrgBuilder: React.FC = () => {
     e.preventDefault();
     if (!modName.trim()) return;
     let structure = {};
-    try {
-      structure = { fields: JSON.parse(modFields) };
-    } catch { setFormError('ساختار فیلدها باید یک آرایه JSON معتبر باشد.');return; }
+    const fields = [...new Set(modFields.split(/[\n،,]/).map(field => field.trim()).filter(Boolean))];
+    if (!fields.length) { setFormError('دست‌کم یک فیلد وارد کنید.'); return; }
+    structure = { fields };
     await perform(()=>(editingModule ? updateModuleDefinition(editingModule,{
       name: modName,
       icon: modIcon,
@@ -361,7 +362,7 @@ export const OrgBuilder: React.FC = () => {
                           {renderIcon(mod.icon, 16)}
                         </div>
                         <div>
-                          <h4 className="text-xs font-black text-text-primary">{mod.name}</h4><button type="button" onClick={()=>{setEditingModule(mod.id);setModName(mod.name);setModDesc(mod.description || '');setModIcon(mod.icon);setModColor(mod.color);setModFields(JSON.stringify(mod.structure?.fields || []));}} className="text-xs text-blue-600">ویرایش</button>
+                          <h4 className="text-xs font-black text-text-primary">{mod.name}</h4><button type="button" onClick={()=>{setEditingModule(mod.id);setModName(mod.name);setModDesc(mod.description || '');setModIcon(mod.icon);setModColor(mod.color);setModFields((mod.structure?.fields || []).join('\n'));}} className="text-xs text-blue-600">ویرایش</button>
                           <p className="text-[10px] text-text-secondary mt-1">{mod.description || 'بدون توضیحات'}</p>
                         </div>
                       </div>
@@ -391,8 +392,7 @@ export const OrgBuilder: React.FC = () => {
                           <th className="pb-2">عنوان نمونه</th>
                           <th className="pb-2">نوع ماژول</th>
                           <th className="pb-2">دپارتمان میزبان</th>
-                          <th className="pb-2">شناسه تخصیص</th>
-                        </tr>
+                                                  </tr>
                       </thead>
                       <tbody className="divide-y divide-border-primary/30">
                         {moduleInstances.map((inst: any) => {
@@ -410,8 +410,7 @@ export const OrgBuilder: React.FC = () => {
                                 </span>
                               </td>
                               <td className="py-2.5 text-text-secondary">{dept?.name || 'ناشناس'}</td>
-                              <td className="py-2.5 font-mono text-[10px]">{inst.id}</td>
-                            </tr>
+                                                          </tr>
                           );
                         })}
                       </tbody>
@@ -537,7 +536,7 @@ export const OrgBuilder: React.FC = () => {
                 {/* Quick-Start Department Templates (Auto-fill Chips) */}
                 <div className="space-y-1.5 pb-1 border-b border-border-primary/40">
                   <div className="flex items-center gap-1.5 text-[10px] text-text-secondary font-bold">
-                    <LucideIcons.Sparkles size={12} className="text-amber-500 shrink-0" />
+                    <Sparkles size={12} className="text-amber-500 shrink-0" />
                     <span>پیشنهادهای متداول:</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -604,7 +603,7 @@ export const OrgBuilder: React.FC = () => {
                         {renderIcon(deptIcon || detectIconByKeywords(deptName), 15, "text-[#155DFC]")}
                         <span className="text-[10px] text-text-secondary font-medium">شناسایی هوشمند</span>
                       </div>
-                      <LucideIcons.Sparkles size={12} className="text-amber-500 shrink-0" />
+                      <Sparkles size={12} className="text-amber-500 shrink-0" />
                     </div>
                   </div>
                 </div>
@@ -686,13 +685,15 @@ export const OrgBuilder: React.FC = () => {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-bold">ساختار فیلدهای داده (آرایه JSON)</label>
-                    <input
-                      type="text"
-                      value={modFields}
-                      onChange={(e) => setModFields(e.target.value)}
-                      className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs font-mono text-left"
-                    />
+                    <label htmlFor="module-fields" className="text-[10px] text-text-secondary font-bold">فیلدهای فرم (هر فیلد در یک خط)</label>
+                  <textarea
+                    id="module-fields"
+                    rows={4}
+                    value={modFields}
+                    onChange={(e) => setModFields(e.target.value)}
+                    placeholder={'مثلاً:\nنام مشتری\nتاریخ تماس\nنتیجه'}
+                    className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs leading-relaxed"
+                  />
                   </div>
 
                   <button

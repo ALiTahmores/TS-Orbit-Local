@@ -1,3 +1,4 @@
+import { formatJalaliDate } from '../lib/dates';
 import { publicFetch as apiFetch } from '../lib/api';
 import { downloadAsset,uploadAsset,canPreviewAsset,type ManagedAsset } from '../lib/assets';
 import {AssetImagePreview} from './assets/AssetImagePreview';
@@ -49,15 +50,15 @@ const texts = {
   fa: {
     loading: 'در حال بارگذاری اطلاعات پورتال کارفرما...',
     notFoundTitle: 'پورتال کارفرما یافت نشد',
-    notFoundDesc: 'لینک دسترسی نامعتبر است یا پورتال کارفرما توسط آژانس غیرفعال شده است.',
+    notFoundDesc: 'این لینک معتبر نیست. لطفاً لینک جدید را از تیم پروژه بگیرید.',
     disabledTitle: 'پورتال غیرفعال است',
-    disabledDesc: 'لینک دسترسی نامعتبر است یا پورتال کارفرما توسط آژانس غیرفعال شده است.',
-    previewBanner: 'حالت پیش‌نمایش مدیر آژانس (دیدگاه کارفرما)',
+    disabledDesc: 'دسترسی به این پورتال فعلاً بسته است. برای دسترسی دوباره با تیم پروژه تماس بگیرید.',
+    previewBanner: 'پیش‌نمایش: این صفحه را کارفرما همین‌طور می‌بیند',
     exitPreview: 'خروج از پیش‌نمایش',
     returnAdmin: 'بازگشت به پنل مدیریت',
     portalTag: 'پورتال اختصاصی کارفرما',
     progress: 'پیشرفت پروژه',
-    roadmapTab: 'روند پیشرفت و فازبندی (Roadmap)',
+    roadmapTab: 'روند پیشرفت',
     filesTab: 'اسناد و فایل‌های تحویلی',
     feedbackTab: 'ثبت و پیگیری بازخورد',
     objectivesTitle: 'توضیحات و اهداف کلیدی پروژه',
@@ -67,7 +68,7 @@ const texts = {
     startDate: 'تاریخ شروع پروژه',
     activeStatus: 'وضعیت اجرای پروژه',
     activeLabel: 'در حال اجرای فعال',
-    milestonesTitle: 'گام‌های اجرایی و سنگ‌نشانی‌های پروژه (Milestones)',
+    milestonesTitle: 'گام‌های اجرایی پروژه',
     noTasks: 'گام‌های اجرایی به زودی توسط مدیر پروژه بروزرسانی خواهند شد.',
     completed: 'تکمیل‌شده',
     inProgress: 'در حال اجرا',
@@ -78,7 +79,7 @@ const texts = {
     noFiles: 'هنوز فایلی در این بخش بارگذاری نشده است.',
     submitFeedbackTitle: 'ثبت بازخورد یا درخواست تغییرات جدید',
     senderName: 'نام فرستنده / کارفرما',
-    senderPlaceholder: 'مثلاً: رضا کریمی',
+    senderPlaceholder: 'نام شما',
     category: 'دسته‌بندی موضوعی',
     catDesign: 'طراحی گرافیک و UI/UX',
     catTechnical: 'فنی، برنامه‌نویسی و عملکرد',
@@ -86,25 +87,25 @@ const texts = {
     catGeneral: 'نظرات و پیشنهادات عمومی',
     feedbackMsg: 'متن دقیق بازخورد یا تغییرات درخواستی',
     feedbackPlaceholder: 'توضیحات کامل خود درباره تغییرات، اصلاحات گرافیکی یا باگ‌های مشاهده‌شده را وارد کنید...',
-    submitBtn: 'ارسال بازخورد برای آژانس',
+    submitBtn: 'ارسال بازخورد',
     submitting: 'در حال ثبت...',
     submitSuccess: 'بازخورد شما با موفقیت در پروژه ثبت شد.',
     feedbackHistoryTitle: 'سابقه و وضعیت بازخوردهای ارسالی شما',
-    agencyReply: 'پاسخ‌دهی مستقیم تیم آژانس',
+    agencyReply: 'پاسخ تیم پروژه',
     noFeedback: 'هنوز هیچ بازخوردی ثبت نکرده‌اید.',
     statusResolved: 'برطرف شده ✅',
     statusInProgress: 'در حال بررسی 🛠',
     statusPending: 'در انتظار بررسی ⏳',
-    footer: 'پورتال اختصاصی تعامل کارفرما • ارائه شده توسط آژانس دیجیتال مارکتینگ طهمورث',
+    footer: 'پورتال اختصاصی کارفرما • ساخته‌شده با TS Orbit',
     tasksSuffix: 'تسک'
   },
   en: {
     loading: 'Loading Client Portal information...',
     notFoundTitle: 'Client Portal Not Found',
-    notFoundDesc: 'The access link is invalid or the portal has been disabled by the agency.',
+    notFoundDesc: 'This link is not valid. Please ask the project team for a new one.',
     disabledTitle: 'Portal Disabled',
-    disabledDesc: 'The access link is invalid or the portal has been disabled by the agency.',
-    previewBanner: 'Agency Admin Preview Mode (Client View)',
+    disabledDesc: 'Access to this portal is currently closed. Contact the project team to reopen it.',
+    previewBanner: 'Preview: this is what your client sees',
     exitPreview: 'Exit Preview',
     returnAdmin: 'Back to Admin',
     portalTag: 'Client Dedicated Portal',
@@ -138,16 +139,16 @@ const texts = {
     catGeneral: 'General Feedback',
     feedbackMsg: 'Detailed Feedback or Change Request',
     feedbackPlaceholder: 'Provide full details regarding design revisions, content updates, or issues observed...',
-    submitBtn: 'Submit Feedback to Agency',
+    submitBtn: 'Send feedback',
     submitting: 'Submitting...',
     submitSuccess: 'Your feedback was saved to the project.',
     feedbackHistoryTitle: 'Feedback History & Status',
-    agencyReply: 'Direct Agency Response',
+    agencyReply: 'Project team reply',
     noFeedback: 'No feedback submitted yet.',
     statusResolved: 'Resolved ✅',
     statusInProgress: 'In Progress 🛠',
     statusPending: 'Pending ⏳',
-    footer: 'Client Dedicated Interaction Portal • Powered by Tahmores Digital Marketing Agency',
+    footer: 'Client portal • Built with TS Orbit',
     tasksSuffix: 'tasks'
   }
 };
@@ -374,15 +375,18 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
               <span>{lang === 'fa' ? 'EN' : 'فا'}</span>
             </button>
 
-            {/* RETURN TO ADMIN BUTTON */}
-            <button 
-              onClick={handleReturnToAdmin}
-              className="px-3.5 py-2.5 min-h-[44px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs shrink-0"
-              title={txt.returnAdmin}
-            >
-              {lang === 'fa' ? <ArrowLeft size={14} /> : <ArrowRight size={14} />}
-              <span className="hidden sm:inline">{txt.returnAdmin}</span>
-            </button>
+            {/* RETURN TO ADMIN: only for a signed-in team member, never for the client */}
+            {(isPreview ? !onClosePreview : privateContext.isAuthenticated) && (
+              <button
+                type="button"
+                onClick={handleReturnToAdmin}
+                className="px-3.5 py-2.5 min-h-[44px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs shrink-0"
+                title={txt.returnAdmin}
+              >
+                {lang === 'fa' ? <ArrowLeft size={14} /> : <ArrowRight size={14} />}
+                <span className="hidden sm:inline">{txt.returnAdmin}</span>
+              </button>
+            )}
 
             {/* PROGRESS METRIC (DESKTOP) */}
             <div className="hidden md:flex items-center gap-3 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 px-4 py-2 rounded-2xl shrink-0">
@@ -483,7 +487,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold">{txt.deadline}</span>
                     <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
                       <Calendar size={13} />
-                      {formatNum(project.deadline)}
+                      {(lang === 'fa' ? formatJalaliDate(project.deadline) : project.deadline && new Date(project.deadline).toLocaleDateString('en-US', { dateStyle: 'medium' })) || '—'}
                     </span>
                   </div>
                 </div>
@@ -501,7 +505,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 p-3.5 rounded-2xl">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">{txt.startDate}</span>
-                  <span className="text-sm font-black text-slate-900 dark:text-slate-100 mt-1 block">{formatNum(project.startDate)}</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-slate-100 mt-1 block">{(lang === 'fa' ? formatJalaliDate(project.startDate) : project.startDate && new Date(project.startDate).toLocaleDateString('en-US', { dateStyle: 'medium' })) || '—'}</span>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 p-3.5 rounded-2xl">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">{txt.activeStatus}</span>

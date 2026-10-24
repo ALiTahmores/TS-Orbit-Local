@@ -202,6 +202,11 @@ html, body {
   font-family: "Inter", sans-serif;
 }
 
+/* URLs, emails, codes and other left-to-right text keep Latin digits. */
+[dir="ltr"], [dir="ltr"] *, code, kbd, samp, pre, input[type="email"], input[type="url"] {
+  font-feature-settings: "ss01" 0;
+}
+
 html:not(.dark), html:not(.dark) body {
   background-color: var(--bg-app);
   color: var(--text-primary);

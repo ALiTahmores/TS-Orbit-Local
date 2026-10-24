@@ -4,6 +4,8 @@ import React, { useState, useMemo } from 'react';
 import { Project, StatusLog, ClientFeedback } from '../../types';
 import { useProject } from '../../context/ProjectContext';
 import { CustomSelect, CustomSelectOption } from '../common/CustomSelect';
+import { JalaliDateInput } from '../common/JalaliDateInput';
+import { formatJalaliDate, formatJalaliDateTime } from '../../lib/dates';
 import { PublicClientPortal } from '../PublicClientPortal';
 import { 
   ArrowRight, 
@@ -64,15 +66,16 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
     toggleClientPortal, 
     regenerateClientToken, 
     updateFeedbackStatus, 
-    deleteFeedback 
+    deleteFeedback,
+    getRoleLabel
   } = useProject();
 
   const teamOptions: CustomSelectOption[] = useMemo(() => {
     if (teamMembers && teamMembers.length > 0) {
-      return teamMembers.map(m => ({ value: m.id || m.name, label: `${m.name} (${m.role})` }));
+      return teamMembers.map(m => ({ value: m.id || m.name, label: `${m.name} — ${getRoleLabel(m.role)}` }));
     }
     return [];
-  }, [teamMembers]);
+  }, [teamMembers, getRoleLabel]);
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'all' | 'general' | 'stats' | 'audit' | 'portal'>(initialTab);
@@ -85,7 +88,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
   const initialLeadId = useMemo(() => {
     if (project.teamLeadId) return project.teamLeadId;
     if (project.teamLead) {
-      const match = teamMembers?.find(m => m.name === project.teamLead || `${m.name} (${m.role})` === project.teamLead);
+      const match = teamMembers?.find(m => m.name === project.teamLead || `${m.name} (${m.role})` === project.teamLead || `${m.name} — ${getRoleLabel(m.role)}` === project.teamLead);
       if (match) return match.id;
       return ''; 
     }
@@ -106,7 +109,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
   );
   const [status, setStatus] = useState<string>(({ACTIVE:'active',IN_PROGRESS:'in_progress',DRAFT:'pending',COMPLETED:'completed',CANCELLED:'canceled',ARCHIVED:'archived'}[project.status] || project.status || 'active'));
   const [startDate, setStartDate] = useState(project.startDate || '');
-  const [deadline, setDeadline] = useState(project.deadline || '');
+  const [deadline, setDeadline] = useState(String((project as any).deadlineCanonical || project.deadline || '').slice(0, 10));
   const [budget, setBudget] = useState(project.budget || '');
   const [isBudgetConfidential, setIsBudgetConfidential] = useState<boolean>(
     project.isBudgetConfidential !== undefined ? project.isBudgetConfidential : true
@@ -161,7 +164,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
     setIsSaving(true);setSavedSuccess(false);setSaveError('');
     try {
       const matchedMember = teamMembers?.find(m => m.id === teamLead || m.name === teamLead);
-      const teamLeadName = matchedMember ? `${matchedMember.name} (${matchedMember.role})` : teamLead;
+      const teamLeadName = matchedMember ? `${matchedMember.name} — ${getRoleLabel(matchedMember.role)}` : teamLead;
       const teamLeadId = matchedMember ? matchedMember.id : teamLead;
 
       const finalMembers = Array.from(new Set([
@@ -412,7 +415,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
               <div className="space-y-1.5">
                 <label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Globe size={14} className="text-blue-500" />
-                  <span>آدرس وبسایت / دامنه پروژه (Website URL)</span>
+                  <span>آدرس وبسایت / دامنه پروژه</span>
                 </label>
                 <input
                   type="url"
@@ -443,7 +446,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
               <div className="space-y-1.5 md:col-span-2">
                 <label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <User size={14} className="text-slate-400" />
-                  <span>مدیر / راهبر ارشد پروژه (Team Lead)</span>
+                  <span>مدیر / راهبر ارشد پروژه</span>
                 </label>
                 <CustomSelect
                   options={teamOptions}
@@ -457,7 +460,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
               <div className="md:col-span-2 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 rounded-2xl space-y-3">
                 <div className="flex items-center gap-2 text-xs font-black text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700/80 pb-2">
                   <Shield size={16} className="text-blue-500" />
-                  <span>سطوح دسترسی و تخصیص پروژه (Zero-Trust Access Control)</span>
+                  <span>سطوح دسترسی و تخصیص پروژه</span>
                 </div>
 
                 {/* ASSIGNED MEMBERS */}
@@ -467,12 +470,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                     <span>اعضای تخصیص‌یافته به پروژه (دسترس‌پذیر برای اعضا)</span>
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                    {(teamMembers && teamMembers.length > 0 ? teamMembers : [
-                      { id: 'user_owner', name: 'علی طهمورث', role: 'OWNER' },
-                      { id: 'user_rezaei', name: 'امیرحسین رضایی', role: 'راهبر فنی' },
-                      { id: 'user_mohammadi', name: 'سارا محمدی', role: 'مدیر محتوا' },
-                      { id: 'user_akbari', name: 'علیرضا اکبری', role: 'متخصص سئو' },
-                    ]).map(m => {
+                    {(teamMembers || []).map(m => {
                       const mId = m.id || m.name;
                       const isAssigned = assignedMemberIds.includes(mId);
                       return (
@@ -527,15 +525,9 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
               <div className="space-y-1.5">
                 <label className="text-xs font-extrabold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Clock size={14} className="text-slate-400" />
-                  <span>تاریخ سررسید / ددلاین تحویل</span>
+                  <span>سررسید پروژه</span>
                 </label>
-                <input
-                  type={/^\d{4}-\d{2}-\d{2}$/.test(deadline) || !deadline ? 'date' : 'text'}
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-800 dark:text-slate-100 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-                  placeholder="1403/12/29"
-                />
+                <JalaliDateInput value={deadline} onChange={setDeadline} ariaLabel="سررسید پروژه" placeholder="بدون سررسید" className="[&>button]:h-11 [&>button]:rounded-2xl" />
               </div>
 
               {/* Budget */}
@@ -625,7 +617,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 <div className="flex justify-between items-center text-xs font-black">
                   <span className="text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                     <Activity size={15} className="text-blue-600" />
-                    <span>میزان پیشرفت کلی پروژه (Physical Completion)</span>
+                    <span>میزان پیشرفت کلی پروژه</span>
                   </span>
                   <span className="font-mono text-blue-600 dark:text-blue-400 text-sm">
                     {toPersianDigits(progressPct)}٪
@@ -640,9 +632,9 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 </div>
 
                 <div className="flex justify-between items-center text-[11px] text-slate-400 font-medium pt-1">
-                  <span>شروع پروژه ({toPersianDigits(startDate)})</span>
+                  <span>شروع: {formatJalaliDate(startDate) || '—'}</span>
                   <span>{toPersianDigits(completedTasksCount)} از {toPersianDigits(totalTasksCount)} وظیفه تکمیل شده</span>
-                  <span>سررسید ({toPersianDigits(deadline)})</span>
+                  <span>سررسید: {formatJalaliDate(deadline) || '—'}</span>
                 </div>
               </div>
 
@@ -692,8 +684,8 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 </div>
                 <div>
                   <span className="text-[11px] text-slate-400 font-bold block">مهلت تحویل پروژه</span>
-                  <span className="text-xs font-black text-slate-800 dark:text-slate-100 font-mono">
-                    {toPersianDigits(deadline)}
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-100">
+                    {formatJalaliDate(deadline) || 'تعیین نشده'}
                   </span>
                 </div>
               </div>
@@ -736,8 +728,8 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
 
                         <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
                           <Clock size={12} className="text-blue-500" />
-                          <span>{toPersianDigits(log.timestamp)}</span>
-                          {log.username && <span className="mr-2 text-slate-400">({log.username})</span>}
+                          <span>{formatJalaliDateTime(log.timestamp)}</span>
+                          {log.username && <span className="mr-2 text-slate-400" dir="ltr">@{log.username}</span>}
                         </div>
                       </div>
 

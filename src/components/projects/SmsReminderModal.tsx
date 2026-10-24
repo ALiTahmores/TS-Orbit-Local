@@ -1,3 +1,4 @@
+import { formatJalaliDate } from '../../lib/dates';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useProject } from '../../context/ProjectContext';
@@ -204,7 +205,7 @@ export const SmsReminderModal: React.FC<SmsReminderModalProps> = ({
             </div>
             <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 font-bold mt-1">
               <span>ددلاین پروژه:</span>
-              <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black">{project.deadline || '۱۴۰۵/۰۵/۲۰'}</span>
+              <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black">{formatJalaliDate(project.deadline) || 'تعیین نشده'}</span>
             </div>
           </div>
 

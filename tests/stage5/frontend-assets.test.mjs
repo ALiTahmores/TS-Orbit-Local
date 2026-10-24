@@ -37,7 +37,7 @@ test('identity change during body download cannot create a URL or download anoth
  authorize();let release,created=0;URL.createObjectURL=()=>{created++;return 'blob:forbidden';};const stream=new ReadableStream({start(controller){release=()=>{controller.enqueue(new TextEncoder().encode('old private bytes'));controller.close();};}});globalThis.fetch=async()=>new Response(stream);const pending=assets.downloadAsset({id:'old-file',name:'old.txt'});await Promise.resolve();await Promise.resolve();api.setApiIdentity('user-2','workspace-2');release();await assert.rejects(pending,error=>error.code==='STALE_REQUEST');assert.equal(created,0);
 });
 test('missing legacy content cannot fake a download; explicit public helper rejects private routes',async()=>{
- let fetched=0;globalThis.fetch=async()=>{fetched++;return new Response('');};await assert.rejects(assets.downloadAsset({id:'legacy',name:'old.pdf',contentAvailable:false}),/قدیمی/);assert.throws(()=>api.publicFetch('/api/files'),error=>error.code==='INVALID_PUBLIC_URL');assert.equal(fetched,0);
+ let fetched=0;globalThis.fetch=async()=>{fetched++;return new Response('');};await assert.rejects(assets.downloadAsset({id:'legacy',name:'old.pdf',contentAvailable:false}),/در دسترس نیست/);assert.throws(()=>api.publicFetch('/api/files'),error=>error.code==='INVALID_PUBLIC_URL');assert.equal(fetched,0);
 });
 test('empty portal capabilities and missing version IDs fail before any private-route fallback',async()=>{
  authorize();let fetched=0;globalThis.fetch=async()=>{fetched++;return Response.json({id:'wrong-route'});};

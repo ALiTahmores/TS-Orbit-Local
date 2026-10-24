@@ -57,8 +57,6 @@ export const StrandsLoader: React.FC<StrandsLoaderProps> = ({
   thickness,
   strandsProps = {}
 }) => {
-  if (!active) return null;
-
   const displayMessage = message || text;
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -76,6 +74,8 @@ export const StrandsLoader: React.FC<StrandsLoaderProps> = ({
       return () => mediaQuery.removeEventListener('change', listener);
     }
   }, []);
+
+  if (!active) return null;
 
   const motionSpeedModifier = prefersReducedMotion ? 0.1 : 1;
 

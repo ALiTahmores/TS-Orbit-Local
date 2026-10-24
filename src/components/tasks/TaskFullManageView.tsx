@@ -1,3 +1,4 @@
+import { formatJalaliDateTime } from '../../lib/dates';
 import {AssetManager} from '../assets/AssetManager';
 import { assignedIds, taskStatus, taskPriority } from '../../lib/domain';
 import { LocalImage } from '../common/LocalImage';
@@ -26,6 +27,8 @@ import {
 import { useProjectContext } from '../../context/ProjectContext';
 import { Task, SubTask, TaskPriority, TaskStatus, DepartmentKey } from '../../types';
 import { cn } from '../../lib/utils';
+import { JalaliDateInput } from '../common/JalaliDateInput';
+import { dueDate as canonicalDueDate } from '../../lib/taskAnalytics';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === undefined || n === null) return '';
@@ -61,7 +64,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
   const [description, setDescription] = useState(task?.description || '');
   const [status, setStatus] = useState<string>(taskStatus(task?.status || 'pending'));
   const [priority, setPriority] = useState<string>(taskPriority(task?.priority || 'medium'));
-  const [dueDate, setDueDate] = useState(task?.deadline || task?.dueDate || '');
+  const [dueDate, setDueDate] = useState(canonicalDueDate(task) || '');
   const [estimatedHours, setEstimatedHours] = useState(String(task?.estimatedHours || 0));
   const [entryHours, setEntryHours] = useState('');
   const [entryNote, setEntryNote] = useState('');
@@ -73,7 +76,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
   useEffect(() => {
     setTitle(task?.title || ''); setDescription(task?.description || '');
     setStatus(taskStatus(task?.status || 'pending')); setPriority(taskPriority(task?.priority || 'medium'));
-    setDueDate(task?.deadline || task?.dueDate || ''); setEstimatedHours(String(task?.estimatedHours || 0));
+    setDueDate(canonicalDueDate(task) || ''); setEstimatedHours(String(task?.estimatedHours || 0));
     setSubtasks(task?.subtasks || []); setMemberIds(assignedIds(task)); setDependencies(task?.dependencies || []); setLinksText((task?.links || []).join('\n'));
   },[task?.id]);
   const [subtasks, setSubtasks] = useState<SubTask[]>(task?.subtasks || []);
@@ -312,7 +315,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
                   <div key={idx} className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/80 space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-slate-800 dark:text-slate-200">{c.authorName || c.author || c.userName || 'کاربر'}</span>
-                      <span className="text-[10px] text-slate-400 font-mono">{toPersianDigits(c.createdAt || c.date || '')}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">{formatJalaliDateTime(c.createdAt || c.date)}</span>
                     </div>
                     <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">{c.text || c.content}</p>
                   </div>
@@ -363,12 +366,12 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-bold focus:outline-none focus:border-blue-500 text-xs"
               >
-                <option value="pending">{isRtl ? '📋 در انتظار (To Do)' : 'To Do'}</option>
-                <option value="inprogress">{isRtl ? '⚡ در حال انجام (In Progress)' : 'In Progress'}</option>
-                <option value="review">{isRtl ? '🔍 در حال بررسی (Review)' : 'Review'}</option>
-                <option value="blocked">{isRtl ? 'مسدود' : 'Blocked'}</option>
+                <option value="pending">{isRtl ? 'در انتظار' : 'To Do'}</option>
+                <option value="inprogress">{isRtl ? 'در حال انجام' : 'In Progress'}</option>
+                <option value="review">{isRtl ? 'در حال بررسی' : 'Review'}</option>
+                <option value="blocked">{isRtl ? 'متوقف' : 'Blocked'}</option>
                 <option value="cancelled">{isRtl ? 'لغوشده' : 'Cancelled'}</option>
-                <option value="completed">{isRtl ? '✅ تکمیل شده (Completed)' : 'Completed'}</option>
+                <option value="completed">{isRtl ? 'تکمیل‌شده' : 'Completed'}</option>
               </select>
             </div>
 
@@ -381,23 +384,18 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
                 onChange={(e) => setPriority(e.target.value)}
                 className="w-full h-11 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-bold focus:outline-none focus:border-blue-500 text-xs"
               >
-                <option value="critical">{isRtl ? '🔥 فوری / بحرانی (Urgent)' : 'Urgent'}</option>
-                <option value="high">{isRtl ? '🔴 بالا (High)' : 'High'}</option>
-                <option value="medium">{isRtl ? '🟡 متوسط (Medium)' : 'Medium'}</option>
-                <option value="low">{isRtl ? '🟢 پایین (Low)' : 'Low'}</option>
+                <option value="critical">{isRtl ? 'فوری' : 'Urgent'}</option>
+                <option value="high">{isRtl ? 'بالا' : 'High'}</option>
+                <option value="medium">{isRtl ? 'متوسط' : 'Medium'}</option>
+                <option value="low">{isRtl ? 'پایین' : 'Low'}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                {isRtl ? 'مهلت تحویل (ددلاین)' : 'Due Date'}
+              <label htmlFor="task-manage-due-date" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                {isRtl ? 'سررسید' : 'Due Date'}
               </label>
-              <input
-                type={/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !dueDate ? 'date' : 'text'}
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full h-11 px-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-center font-mono font-bold text-xs focus:outline-none focus:border-blue-500"
-              />
+              <JalaliDateInput id="task-manage-due-date" value={dueDate} onChange={setDueDate} placeholder="بدون سررسید" className="[&>button]:h-11" />
             </div>
           </div>
 

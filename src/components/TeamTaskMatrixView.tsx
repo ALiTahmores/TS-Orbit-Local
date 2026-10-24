@@ -1,3 +1,4 @@
+import { formatJalaliDate } from '../lib/dates';
 import React, { useState } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { Task, TaskStatus, TaskPriority } from '../types';
@@ -316,9 +317,7 @@ export const TeamTaskMatrixView: React.FC = () => {
                                   <div className="flex items-center gap-1.5">
                                     <Calendar size={13} className="text-slate-400 dark:text-slate-500 shrink-0" />
                                     <span>
-                                      {task.startDate 
-                                        ? `${formatDigits(task.startDate)} - ${formatDigits(task.deadline || (isRtl ? '۱۴۰۵/۰۴/۳۰' : '2026-07-30'))}` 
-                                        : (isRtl ? '۱۵ تیر - ۲۸ تیر' : 'Jul 5 - Jul 18')}
+                                      {[formatJalaliDate(task.startDate), formatJalaliDate((task as any).deadlineCanonical || task.deadline)].filter(Boolean).join(' تا ') || (isRtl ? 'بدون تاریخ' : 'No dates')}
                                     </span>
                                   </div>
                                 </td>

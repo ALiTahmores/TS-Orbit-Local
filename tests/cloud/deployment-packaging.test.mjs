@@ -17,7 +17,7 @@ test('the Vercel function explicitly includes its TypeScript runtime modules', (
   const config = JSON.parse(fs.readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
   const includeFiles = config.functions?.['server.js']?.includeFiles;
 
-  assert.equal(includeFiles, '{application.ts,server/**,src/data/**,src/lib/**}');
+  assert.equal(includeFiles, '{application.ts,server/**,src/data/**,src/lib/**,public/**}');
   for (const file of [
     'application.ts',
     'server.js',
@@ -25,6 +25,7 @@ test('the Vercel function explicitly includes its TypeScript runtime modules', (
     'server/local-config.ts',
     'src/data/dbService.ts',
     'src/lib/localAssets.ts',
+    'public/index.html',
   ]) {
     assert.ok(fs.existsSync(new URL('../../' + file, import.meta.url)), `${file} must be present in the function bundle inputs`);
   }

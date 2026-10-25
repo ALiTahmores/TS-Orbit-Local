@@ -5,7 +5,7 @@
   "functions": {
     "server.js": {
       "maxDuration": 300,
-      "includeFiles": "{application.ts,server/**,src/data/**,src/lib/**}"
+      "includeFiles": "{application.ts,server/**,src/data/**,src/lib/**,public/**}"
     }
   },
   "headers": [

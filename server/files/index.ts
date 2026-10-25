@@ -1,20 +1,22 @@
 import fs from 'node:fs';
-import { createHash } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { pipeline } from 'node:stream/promises';
 import { Router } from 'express';
 import { DomainError, identifier, now } from '../domain/repository.ts';
 import { boolean, dto, text } from '../domain/models.ts';
 import { departmentAction, manager, membership, writer, type ScopedState } from '../policy/scope.ts';
 import { FileStorage } from './storage.ts';
+import { VercelBlobStorage } from '../cloud/blob-storage.ts';
+import { handleUpload } from '@vercel/blob/client';
 import { fileName, mimeType, textual, uploadMetadata, verifySignature } from './validation.ts';
 
 interface FilePersistence {
   isActive(): boolean;
   onRollback(cleanup: () => void): void;
-  afterCommit(event: () => void): void;
-  prepareStream(): void;
+  afterCommit(event: () => void | Promise<void>): void;
+  prepareStream(): void | Promise<void>;
 }
-interface FileOptions { scoped: ScopedState; dataDir: string; persistence: FilePersistence; broadcast: (event: string, payload: any) => void; broadcastWorkspace?: (workspaceId:string,event:string,payload:any)=>void; }
+interface FileOptions { cloudStorage?: VercelBlobStorage; scoped: ScopedState; dataDir: string; persistence: FilePersistence; broadcast: (event: string, payload: any) => void; broadcastWorkspace?: (workspaceId:string,event:string,payload:any)=>void; }
 const fail = (status: number, code: string, message: string): never => { throw new DomainError(status, code, message); };
 const parentFields = { projectId:'projects', taskId:'tasks', conversationId:'conversations' };
 const sizeLabel = (bytes: number) => bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes/1024).toFixed(1)} KB` : `${(bytes/1048576).toFixed(1)} MB`;
@@ -72,14 +74,14 @@ export class FileService {
   private versions(row: any): any[] { return this.raw.fileVersions.filter((version:any)=>version.fileId===row.id&&!version.deletedAt&&this.options.scoped.scopeOf('fileVersions',version)===this.options.scoped.scopeOf('files',row)).sort((a:any,b:any)=>a.version-b.version); }
   private current(row: any): any | undefined { return this.versions(row).find((version:any)=>version.id===row.currentVersionId); }
   private versionDto(row: any, file: any, publicToken?: string): any {
-    const available=this.storage.available(row);
+    const available=(this.options.cloudStorage || this.storage).available(row);
     const publicAllowed=publicToken && row.approved===true && row.clientVisible===true;
     const result:any={id:row.id,fileId:file.id,version:row.version,name:row.name||file.name,byteSize:row.byteSize,size:sizeLabel(row.byteSize),mimeType:row.mimeType,sha256:row.sha256,createdAt:row.createdAt,date:row.createdAt,contentAvailable:available,downloadPath:available&&(!publicToken||publicAllowed)?publicToken?`/api/public/portal/${encodeURIComponent(publicToken)}/files/${encodeURIComponent(file.id)}/versions/${encodeURIComponent(row.id)}/download`:`/api/files/${encodeURIComponent(file.id)}/versions/${encodeURIComponent(row.id)}/download`:null};
     if(!publicToken)Object.assign(result,{note:row.note||'',uploadedBy:this.author(row),changedBy:this.author(row).name});
     return result;
   }
   private fileDto(row: any, publicToken?: string): any {
-    const current=this.current(row), available=!!current&&this.storage.available(current);
+    const current=this.current(row), available=!!current&&(this.options.cloudStorage || this.storage).available(current);
     const versions=this.versions(row).filter((version:any)=>!publicToken||version.approved===true&&version.clientVisible===true).map((version:any)=>this.versionDto(version,row,publicToken));
     const byteSize=current?.byteSize??null;
     const downloadable=available&&(!publicToken||this.publicEligible(row));
@@ -110,7 +112,7 @@ export class FileService {
       const linked=attachments.some((item:any)=>(typeof item==='string'?item:item?.id)===file.id);
       if(!linked&&task.id!==file.taskId)continue;
       const retained=attachments.filter((item:any)=>(typeof item==='string'?item:item?.id)!==file.id);
-      if(!remove)retained.push({id:file.id,name:file.name,size:sizeLabel(file.byteSize),byteSize:file.byteSize,mimeType:file.mimeType,type:file.mimeType,url:`/api/files/${encodeURIComponent(file.id)}/download`,contentAvailable:!!this.current(file)&&this.storage.available(this.current(file))});
+      if(!remove)retained.push({id:file.id,name:file.name,size:sizeLabel(file.byteSize),byteSize:file.byteSize,mimeType:file.mimeType,type:file.mimeType,url:`/api/files/${encodeURIComponent(file.id)}/download`,contentAvailable:!!this.current(file)&&(this.options.cloudStorage || this.storage).available(this.current(file))});
       task.attachments=retained;task.updatedAt=now();changed=true;
     }
     if(changed)this.options.broadcast('app_tasks_updated',{type:'data_changed'});
@@ -141,6 +143,12 @@ export class FileService {
     }catch(error){cleanup();if(!req.destroyed)req.resume();throw error;}finally{clearTimeout(timer);this.uploads.delete(stage.key);}
   }
   async upload(req:any,res:any,versionOf?:string,publicProject?:any):Promise<void>{
+    const {metadata,existing,workspaceId,actor,publicUpload}=this.prepareUpload(req,versionOf,publicProject);
+    if(this.options.cloudStorage)fail(409,'DIRECT_UPLOAD_REQUIRED','بارگذاری مستقیم فایل لازم است.');
+    const received=await this.receive(req,metadata);this.active(req);
+    this.registerUpload(req,res,metadata,existing,workspaceId,actor,publicUpload,received);
+  }
+  private prepareUpload(req:any,versionOf?:string,publicProject?:any):any {
     const publicUpload=!!publicProject;let metadata=uploadMetadata(req,publicUpload),existing:any,workspaceId:string,actor:any;
     if(publicUpload){workspaceId=this.projectWorkspace(publicProject);metadata={...metadata,projectId:publicProject.id,approved:false,clientVisible:false};actor={publicUpload:true,source:'client_portal',uploadedBy:{id:'client_portal',name:'مشتری پورتال',avatar:''}};}
     else{
@@ -152,7 +160,9 @@ export class FileService {
       if(metadata.conversationId&&(metadata.approved||metadata.clientVisible))fail(422,'PRIVATE_CONVERSATION_FILE','پیوست گفتگو قابل انتشار در پورتال نیست.');
       if(this.options.scoped.scopeOf('files',{...metadata,workspaceId})!==workspaceId)fail(422,'FILE_PARENT_CONFLICT','دامنه والدهای فایل همخوانی ندارد.');
     }
-    const received=await this.receive(req,metadata);this.active(req);
+    return {metadata,existing,workspaceId,actor,publicUpload};
+  }
+  private registerUpload(req:any,res:any,metadata:any,existing:any,workspaceId:string,actor:any,publicUpload:boolean,received:any):void {
     const stamp=now(),id=existing?.id||identifier('file'),version=existing?Math.max(Number(existing.version)||1,...this.versions(existing).map((row:any)=>row.version))+1:1;
     const versionRow:any={id:identifier('fileversion'),fileId:id,workspaceId,version,name:metadata.name,note:metadata.note||'',createdAt:stamp,approved:metadata.approved===true,clientVisible:metadata.clientVisible??existing?.clientVisible??false,...received,...actor};
     for(const field of Object.keys(parentFields))if(metadata[field])versionRow[field]=metadata[field];
@@ -171,30 +181,94 @@ export class FileService {
     Object.assign(file,changes,{updatedAt:now()});const current=this.current(file);if(current){for(const field of ['approved','clientVisible'])if(field in changes)current[field]=changes[field];}
     this.syncTaskAttachments(file);this.audit('FILE_METADATA_UPDATED',file);this.publishEvent(file.workspaceId);return this.fileDto(file);
   }
-  delete(id:string):any{const file=this.requireFile(id,'delete');this.own(file);const deletedAt=now();file.deletedAt=deletedAt;file.deletedById=this.scope().user.id;file.cleanupRequestedAt=deletedAt;for(const version of this.versions(file))version.deletedAt=deletedAt;this.syncTaskAttachments(file,true);this.audit('FILE_DELETED',file);this.publishEvent(file.workspaceId);this.options.persistence.afterCommit(()=>{try{this.collectDeleted();}catch(error){console.error('File cleanup deferred:',(error as any).code||'storage error');}});return{success:true,deletedId:id};}
+  delete(id:string):any{const file=this.requireFile(id,'delete');this.own(file);const deletedAt=now();file.deletedAt=deletedAt;file.deletedById=this.scope().user.id;file.cleanupRequestedAt=deletedAt;for(const version of this.versions(file))version.deletedAt=deletedAt;this.syncTaskAttachments(file,true);this.audit('FILE_DELETED',file);this.publishEvent(file.workspaceId);this.options.persistence.afterCommit(async()=>{try{await this.collectDeleted();}catch(error){console.error('File cleanup deferred:',(error as any).code||'storage error');}});return{success:true,deletedId:id};}
   private async send(req:any,res:any,file:any,versionId?:string,publicToken?:string):Promise<void>{
     const version=versionId?this.versions(file).find((row:any)=>row.id===versionId):this.current(file);
     if(!version||publicToken&&(version.approved!==true||version.clientVisible!==true))fail(404,'FILE_CONTENT_UNAVAILABLE','محتوای نسخه فایل موجود یا قابل دسترسی نیست.');
-    let descriptor:number|undefined=this.storage.openVerified(version);
+    const staged=this.options.cloudStorage ? await this.options.cloudStorage.readVerified(version) : undefined;
+    let descriptor:number|undefined=staged ? fs.openSync(staged.filePath,'r') : this.storage.openVerified(version);
     try{
       const size=version.byteSize;let start=0,end=Math.max(0,size-1),status=200;
       if(req.headers.range){const match=/^bytes=(\d*)-(\d*)$/.exec(req.headers.range);if(!match||!size||(!match[1]&&!match[2])){res.setHeader('Content-Range',`bytes */${size}`);fail(416,'INVALID_FILE_RANGE','محدوده فایل معتبر نیست.');}if(!match[1])start=Math.max(0,size-Number(match[2]));else start=Number(match[1]);if(match[1]&&match[2])end=Math.min(size-1,Number(match[2]));if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>=size||end<start){res.setHeader('Content-Range',`bytes */${size}`);fail(416,'INVALID_FILE_RANGE','محدوده فایل معتبر نیست.');}status=206;}
-      res.status(status);this.options.persistence.prepareStream();
+      res.status(status);await this.options.persistence.prepareStream();
       res.setHeader('Content-Type',version.mimeType||'application/octet-stream');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Content-Security-Policy',"default-src 'none'; sandbox");res.setHeader('Cache-Control','private, no-store');res.setHeader('Accept-Ranges','bytes');res.setHeader('ETag','"'+version.sha256+'"');
       const name=version.name||file.name,ascii=name.replace(/[^\x20-\x7e]|["\\]/g,'_');res.setHeader('Content-Disposition',`attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name).replace(/['()*]/g,c=>'%'+c.charCodeAt(0).toString(16).toUpperCase())}`);
       if(status===206)res.setHeader('Content-Range',`bytes ${start}-${end}/${size}`);res.setHeader('Content-Length',String(size?end-start+1:0));
       if(req.method==='HEAD'||size===0){fs.closeSync(descriptor);descriptor=undefined;res.end();return;}
       const stream=fs.createReadStream('',{fd:descriptor,autoClose:true,start,end});descriptor=undefined;await pipeline(stream,res);
-    }finally{if(descriptor!==undefined)fs.closeSync(descriptor);}
+    }finally{if(descriptor!==undefined)fs.closeSync(descriptor);await staged?.dispose();}
   }
   async download(req:any,res:any,next:any,id:string,versionId?:string):Promise<void>{try{const file=this.requireFile(id);await this.send(req,res,file,versionId);}catch(error){if(!res.headersSent&&!res.destroyed)next(error);else if(!res.destroyed)res.destroy(error as Error);}}
   private projectWorkspace(project:any):string{const current=this.raw.projects.find((row:any)=>row===project||row.id===project?.id);const workspaceId=current&&this.options.scoped.scopeOf('projects',current);const workspace=this.raw.workspaces.find((row:any)=>row.id===workspaceId);if(!current||current!==project||!workspaceId||!workspace||workspace.deletedAt||workspace.isActive===false||!project.clientPortalEnabled||project.isPortalActive===false||project.deletedAt)fail(404,'PORTAL_NOT_FOUND','پورتال در دسترس نیست.');return workspaceId;}
   private publicEligible(file:any):boolean{const current=this.current(file);return !file.deletedAt&&!file.conversationId&&file.approved===true&&file.clientVisible===true&&(!file.managed||!!current&&current.approved===true&&current.clientVisible===true);}
   listPublic(project:any):any[]{const workspace=this.projectWorkspace(project);return this.raw.files.filter((file:any)=>file.projectId===project.id&&this.options.scoped.scopeOf('files',file)===workspace&&this.publicEligible(file)).map((file:any)=>this.fileDto(file,project.clientPortalToken||project.portalToken));}
-  validatePublicAttachment(project:any,id:string,publicOnly=false):boolean{const workspace=this.projectWorkspace(project),file=this.raw.files.find((row:any)=>row.id===id);return !!file&&!file.deletedAt&&!file.conversationId&&file.projectId===project.id&&this.options.scoped.scopeOf('files',file)===workspace&&!!this.current(file)&&this.storage.available(this.current(file))&&(publicOnly?this.publicEligible(file):file.publicUpload===true||this.publicEligible(file));}
+  validatePublicAttachment(project:any,id:string,publicOnly=false):boolean{const workspace=this.projectWorkspace(project),file=this.raw.files.find((row:any)=>row.id===id);return !!file&&!file.deletedAt&&!file.conversationId&&file.projectId===project.id&&this.options.scoped.scopeOf('files',file)===workspace&&!!this.current(file)&&(this.options.cloudStorage || this.storage).available(this.current(file))&&(publicOnly?this.publicEligible(file):file.publicUpload===true||this.publicEligible(file));}
   async sendPublic(req:any,res:any,next:any,project:any,fileId:string,versionId?:string):Promise<void>{try{const workspace=this.projectWorkspace(project),file=this.raw.files.find((row:any)=>row.id===fileId);if(!file||file.projectId!==project.id||this.options.scoped.scopeOf('files',file)!==workspace||!this.publicEligible(file))fail(404,'FILE_NOT_FOUND','فایل در دسترس نیست.');await this.send(req,res,file,versionId,req.params.token);}catch(error){if(!res.headersSent&&!res.destroyed)next(error);else if(!res.destroyed)res.destroy(error as Error);}}
   async uploadPublic(req:any,res:any,next:any,project:any):Promise<void>{try{this.projectWorkspace(project);await this.upload(req,res,undefined,project);}catch(error){if(!res.destroyed){if(!req.complete)res.setHeader('Connection','close');next(error);}}}
-  collectDeleted():any{if(this.uploads.size||this.options.persistence.isActive())return{skippedActive:true,deletedBlobs:0,deletedStages:0};const live=new Set<string>();for(const file of this.raw.files)if(!file.deletedAt&&this.storage.validKey(file.storageKey))live.add(file.storageKey);for(const version of this.raw.fileVersions){const file=this.raw.files.find((row:any)=>row.id===version.fileId);if(file&&!file.deletedAt&&!version.deletedAt&&this.storage.validKey(version.storageKey))live.add(version.storageKey);}return this.storage.collect(live);}
+
+  private cloud(){if(!this.options.cloudStorage)fail(409,'DIRECT_UPLOAD_UNAVAILABLE','بارگذاری مستقیم در حالت محلی فعال نیست.');return this.options.cloudStorage!;}
+  private intents():any[]{return this.raw.cloudUploadIntents ??= [];}
+  private intentRequest(req:any,intent:any):any {return {...req,headers:{...req.headers,'x-file-metadata':encodeURIComponent(JSON.stringify(intent.portalHash?Object.fromEntries(Object.entries(intent.metadata).filter(([key])=>['name','category','tag','note'].includes(key))):intent.metadata))}};}
+  private authorizedIntent(req:any,id:string,project?:any):any {
+    const intent=this.intents().find((row:any)=>row.id===id);
+    if(!intent||intent.expiresAt<=Date.now()||intent.cleanedAt)fail(404,'UPLOAD_INTENT_NOT_FOUND','درخواست بارگذاری معتبر نیست.');
+    if(project){this.projectWorkspace(project);if(intent.projectId!==project.id||intent.portalHash!==createHash('sha256').update(req.params.token).digest('hex'))fail(403,'UPLOAD_INTENT_FORBIDDEN','درخواست بارگذاری مجاز نیست.');}
+    else if(intent.actorId!==this.scope().user.id||intent.workspaceId!==this.scope().workspaceId||intent.portalHash)fail(403,'UPLOAD_INTENT_FORBIDDEN','درخواست بارگذاری مجاز نیست.');
+    this.prepareUpload(this.intentRequest(req,intent),intent.versionOf,project);return intent;
+  }
+  createDirectIntent(req:any,res:any,project?:any):void {
+    const storage=this.cloud();const input=dto(req.body,['metadata','byteSize','mimeType','versionOf']);
+    if(project&&input.versionOf)fail(422,'PUBLIC_VERSION_DENIED','نسخه جدید از مدیریت پروژه ثبت می‌شود.');
+    const request={...req,headers:{...req.headers,'x-file-metadata':encodeURIComponent(JSON.stringify(input.metadata))}};
+    const prepared=this.prepareUpload(request,input.versionOf,project);
+    if(!Number.isSafeInteger(input.byteSize)||input.byteSize<0||input.byteSize>this.maxBytes)fail(413,'FILE_TOO_LARGE','اندازه فایل معتبر نیست.');
+    const owner=project?'portal:'+project.id:prepared.actor.uploadedById;
+    const pending=this.intents().filter((row:any)=>row.owner===owner&&!row.finalizedAt&&!row.cleanedAt&&row.expiresAt>Date.now());
+    if(pending.length>=10)fail(429,'UPLOAD_LIMIT','ابتدا بارگذاری‌های قبلی را تکمیل کنید.');
+    const intent={id:randomUUID(),key:randomUUID(),owner,actorId:prepared.actor.uploadedById,workspaceId:prepared.workspaceId,projectId:project?.id,portalHash:project?createHash('sha256').update(req.params.token).digest('hex'):undefined,metadata:prepared.metadata,name:prepared.metadata.name,mimeType:mimeType(prepared.metadata.name,input.mimeType),byteSize:input.byteSize,versionOf:input.versionOf,expiresAt:Date.now()+10*60*1000};
+    this.intents().push(intent);res.status(201).json({id:intent.id,pathname:storage.pathname(intent.key),mimeType:intent.mimeType,expiresAt:intent.expiresAt});
+  }
+  async directToken(req:any,res:any,project?:any):Promise<void>{
+    const storage=this.cloud();
+    if(req.body?.type!=='blob.generate-client-token')fail(422,'INVALID_UPLOAD_EVENT','رویداد بارگذاری معتبر نیست.');
+    const result=await handleUpload({request:req,body:req.body,onBeforeGenerateToken:async(pathname,payload)=>{
+      let id:string;try{id=JSON.parse(payload||'').uploadId;}catch{fail(422,'INVALID_UPLOAD_INTENT','درخواست بارگذاری معتبر نیست.');}
+      const intent=this.authorizedIntent(req,id!,project);if(intent.finalizedAt)fail(409,'UPLOAD_ALREADY_COMPLETED','بارگذاری قبلاً ثبت شده است.');
+      return storage.directTokenOptions(intent,pathname,payload);
+    }});res.json(result);
+  }
+  async finalizeDirect(req:any,res:any,project?:any):Promise<void>{
+    const storage=this.cloud(),intent=this.authorizedIntent(req,req.params.uploadId,project);
+    if(intent.finalizedAt){const file=this.raw.files.find((row:any)=>row.id===intent.fileId&&!row.deletedAt);if(!file)fail(404,'FILE_NOT_FOUND','فایل موجود نیست.');res.json(this.fileDto(file,project?req.params.token:undefined));return;}
+    const prepared=this.prepareUpload(this.intentRequest(req,intent),intent.versionOf,project);
+    const received=await storage.verifyUploaded(intent);this.active(req);
+    // The known key remains in the durable intent if verification/commit fails.
+    const capture={status:(_status:number)=>({json:(file:any)=>{intent.finalizedAt=now();intent.fileId=file.id;res.status(201).json(file);}})};
+    this.registerUpload(req,capture,prepared.metadata,prepared.existing,prepared.workspaceId,prepared.actor,prepared.publicUpload,received);
+  }
+  async collectCloudDeleted():Promise<any>{
+    if(!this.options.persistence.isActive())return {skippedActive:true,deletedBlobs:0,deletedStages:0};
+    const storage=this.cloud(),at=Date.now();let deletedBlobs=0;
+    const intents=this.intents();
+    const live=new Set(this.raw.fileVersions.filter((v:any)=>!v.deletedAt&&this.raw.files.some((f:any)=>f.id===v.fileId&&!f.deletedAt)).map((v:any)=>v.storageKey));
+    const candidates=new Set<string>();
+    const tokenMayRemain=(key:string)=>intents.some((intent:any)=>intent.key===key&&intent.expiresAt+90_000>=at);
+    for(const v of this.raw.fileVersions)if(v.deletedAt&&!v.cloudCleanupAt&&!live.has(v.storageKey)&&storage.validKey(v.storageKey)&&!tokenMayRemain(v.storageKey))candidates.add(v.storageKey);
+    for(const i of intents)if(!i.finalizedAt&&!i.cleanedAt&&i.expiresAt+90_000<at&&!live.has(i.key)&&storage.validKey(i.key))candidates.add(i.key);
+    // Remote I/O holds the transaction lock: each pass has a strict work bound.
+    for(const key of [...candidates].slice(0,20)){
+      await storage.remove(key);deletedBlobs++;
+      const stamp=now();
+      for(const version of this.raw.fileVersions)if(version.storageKey===key&&version.deletedAt)version.cloudCleanupAt=stamp;
+      for(const intent of intents)if(intent.key===key&&intent.expiresAt+90_000<at)intent.cleanedAt=stamp;
+    }
+    // Pending remote deletions retain their durable known keys. A completed intent
+    // may disappear only after no minted token or in-flight transfer can survive.
+    this.raw.cloudUploadIntents=intents.filter((intent:any)=>!(intent.expiresAt+90_000<at&&(intent.finalizedAt||intent.cleanedAt)));
+
+    return {deletedBlobs,deletedStages:0};
+  }
+  collectDeleted():any{if(this.options.cloudStorage)return this.collectCloudDeleted();if(this.uploads.size||this.options.persistence.isActive())return{skippedActive:true,deletedBlobs:0,deletedStages:0};const live=new Set<string>();for(const file of this.raw.files)if(!file.deletedAt&&this.storage.validKey(file.storageKey))live.add(file.storageKey);for(const version of this.raw.fileVersions){const file=this.raw.files.find((row:any)=>row.id===version.fileId);if(file&&!file.deletedAt&&!version.deletedAt&&this.storage.validKey(version.storageKey))live.add(version.storageKey);}return this.storage.collect(live);}
 }
 export const createFileService=(options:FileOptions)=>new FileService(options);
-export function createFileRouter(service:FileService){const router=Router();const synchronous=(operation:(req:any)=>any)=>(req:any,res:any,next:any)=>{try{res.json(operation(req));}catch(error){next(error);}};router.get('/files',synchronous(req=>service.list(req.query)));router.post('/files',(req,res,next)=>{service.upload(req,res).catch(next);});router.get('/files/:id',synchronous(req=>service.get(req.params.id)));router.put('/files/:id',synchronous(req=>service.update(req.params.id,req.body)));router.delete('/files/:id',synchronous(req=>service.delete(req.params.id)));router.get('/files/:id/versions',synchronous(req=>service.listVersions(req.params.id)));router.post('/files/:id/versions',(req,res,next)=>{service.upload(req,res,req.params.id).catch(next);});router.get('/files/:id/download',(req,res,next)=>{void service.download(req,res,next,req.params.id);});router.get('/files/:id/versions/:versionId/download',(req,res,next)=>{void service.download(req,res,next,req.params.id,req.params.versionId);});return router;}
+export function createFileRouter(service:FileService){const router=Router();router.post('/files/direct-intents',(req,res,next)=>{try{service.createDirectIntent(req,res);}catch(error){next(error);}});router.post('/files/direct-token',(req,res,next)=>{service.directToken(req,res).catch(next);});router.post('/files/direct-intents/:uploadId/finalize',(req,res,next)=>{service.finalizeDirect(req,res).catch(next);});const synchronous=(operation:(req:any)=>any)=>(req:any,res:any,next:any)=>{try{res.json(operation(req));}catch(error){next(error);}};router.get('/files',synchronous(req=>service.list(req.query)));router.post('/files',(req,res,next)=>{service.upload(req,res).catch(next);});router.get('/files/:id',synchronous(req=>service.get(req.params.id)));router.put('/files/:id',synchronous(req=>service.update(req.params.id,req.body)));router.delete('/files/:id',synchronous(req=>service.delete(req.params.id)));router.get('/files/:id/versions',synchronous(req=>service.listVersions(req.params.id)));router.post('/files/:id/versions',(req,res,next)=>{service.upload(req,res,req.params.id).catch(next);});router.get('/files/:id/download',(req,res,next)=>{void service.download(req,res,next,req.params.id);});router.get('/files/:id/versions/:versionId/download',(req,res,next)=>{void service.download(req,res,next,req.params.id,req.params.versionId);});return router;}

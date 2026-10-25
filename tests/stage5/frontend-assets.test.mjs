@@ -8,11 +8,15 @@ class Storage{getItem(k){return this[k]??null;}setItem(k,v){this[k]=String(v);}r
 globalThis.localStorage=new Storage();globalThis.window=new EventTarget();window.location={origin:'http://localhost:3000'};
 const apiUrl=asUrl(compile(fs.readFileSync(new URL('../../src/lib/api.ts',import.meta.url),'utf8')));
 const api=await import(apiUrl);
-const assets=await import(asUrl(compile(fs.readFileSync(new URL('../../src/lib/assets.ts',import.meta.url),'utf8')).replace("'./api'",JSON.stringify(apiUrl))));
+const blobStubUrl=asUrl('export const upload=(...args)=>globalThis.__testBlobUpload(...args);');
+const assets=await import(asUrl(compile(fs.readFileSync(new URL('../../src/lib/assets.ts',import.meta.url),'utf8')).replace("'./api'",JSON.stringify(apiUrl)).replace("'@vercel/blob/client'",JSON.stringify(blobStubUrl))));
 const portal=await import(asUrl(compile(fs.readFileSync(new URL('../../src/lib/portal.ts',import.meta.url),'utf8')).replace("'./api'",JSON.stringify(apiUrl))));
 const overview=await import(asUrl(compile(fs.readFileSync(new URL('../../src/components/projects/overview/utils.ts',import.meta.url),'utf8'))));
 const originalFetch=globalThis.fetch,originalDocument=globalThis.document,originalCreate=URL.createObjectURL,originalRevoke=URL.revokeObjectURL,originalTimeout=globalThis.setTimeout;
-test.after(()=>{globalThis.fetch=originalFetch;globalThis.document=originalDocument;URL.createObjectURL=originalCreate;URL.revokeObjectURL=originalRevoke;globalThis.setTimeout=originalTimeout;delete globalThis.window;delete globalThis.localStorage;});
+const fetchDescriptor=Object.getOwnPropertyDescriptor(globalThis,'fetch');
+let mockedFetch=originalFetch,runtimeResponse=()=>Response.json({directUpload:false,cloud:false}),runtimeCalls=0;
+Object.defineProperty(globalThis,'fetch',{configurable:true,get(){return (url,options)=>{if(url==='/api/runtime'){runtimeCalls++;return Promise.resolve(runtimeResponse(options));}return mockedFetch(url,options);};},set(value){mockedFetch=value;}});
+test.after(()=>{Object.defineProperty(globalThis,'fetch',fetchDescriptor);delete globalThis.__testBlobUpload;globalThis.document=originalDocument;URL.createObjectURL=originalCreate;URL.revokeObjectURL=originalRevoke;globalThis.setTimeout=originalTimeout;delete globalThis.window;delete globalThis.localStorage;});
 function authorize(){localStorage.setItem('token','real-session');api.setApiIdentity('user-1','workspace-1');}
 test('raw upload keeps exact bytes and MIME while identity and metadata are authoritative',async()=>{
  authorize();const file=new File([Uint8Array.from([0,255,13,10,4])],'فایل.bin',{type:'application/x-orbit-test'});
@@ -50,9 +54,10 @@ test('empty portal capabilities and missing version IDs fail before any private-
 });
 test('late upload response after an account change cannot report success or invalidate new-scope assets',async()=>{
  authorize();let respond,emitted=0;const listener=()=>emitted++;window.addEventListener('orbit:assets-updated',listener);
- globalThis.fetch=()=>new Promise(resolve=>respond=resolve);
+ let signalStarted;const started=new Promise(resolve=>signalStarted=resolve);
+ globalThis.fetch=()=>new Promise(resolve=>{respond=resolve;signalStarted();});
  const pending=assets.uploadAsset(new File(['old draft'],'draft.txt'),{projectId:'old-project'});
- api.setApiIdentity('other-account','same-workspace');respond(Response.json({id:'old-file'}));
+ await started;api.setApiIdentity('other-account','same-workspace');respond(Response.json({id:'old-file'}));
  await assert.rejects(pending,error=>error.code==='STALE_REQUEST');
  window.removeEventListener('orbit:assets-updated',listener);assert.equal(emitted,0);
 });
@@ -133,4 +138,21 @@ test('image preview refuses SVG, unexpected response MIME and cancelled portal s
  const controller=new AbortController();let respond;globalThis.fetch=()=>new Promise(resolve=>respond=resolve);
  const pending=assets.previewAsset({id:'image',name:'image.png'},'former-token',controller.signal);controller.abort();respond(new Response('old bytes',{headers:{'Content-Type':'image/png'}}));
  await assert.rejects(pending,error=>error.code==='STALE_REQUEST');assert.equal(created,0);
+});
+
+test('runtime negotiation failure prevents any upload or success event',async()=>{
+ authorize();let writes=0;runtimeResponse=()=>Response.json({},{status:503});globalThis.fetch=async()=>{writes++;throw new Error('must not upload');};
+ try{await assert.rejects(assets.uploadAsset(new File(['bytes'],'r.txt')),error=>error.code==='RUNTIME_UNAVAILABLE');assert.equal(writes,0);}finally{runtimeResponse=()=>Response.json({directUpload:false,cloud:false});}
+});
+test('cloud upload sends scoped intent, normalized MIME and private SDK capability before explicit finalize',async()=>{
+ authorize();runtimeResponse=()=>Response.json({directUpload:true,cloud:true});const calls=[];
+ globalThis.fetch=async(url,options)=>{calls.push(url);assert.equal(options.headers.get('Authorization'),'Bearer real-session');assert.equal(options.headers.get('x-workspace-id'),'workspace-1');if(url==='/api/files/direct-intents'){const input=JSON.parse(options.body);assert.equal(input.byteSize,5);assert.equal(input.versionOf,'managed');assert.equal(input.metadata.uploadedById,undefined);return Response.json({id:'intent-id',pathname:'orbit-assets/v1/owned-key',mimeType:'text/plain'});}assert.equal(url,'/api/files/direct-intents/intent-id/finalize');return Response.json({id:'managed',version:2});};
+ globalThis.__testBlobUpload=async(pathname,file,options)=>{assert.equal(calls.length,1);assert.equal(pathname,'orbit-assets/v1/owned-key');assert.equal(await file.text(),'bytes');assert.equal(options.access,'private');assert.equal(options.handleUploadUrl,'/api/files/direct-token');assert.equal(options.headers.Authorization,'Bearer real-session');assert.equal(options.contentType,'text/plain');assert.deepEqual(JSON.parse(options.clientPayload),{uploadId:'intent-id'});};
+ try{const saved=await assets.uploadAsset(new File(['bytes'],'r.txt',{type:'application/octet-stream'}),{uploadedById:'spoofed'},'managed');assert.equal(saved.version,2);assert.equal(calls.length,2);}finally{runtimeResponse=()=>Response.json({directUpload:false,cloud:false});}
+});
+test('cloud public upload never exposes the signed-in session to capability routes or SDK',async()=>{
+ authorize();runtimeResponse=()=>Response.json({directUpload:true,cloud:true});let sdkCalled=false;
+ globalThis.fetch=async(url,options)=>{assert.equal(options.headers.get('Authorization'),null);assert.equal(options.headers.get('x-workspace-id'),null);if(url.endsWith('/direct-intents'))return Response.json({id:'public-intent',pathname:'orbit-assets/v1/public-key',mimeType:'text/plain'});assert.equal(url,'/api/public/portal/exact%2Fcapability/files/direct-intents/public-intent/finalize');return Response.json({id:'public-file',approved:false});};
+ globalThis.__testBlobUpload=async(_pathname,_file,options)=>{sdkCalled=true;assert.deepEqual(options.headers,{});assert.equal(options.handleUploadUrl,'/api/public/portal/exact%2Fcapability/files/direct-token');};
+ try{await assets.uploadAsset(new File(['public'],'p.txt'),{},undefined,'exact/capability');assert.equal(sdkCalled,true);}finally{runtimeResponse=()=>Response.json({directUpload:false,cloud:false});}
 });

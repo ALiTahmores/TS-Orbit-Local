@@ -1,11 +1,12 @@
 import { ClientPortalView } from './ClientPortalView';
 import { projectStatusUI } from '../../lib/domain';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Project, StatusLog, ClientFeedback } from '../../types';
 import { useProject } from '../../context/ProjectContext';
 import { CustomSelect, CustomSelectOption } from '../common/CustomSelect';
 import { JalaliDateInput } from '../common/JalaliDateInput';
 import { formatJalaliDate, formatJalaliDateTime } from '../../lib/dates';
+import { calendarDay, deadlineEditPatch } from '../../lib/formValues';
 import { PublicClientPortal } from '../PublicClientPortal';
 import { 
   ArrowRight, 
@@ -109,7 +110,12 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
   );
   const [status, setStatus] = useState<string>(({ACTIVE:'active',IN_PROGRESS:'in_progress',DRAFT:'pending',COMPLETED:'completed',CANCELLED:'canceled',ARCHIVED:'archived'}[project.status] || project.status || 'active'));
   const [startDate, setStartDate] = useState(project.startDate || '');
-  const [deadline, setDeadline] = useState(String((project as any).deadlineCanonical || project.deadline || '').slice(0, 10));
+  const [deadline, setDeadline] = useState(calendarDay((project as any).deadlineCanonical || project.deadline) || '');
+  const [deadlineChanged, setDeadlineChanged] = useState(false);
+  useEffect(() => {
+    setDeadline(calendarDay((project as any).deadlineCanonical || project.deadline) || '');
+    setDeadlineChanged(false);
+  }, [project.id]);
   const [budget, setBudget] = useState(project.budget || '');
   const [isBudgetConfidential, setIsBudgetConfidential] = useState<boolean>(
     project.isBudgetConfidential !== undefined ? project.isBudgetConfidential : true
@@ -183,13 +189,14 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
         assignedTeamIds,
         status: status as any,
         startDate,
-        deadline,
+        ...deadlineEditPatch(deadline, deadlineChanged),
         budget,
         isBudgetConfidential,
 
       });
 
       setSavedSuccess(true);
+      setDeadlineChanged(false);
       setTimeout(() => {
         setSavedSuccess(false);
       }, 3000);
@@ -527,7 +534,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                   <Clock size={14} className="text-slate-400" />
                   <span>سررسید پروژه</span>
                 </label>
-                <JalaliDateInput value={deadline} onChange={setDeadline} ariaLabel="سررسید پروژه" placeholder="بدون سررسید" className="[&>button]:h-11 [&>button]:rounded-2xl" />
+                <JalaliDateInput value={deadline} onChange={value => { setDeadline(value); setDeadlineChanged(true); }} ariaLabel="سررسید پروژه" placeholder="بدون سررسید" className="[&>button]:h-11 [&>button]:rounded-2xl" />
               </div>
 
               {/* Budget */}

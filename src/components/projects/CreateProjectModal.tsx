@@ -8,6 +8,7 @@ import {
 import { useProjectContext } from '../../context/ProjectContext';
 import { cn } from '../../lib/utils';
 import { Project } from '../../types';
+import { calendarDay, deadlineEditPatch, projectLeadSelection } from '../../lib/formValues';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -53,6 +54,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const defaultLeadName = useMemo(() => currentUserName ? leadLabel(currentUserName, currentUser?.role) : '', [currentUserName, currentUser?.role, locale]);
 
   const [selectedLead, setSelectedLead] = useState(defaultLeadName);
+  const [selectedLeadId, setSelectedLeadId] = useState(currentUser?.id || '');
   const [isLeadDropdownOpen, setIsLeadDropdownOpen] = useState(false);
   const [customLeadInput, setCustomLeadInput] = useState('');
   const [isCustomLeadMode, setIsCustomLeadMode] = useState(false);
@@ -63,6 +65,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
   // 3. Deadline (ISO date, or '' for none)
   const [deadline, setDeadline] = useState('');
+  const [deadlineChanged, setDeadlineChanged] = useState(false);
 
   // 4. Access Control Selection
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
@@ -87,15 +90,16 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSubmitError('');
-      const existing=String((projectToEdit as any)?.deadlineCanonical || projectToEdit?.deadline || projectToEdit?.dueDate || '').slice(0, 10);
-      setDeadline(/^\d{4}-\d{2}-\d{2}$/.test(existing) ? existing : '');
+      const existing=(projectToEdit as any)?.deadlineCanonical || projectToEdit?.deadline || projectToEdit?.dueDate || '';
+      setDeadline(calendarDay(existing) || '');
+      setDeadlineChanged(false);
       if (projectToEdit) {
         setTitle(projectToEdit.title || projectToEdit.name || '');
         setWebsite(projectToEdit.websiteUrl || '');
         setClientName(projectToEdit.clientName || '');
-        if (projectToEdit.teamLead) {
-          setSelectedLead(projectToEdit.teamLead);
-        }
+        const lead = projectLeadSelection(projectToEdit, teamMembers, leadLabel);
+        setSelectedLead(lead.label);
+        setSelectedLeadId(lead.id);
         const numericBudget = toEnglishDigits(projectToEdit.budget || '').replace(/[^0-9]/g, '');
         setRawBudget(numericBudget);
         setIsConfidential(!!(projectToEdit.isBudgetConfidential || projectToEdit.isConfidential));
@@ -106,6 +110,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         setWebsite('');
         setClientName('');
         setSelectedLead(defaultLeadName);
+        setSelectedLeadId(currentUser?.id || '');
         setRawBudget('');
         setIsConfidential(false);
         setSelectedTeams([]);
@@ -139,8 +144,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     if (!currentUser?.id || !activeWorkspaceId) throw new Error('برای ذخیرهٔ پروژه، وارد فضای کاری معتبر شوید.');
     // Labels describe disciplines; only real team IDs are membership links.
     const assignedTeamIds = teams.filter(team => selectedTeams.includes(team.id) || selectedTeams.includes(team.name)).map(team => team.id);
-    const chosenLead = teamMembers.find(member => selectedLead === leadLabel(member.name, member.role));
-    const leadId = selectedLead === defaultLeadName ? currentUser.id : (chosenLead ? ((chosenLead as any).userId || chosenLead.id) : '');
+    const leadId = selectedLeadId;
 
     const savedDate = deadline;
     const formattedBudgetStr = rawBudget ? `${formatCurrency(rawBudget)} تومان` : '';
@@ -158,8 +162,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         teamLead: selectedLead,
         teamLeadId: leadId,
         budget: formattedBudgetStr,
-        dueDate: savedDate,
-        deadline: savedDate,
+        ...deadlineEditPatch(savedDate, deadlineChanged),
         isConfidential,
         isBudgetConfidential: isConfidential,
         selectedTeams,
@@ -341,6 +344,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                       if (e.key === 'Enter' && customLeadInput.trim()) {
                         e.preventDefault();
                         setSelectedLead(customLeadInput.trim());
+                        setSelectedLeadId('');
                         setIsCustomLeadMode(false);
                       }
                     }}
@@ -352,6 +356,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                     onClick={() => {
                       if (customLeadInput.trim()) {
                         setSelectedLead(customLeadInput.trim());
+                        setSelectedLeadId('');
                       }
                       setIsCustomLeadMode(false);
                     }}
@@ -377,6 +382,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                   <div
                     onClick={() => {
                       setSelectedLead(defaultLeadName);
+                      setSelectedLeadId(currentUser?.id || '');
                       setIsLeadDropdownOpen(false);
                     }}
                     className={cn(
@@ -400,6 +406,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                           key={m.id}
                           onClick={() => {
                             setSelectedLead(itemLabel);
+                            setSelectedLeadId((m as any).userId || m.id);
                             setIsLeadDropdownOpen(false);
                           }}
                           className={cn(
@@ -439,7 +446,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 <Calendar className="w-3.5 h-3.5 text-blue-500"/>
                 <span>سررسید تحویل پروژه</span>
               </label>
-              <JalaliDateInput id="project-deadline" value={deadline} onChange={setDeadline} placeholder="بدون سررسید" />
+              <JalaliDateInput id="project-deadline" value={deadline} onChange={value => { setDeadline(value); setDeadlineChanged(true); }} placeholder="بدون سررسید" />
             </div>
 
             {/* Left Column (in RTL): Budget with Comma Separator & Dynamic Lock Icon */}

@@ -32,6 +32,7 @@ export function createPublicRouter(state: any, scoped: ScopedState, options: Por
     if (!options.files) return res.status(503).json({ error: 'FILE_SERVICE_UNAVAILABLE', message: 'سرویس فایل در دسترس نیست.' });
     try { const result = method === 'uploadPublic' ? options.files.uploadPublic(req, res, next, req.portalProject) : options.files.sendPublic(req, res, next, req.portalProject, req.params.fileId, req.params.versionId); Promise.resolve(result).catch(next); } catch (error) { next(error); }
   };
+  for(const [suffix,method] of [['direct-intents','createDirectIntent'],['direct-token','directToken'],['direct-intents/:uploadId/finalize','finalizeDirect']] as const) router.post('/portal/:token/files/'+suffix,authorize,(req:any,res,next)=>{if(!options.files)return res.status(503).json({error:'FILE_SERVICE_UNAVAILABLE'});try{Promise.resolve((options.files as any)[method](req,res,req.portalProject)).catch(next);}catch(error){next(error);}});
   router.post('/portal/:token/files', authorize, files('uploadPublic'));
   router.get('/portal/:token/files/:fileId/download', authorize, files('sendPublic'));
   router.get('/portal/:token/files/:fileId/versions/:versionId/download', authorize, files('sendPublic'));

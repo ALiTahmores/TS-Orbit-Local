@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
+import os from 'node:os';
 import { randomBytes } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -9,8 +10,11 @@ import { DatabaseSync } from 'node:sqlite';
 // before either singleton is initialized (ES modules evaluate imports first).
 const rootDir = path.resolve(process.env.PROJECT_ROOT || process.cwd());
 dotenv.config({ path: path.join(rootDir, '.env'), quiet: true });
+const cloud = process.env.ORBIT_STORAGE === 'postgres' || process.env.VERCEL === '1';
+const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
+if (cloud && !/^postgres(?:ql)?:\/\//.test(databaseUrl)) throw new Error('Cloud storage requires DATABASE_URL; an ephemeral SQLite fallback is never used.');
 const host = process.env.HOST || '127.0.0.1';
-const networkAccess = process.env.ALLOW_NETWORK_ACCESS === 'true';
+const networkAccess = cloud || process.env.ALLOW_NETWORK_ACCESS === 'true';
 if (!['127.0.0.1', 'localhost', '::1'].includes(host) && !(host === '0.0.0.0' && networkAccess)) {
   throw new Error('HOST must be loopback; 0.0.0.0 requires explicit ALLOW_NETWORK_ACCESS=true.');
 }
@@ -20,7 +24,8 @@ if (!/^\d+$/.test(portValue) || Number(portValue) < 1 || Number(portValue) > 655
 }
 const port = Number(portValue);
 const expectedOrigin = `http://${host === '::1' ? '[::1]' : host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`;
-const appOrigin = process.env.APP_ORIGIN || expectedOrigin;
+const cloudHostname = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+const appOrigin = process.env.APP_ORIGIN || (cloud && cloudHostname ? 'https://' + cloudHostname : expectedOrigin);
 const originUrl = new URL(appOrigin);
 const loopbackOrigin = ['127.0.0.1', 'localhost', '[::1]'].includes(originUrl.hostname);
 // A public origin means a deployment behind a TLS-terminating reverse proxy: it must be
@@ -39,8 +44,9 @@ function parseTrustProxy(value: string): false | number | string[] {
     (net.isIP(entry.split('/')[0]) !== 0 && (!entry.includes('/') || /^\d{1,3}$/.test(entry.split('/')[1]))))) return entries;
   throw new Error('TRUST_PROXY must be empty, a hop count from 1 to 10, or proxy addresses/subnets (for example loopback or 10.0.0.0/8); "true" is not accepted.');
 }
-const trustProxy = parseTrustProxy((process.env.TRUST_PROXY || '').trim());
-const dataDir = path.resolve(rootDir, process.env.DATA_DIR || 'data');
+const trustProxy = parseTrustProxy((process.env.TRUST_PROXY ?? (process.env.VERCEL === '1' ? '1' : '')).trim());
+// Cloud DATA_DIR is temporary staging only; PostgreSQL and private Blob own durable data.
+const dataDir = cloud ? path.resolve(os.tmpdir(), 'ts-orbit-staging') : path.resolve(rootDir, process.env.DATA_DIR || 'data');
 export function rejectDataSymlinks(candidate: string): void {
   let current = path.resolve(candidate);
   while (true) {
@@ -63,12 +69,21 @@ if (contains(dataDir, rootDir) || contains(publicDir, dataDir)) {
 if (dataDir.toLowerCase() === distDir.toLowerCase() || dataDir.toLowerCase().startsWith(distDir.toLowerCase() + path.sep)) {
   throw new Error('DATA_DIR must be outside the build output.');
 }
-export const config = Object.freeze({ rootDir, host, port, appOrigin, dataDir, trustProxy,
+export const config = Object.freeze({ rootDir, host, port, appOrigin, dataDir, trustProxy, cloud, databaseUrl,
   secureOrigin: originUrl.protocol === 'https:' && !loopbackOrigin,
   dbPath: path.join(dataDir, 'db.json'), legacyDbPath: path.join(dataDir, 'db.json'),
-  sqlitePath: path.join(dataDir, 'orbit.sqlite'), clientDir: path.join(distDir, 'client') });
+  sqlitePath: path.join(dataDir, 'orbit.sqlite'), clientDir: cloud ? publicDir : path.join(distDir, 'client') });
 
+let cloudJwtSecret: string | undefined;
+export function setCloudJwtSecret(secret: string): void {
+  if (!/^[a-f0-9]{96}$/.test(secret)) throw new Error('Invalid shared signing key.');
+  cloudJwtSecret = secret;
+}
 export function getJwtSecret(): string {
+  if (cloud) {
+    if (!cloudJwtSecret) throw new Error('Shared credentials have not been initialized.');
+    return cloudJwtSecret;
+  }
   const secretPath = path.join(dataDir, 'jwt-secret');
   rejectDataSymlinks(secretPath);
   rejectDataSymlinks(config.sqlitePath);

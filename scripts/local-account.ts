@@ -53,8 +53,9 @@ async function main() {
   if (!validatePassword(password)) throw new Error('Password must contain at least 12 characters and at most 72 UTF-8 bytes.');
   const db = DbService.getInstance();
   openedDatabase = db;
+  await db.initializeCloud();
   getJwtSecret();
-  db.beginTransaction();
+  await db.beginTransaction();
   const state = db.getState();
   if (command === 'bootstrap') {
     if (state.users.some(user => user.systemRole === 'ADMIN' || (user.systemRole === undefined && user.role === 'OWNER'))) throw new Error('A system administrator already exists. Use set-password to recover the existing account.');
@@ -89,18 +90,19 @@ async function main() {
   let replacementSecret: string | undefined;
   if (command === 'set-password') {
     replacementSecret = randomBytes(48).toString('hex');
-    db.getStore().database.prepare("INSERT INTO metadata(key,value) VALUES ('jwt_secret',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(replacementSecret);
+    if (db.cloudStore) await db.cloudStore.setMetadata('jwt_secret', replacementSecret);
+    else db.getStore().database.prepare("INSERT INTO metadata(key,value) VALUES ('jwt_secret',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").run(replacementSecret);
   }
-  db.commitTransaction();
-  if (replacementSecret) {
+  await db.commitTransaction();
+  if (replacementSecret && !db.isCloud) {
     try { fs.writeFileSync(config.dataDir + '/jwt-secret', replacementSecret, { mode: 0o600 }); }
     catch { console.error('Signing secret is safely updated in SQLite; the legacy secret-file mirror could not be updated.'); }
   }
-  db.close();
+  await db.close();
   console.log(command === 'bootstrap' ? 'Local owner and workspace created. Start TS-Orbit and sign in.' : 'Local password updated; identity and memberships preserved. Start TS-Orbit and sign in again.');
 }
 
-main().catch(error => {
-  try { openedDatabase?.close(); } catch { /* Startup may have failed before the store opened. */ }
+main().catch(async error => {
+  try { await openedDatabase?.rollbackTransaction(); await openedDatabase?.close(); } catch { /* Startup may have failed before the store opened. */ }
   console.error(error.message); process.exitCode = 1;
 });

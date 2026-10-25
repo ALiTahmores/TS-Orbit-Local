@@ -15,6 +15,8 @@ import { migrateIdentity } from './server/bootstrap/identity.ts';
 import { ScopedState, membership, accessibleWorkspaces, manager } from './server/policy/scope.ts';
 import { createPolicy } from './server/policy/index.ts';
 import { attachRealtime } from './server/realtime.ts';
+import { createCloudRealtime } from './server/cloud/realtime.ts';
+import { VercelBlobStorage } from './server/cloud/blob-storage.ts';
 import { createPublicRouter } from './server/public/router.ts';
 import { createWordPressReceiver } from './server/integrations/wordpress.ts';
 import express from 'express';
@@ -24,15 +26,17 @@ import { dirname } from 'path';
 import { createServer as createHttpServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { config, getJwtSecret, redactSensitive, validatePassword } from './server/local-config.ts';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { DbService } from './src/data/dbService.ts';
 import { PersistenceCoordinator } from './server/persistence.ts';
 import { localAvatar } from './src/lib/localAssets.ts';
 const app = express();
 app.enable('case sensitive routing');
+// Both HTTP and WebSocket admission await the same database/schema initialization.
+app.use((_req, res, next) => { void ready.then(() => next(), () => res.status(503).json({error:'CLOUD_INITIALIZATION_FAILED',message:'سرویس ذخیره‌سازی آماده نیست.'})); });
 app.disable('x-powered-by');
 app.set('trust proxy', config.trustProxy);
-app.use(securityHeaders({ production: process.env.NODE_ENV === 'production', appOrigin: config.appOrigin, secureOrigin: config.secureOrigin }));
+app.use(securityHeaders({ production: process.env.NODE_ENV === 'production', appOrigin: config.appOrigin, secureOrigin: config.secureOrigin, cloud:config.cloud }));
 const PORT = config.port;
 const parseJson = express.json({ limit: '1mb', verify: (req: any, _res, buffer) => { req.rawBody = buffer.toString('utf8'); } });
 app.use((req, res, next) => {
@@ -42,6 +46,8 @@ app.use((req, res, next) => {
 });
 const httpServer = createHttpServer(app);
 const io = new SocketIOServer(httpServer, {
+    transports: config.cloud ? ['websocket'] : ['polling', 'websocket'],
+    allowRequest: (_req, callback) => { void ready.then(() => callback(null, true), () => callback('Storage unavailable', false)); },
     cors: {
         origin: config.appOrigin,
         methods: ["GET", "POST"]
@@ -435,18 +441,21 @@ class ProjectSyncConnector {
 
 ProjectSyncConnector::get_instance();
 `;
-// SQLite persistence with a compatibility state for existing route contracts
+export async function initializeApplication() {
+// Local SQLite or remote PostgreSQL share the same business-contract boundary.
 const db = DbService.getInstance();
+await db.initializeCloud();
 // All identity upgrades and private data boundaries use the same durable store.
-migrateIdentity(db);
+await migrateIdentity(db);
 const RAW = db.getState();
 const scoped = new ScopedState(RAW);
 const STATE = scoped.state;
 const persistence = new PersistenceCoordinator(db);
-const JWT_SECRET = getJwtSecret();
+const cloudHub = db.cloudStore ? createCloudRealtime({query: (sql:string, values?:any[]) => db.cloudStore!.transactionQuery(sql, values)}) : undefined;
+if (cloudHub) await persistence.mutateResult(async () => { await cloudHub.initialize(); });
 let realtime: ReturnType<typeof attachRealtime>;
 let chat: ChatService;
-const auth = createAuth({ state: RAW, jwtSecret: JWT_SECRET, appOrigin: config.appOrigin,
+const auth = createAuth({ state: RAW, jwtSecret: config.cloud ? getJwtSecret : getJwtSecret(), appOrigin: config.appOrigin,
     afterCommit: operation => persistence.afterCommit(operation),
     onSessionsRevoked: ids => realtime?.revokeSessions(ids) });
 const policy = createPolicy(scoped, auth.authenticateToken);
@@ -459,19 +468,40 @@ const isOwnerEmail = (email: string) => {
     const user = RAW.users.find((item: any) => item.email === email);
     return !!user && manager(membership(RAW, user, scoped.current()?.workspaceId || ''));
 };
-realtime = attachRealtime(io, auth, scoped, persistence, { markRead: (id, body) => chat.read(id, body) });
+realtime = attachRealtime(io, auth, scoped, persistence, { markRead: (id, body) => chat.read(id, body), cloud:cloudHub, queueEvent:event=>db.queueCloudEvent(event) });
 const broadcast = realtime.broadcast;
 const broadcastRoom = realtime.broadcastRoom;
-const files = createFileService({scoped, dataDir: config.dataDir, persistence, broadcast, broadcastWorkspace: realtime.broadcastWorkspace});
-files.collectDeleted();
+const files = createFileService({scoped, dataDir: config.dataDir, persistence, broadcast, broadcastWorkspace: realtime.broadcastWorkspace,
+    cloudStorage:config.cloud ? new VercelBlobStorage({maxBytes:Number(process.env.FILE_MAX_BYTES || 25*1024*1024)}) : undefined});
+if(config.cloud) await persistence.mutateResult(()=>files.collectCloudDeleted()).catch(()=>console.error('Cloud file cleanup deferred.'));
+else files.collectDeleted();
+let lastCloudCleanup=Date.now();
 const notifications = createNotificationService({scoped,broadcast,broadcastWorkspace:realtime.broadcastWorkspace});
 chat = new ChatService({scoped,files,broadcast,broadcastRoom,presence:realtime.presence,notify: input => notifications.notify(input),recordActivity: input => notifications.recordActivity(input)});
 // Password hashing runs before the serialized storage queue (see prepareCredentials).
-app.use('/api/auth', auth.prepareCredentials);
+if(!config.cloud) app.use('/api/auth', auth.prepareCredentials);
 app.use(persistence.middleware);
+if(config.cloud) {
+    await db.cloudStore!.sharedQuery(`CREATE TABLE IF NOT EXISTS orbit_auth_limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL, until_at TIMESTAMPTZ NOT NULL)`);
+    app.use('/api/auth', (req,res,next)=>{
+        if(req.method!=='POST') return next();
+        const group=req.path==='/login'?'login':req.path==='/register'?'register':req.path.startsWith('/check-')?'lookup':null;
+        if(!group)return next();
+        const limit=group==='login'?20:group==='register'?10:60;
+        const key=createHash('sha256').update(group+':'+String(req.ip||'unknown')).digest('hex');
+        void db.cloudStore!.sharedQuery(`INSERT INTO orbit_auth_limits(key,count,until_at) VALUES ($1,1,now()+interval '15 minutes') ON CONFLICT(key) DO UPDATE SET count=CASE WHEN orbit_auth_limits.until_at<=now() THEN 1 ELSE orbit_auth_limits.count+1 END, until_at=CASE WHEN orbit_auth_limits.until_at<=now() THEN now()+interval '15 minutes' ELSE orbit_auth_limits.until_at END RETURNING count`,[key]).then(result=>{
+            if(Number(result.rows[0].count)>limit){res.setHeader('Retry-After','900');res.status(429).json({error:'RATE_LIMITED',message:'تعداد تلاش‌ها زیاد است؛ بعداً تلاش کنید.'});}else next();
+        },next);
+    });
+    app.use('/api/auth',auth.prepareCredentials);
+}
+app.get('/api/runtime',(_req,res)=>res.json({cloud:config.cloud,directUpload:config.cloud,maxFileBytes:files.maxBytes}));
 app.use(requestAudit(RAW));
 app.use((req, _res, next) => {
-    if (req.method === 'DELETE' && /^\/api\//.test(req.path)) persistence.afterCommit(() => files.collectDeleted());
+    if (config.cloud && /^\/api\//.test(req.path) && (req.method==='DELETE'||Date.now()-lastCloudCleanup>60_000)) {
+        lastCloudCleanup=Date.now();
+        persistence.afterCommit(()=>persistence.mutateResult(()=>files.collectCloudDeleted()).then(()=>{}));
+    } else if (!config.cloud && req.method === 'DELETE' && /^\/api\//.test(req.path)) persistence.afterCommit(() => files.collectDeleted());
     next();
 });
 app.use('/api/auth', auth.router);
@@ -859,9 +889,10 @@ async function shutdown() {
         return;
     shuttingDown = true;
     httpServer.close();
+    await realtime.close();
     await persistence.stop();
     io.close();
-    db.close();
+    await db.close();
 }
 process.once('SIGINT', () => { shutdown().then(() => process.exit(0)).catch(error => { console.error(error); process.exit(1); }); });
 process.once('SIGTERM', () => { shutdown().then(() => process.exit(0)).catch(error => { console.error(error); process.exit(1); }); });
@@ -886,8 +917,13 @@ async function startServer() {
         console.log("Staging production mode. Hosting compiled bundle...");
         app.use(...clientApp(config.clientDir));
     }
-    httpServer.listen(PORT, config.host, () => {
+    if(!config.cloud) httpServer.listen(PORT, config.host, () => {
         console.log(`TS-Orbit local server: ${config.appOrigin}`);
     });
 }
-startServer().catch(error => { console.error(error); process.exitCode = 1; });
+await startServer();
+return {app,httpServer,db,persistence,realtime};
+}
+export const ready = initializeApplication();
+ready.catch(error => { console.error('Application initialization failed:', error?.code || error?.name || 'storage error'); if(!config.cloud)process.exitCode=1; });
+export default httpServer;

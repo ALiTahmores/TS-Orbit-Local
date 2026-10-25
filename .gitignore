@@ -1,4 +1,9 @@
 node_modules/
+npm-cache/
+.vercel/
+.cloud-provider.env
+/public/assets/
+/public/index.html
 build/
 dist/
 coverage/

@@ -42,12 +42,12 @@ test('asset side effects share HTTP commit, rollback and stream boundaries', asy
       state.tasks.push({id:'task',workspaceId:'ws',title:req.body.title});
       res.status(req.body.reject?409:201).json({saved:!req.body.reject});
     });
-    app.get('/api/stream',(req,res)=>{
+    app.get('/api/stream',async(req,res,next)=>{try{
       state.tasks.push({id:'stream-record',workspaceId:'ws',title:req.query.fail?'fail':'stream'});
-      persistence.prepareStream();
+      await persistence.prepareStream();
       res.setHeader('Content-Type','application/octet-stream');res.write('first bytes;');
       finishStream=()=>{streamFinished=true;res.end('last bytes');};
-    });
+    }catch(error){next(error);}});
     let enteredResolve, closedResolve, continueResolve, lateActive;
     const entered=new Promise(resolve=>enteredResolve=resolve),closed=new Promise(resolve=>closedResolve=resolve),continuation=new Promise(resolve=>continueResolve=resolve);
     app.get('/api/aborted',async(req,res)=>{
@@ -97,6 +97,8 @@ test('asset side effects share HTTP commit, rollback and stream boundaries', asy
     try {
       const abort=new AbortController(), request=fetch(f.origin+'/api/aborted',{signal:abort.signal}).catch(()=>null);
       await f.entered;abort.abort();await f.closed;await request;
+      // Close starts asynchronous rollback; the next queued request must observe its completed cleanup.
+      assert.equal((await fetch(f.origin+'/api/probe')).status,200);
       assert.equal(fs.existsSync(path.join(f.directory,'aborted-blob')),false);assert.deepEqual(f.state.tasks,[]);
       f.continue();await new Promise(resolve=>setImmediate(resolve));assert.equal(f.lateActive(),false);
       assert.equal((await fetch(f.origin+'/api/probe')).status,200);

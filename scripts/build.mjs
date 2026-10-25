@@ -23,6 +23,7 @@ await buildServer({
     server: path.join(projectRoot, 'server.ts'),
     'local-account': path.join(projectRoot, 'scripts', 'local-account.ts'),
     database: path.join(projectRoot, 'scripts', 'database.ts')
+    ,'cloud-database': path.join(projectRoot, 'scripts', 'cloud-database.ts')
   },
   bundle: true,
   platform: 'node',

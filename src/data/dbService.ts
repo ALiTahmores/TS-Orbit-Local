@@ -2,10 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import bcryptjs from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
-import { acquireDataLock, config } from '../../server/local-config.ts';
+import { acquireDataLock, config, setCloudJwtSecret } from '../../server/local-config.ts';
 import { localAvatar } from '../lib/localAssets.ts';
 import { canUserAccessProject, canUserAccessNotification } from '../utils/helpers';
-import { SqliteStore, importLegacyFile } from '../../server/db/store.ts';
+import { SqliteStore, importLegacyFile, inspectState } from '../../server/db/store.ts';
+import { PostgresStore, type PgPool } from '../../server/cloud/postgres.ts';
 
 // Persistent application data lives outside the build output.
 const DB_PATH = config.sqlitePath;
@@ -157,8 +158,14 @@ export class DbService {
   private state: DatabaseSchema | null = null;
   private store!: SqliteStore;
   private transactionSnapshot: DatabaseSchema | null = null;
+  private remoteStore?: PostgresStore;
+  private remotePool?: PgPool;
+  private cloudInitialization: Promise<void> | null = null;
+  private cloudEvents: any[] = [];
+  public cloudBeforeCommit?: () => Promise<void>;
 
   private constructor() {
+    if (config.cloud) { this.state = emptyDatabase(); return; }
     acquireDataLock();
     this.init();
   }
@@ -168,6 +175,69 @@ export class DbService {
       DbService.instance = new DbService();
     }
     return DbService.instance;
+  }
+
+  public get isCloud(): boolean { return config.cloud; }
+  public get cloudStore(): PostgresStore | undefined { return this.remoteStore; }
+
+  /** One remote canonical store, never a local SQLite shadow. A pool can be
+   * supplied by a trusted test or host integration without embedding credentials. */
+  public initializeCloud(pool?: PgPool): Promise<void> {
+    if (!this.isCloud) return Promise.resolve();
+    if (this.cloudInitialization) return this.cloudInitialization;
+    this.cloudInitialization = this.openCloud(pool).catch(error => {
+      this.cloudInitialization = null; throw error;
+    });
+    return this.cloudInitialization;
+  }
+
+  private async openCloud(suppliedPool?: PgPool): Promise<void> {
+    let ownedPool: PgPool | undefined;
+    if (!suppliedPool) {
+      if (!config.databaseUrl) throw new Error('DATABASE_URL is required for cloud storage.');
+      const { Pool } = await import('pg');
+      const pool = new Pool({ connectionString: config.databaseUrl, max: 3, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 10_000 });
+      pool.on('error', () => console.error('Cloud SQL idle connection failed.'));
+      suppliedPool = pool; ownedPool = pool;
+    }
+    const remote = new PostgresStore({ pool: suppliedPool, validateState: (next, previous) => {
+      // New anomalies cannot inherit a blanket legacy bypass. Only the exact
+      // signatures/counts already present in the locked baseline remain allowed.
+      const baseline = new Map<string, number>();
+      for (const issue of inspectState(previous).issues) baseline.set(issue.signature, (baseline.get(issue.signature) || 0) + 1);
+      const inspection = inspectState(next), proposed = new Map<string, number>();
+      for (const issue of inspection.issues) proposed.set(issue.signature, (proposed.get(issue.signature) || 0) + 1);
+      for (const [signature, count] of proposed) if (count > (baseline.get(signature) || 0)) {
+        const issue = inspection.issues.find(row => row.signature === signature)!;
+        throw Object.assign(new Error(`Invalid cloud relation/identity: ${issue.collection}[${issue.index}] ${issue.field || 'id'} (${issue.reason}).`), { code: 'DATA_VALIDATION_FAILED' });
+      }
+      return { relations: inspection.relations };
+    } });
+    try {
+      await remote.initialize(); await remote.begin();
+      const state = await remote.loadState();
+      this.restoreState(state as DatabaseSchema);
+      const secret = await remote.initializeSharedSecret();
+      // Apply the credential safety upgrade once per remote database, under the
+      // same global lock; a fresh instance never seeds a fabricated account.
+      if (!await remote.getMetadata('credential_stage1_v1')) {
+        for (const user of this.state!.users) {
+          if (!user || typeof user !== 'object') continue;
+          delete user.recoveryCode;
+          if (typeof user.passwordHash === 'string' && ['123456', 'invited123'].some(password => bcryptjs.compareSync(password, user.passwordHash))) {
+            user.passwordHash = bcryptjs.hashSync(randomBytes(48).toString('hex'), 10); user.localPasswordRequired = true;
+          }
+          if (typeof user.avatar === 'string' && /^https?:/.test(user.avatar)) user.avatar = localAvatar(user.name || user.id);
+        }
+        await remote.setMetadata('credential_stage1_v1', { version: 1, completedAt: new Date().toISOString() });
+      }
+      await remote.saveState(this.getState()); await remote.commit();
+      this.remoteStore = remote; this.remotePool = ownedPool; setCloudJwtSecret(secret);
+    } catch (error) {
+      await remote.rollback().catch(() => undefined);
+      await ownedPool?.end?.().catch(() => undefined);
+      throw error;
+    }
   }
 
   private init() {
@@ -207,12 +277,14 @@ export class DbService {
   }
 
   public beginTransaction() {
+    if (this.isCloud) return this.beginCloudTransaction();
     if (this.transactionSnapshot) throw new Error('Database request transaction already active.');
     this.store.begin();
     this.transactionSnapshot = structuredClone(this.getState());
   }
 
   public commitTransaction() {
+    if (this.isCloud) return this.commitCloudTransaction();
     if (!this.transactionSnapshot) throw new Error('No database request transaction active.');
     this.store.saveState(this.getState());
     this.store.commit();
@@ -220,24 +292,75 @@ export class DbService {
   }
 
   public rollbackTransaction() {
+    if (this.isCloud) return this.rollbackCloudTransaction();
     this.store.rollback();
     if (this.transactionSnapshot) this.restoreState(this.transactionSnapshot);
     this.transactionSnapshot = null;
   }
 
+  private async beginCloudTransaction(): Promise<void> {
+    await this.initializeCloud();
+    if (this.transactionSnapshot) throw new Error('Database request transaction already active.');
+    const remote = this.remoteStore!; this.cloudEvents = [];
+    await remote.begin();
+    try {
+      const state = await remote.loadState();
+      // Preserve the RAW root identity captured by the router/services while
+      // replacing its content with this transaction's cross-instance fresh view.
+      this.restoreState(state as DatabaseSchema);
+      this.transactionSnapshot = structuredClone(this.getState());
+      const secret = await remote.getMetadata<unknown>('jwt_secret');
+      if (typeof secret !== 'string' || !/^[0-9a-f]{96}$/.test(secret)) throw new Error('Invalid canonical cloud signing key.');
+      setCloudJwtSecret(secret);
+    } catch (error) { await this.rollbackCloudTransaction(); throw error; }
+  }
+
+  private async commitCloudTransaction(): Promise<void> {
+    if (!this.transactionSnapshot || !this.remoteStore?.inTransaction) throw new Error('No database request transaction active.');
+    await this.remoteStore.saveState(this.getState());
+    if (this.cloudBeforeCommit) await this.cloudBeforeCommit();
+    if(this.cloudEvents.length) await this.remoteStore.transactionQuery('INSERT INTO orbit_rt_events(event) SELECT value FROM jsonb_array_elements($1::jsonb)', [JSON.stringify(this.cloudEvents)]);
+    await this.remoteStore.commit();
+    this.transactionSnapshot = null; this.cloudEvents = [];
+  }
+
+  private async rollbackCloudTransaction(): Promise<void> {
+    try { await this.remoteStore?.rollback(); }
+    finally {
+      if (this.transactionSnapshot) this.restoreState(this.transactionSnapshot);
+      this.transactionSnapshot = null; this.cloudEvents = [];
+    }
+  }
+
+  public queueCloudEvent(event: any): void {
+    if (!this.isCloud || !this.transactionSnapshot || !this.remoteStore?.inTransaction) throw new Error('Cloud events require an active business transaction.');
+    const encoded = JSON.stringify(event);
+    if (!encoded || Buffer.byteLength(encoded, 'utf8') > 256_000) throw new Error('Invalid/oversized cloud event.');
+    this.cloudEvents.push(JSON.parse(encoded));
+  }
+
   public save() {
     if (!this.state || this.transactionSnapshot) return;
+    if (this.isCloud) throw new Error('Cloud business writes require an explicit async transaction.');
     try { this.store.saveState(this.state); }
     catch (error) { this.restoreState(this.store.loadState() as DatabaseSchema); throw error; }
   }
 
   public persist() { this.save(); }
-  public getStore() { return this.store; }
-  public close() { this.rollbackTransaction(); this.store.close(); }
+  public getStore() { if (this.isCloud) throw new Error('SQLite maintenance is unavailable in cloud mode.'); return this.store; }
+  public close() {
+    if (this.isCloud) return this.closeCloud();
+    this.rollbackTransaction(); this.store.close();
+  }
+  private async closeCloud(): Promise<void> {
+    try { await this.rollbackCloudTransaction(); }
+    finally { await this.remotePool?.end?.(); }
+  }
 
   // --- GENERIC STATE GETTERS ---
   public getState(): DatabaseSchema {
     if (!this.state) {
+      if (this.isCloud) throw new Error('Initialize cloud storage before reading state.');
       this.init();
     }
     return this.state!;

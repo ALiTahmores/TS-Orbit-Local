@@ -52,7 +52,7 @@ const domainReferenceFields = new Set(['definitionId','groupId','moduleId','lead
 const assetReferenceFields = new Set(['fileId','currentVersionId']);
 const collaborationReference = (field:string) => ['replyToMessageId','lastReadMessageId','targetTeamId','actorId','voiceNote.fileId'].includes(field) || /^attachments\[\d+\]\.(?:id|versionId)$/.test(field);
 type Relation = { sourceCollection: string; sourceId: string; field: string; targetCollection: string; targetId: string };
-function inspectState(state: ApplicationState) {
+export function inspectState(state: ApplicationState) {
   const entities = new Map<string, { collection: string; id: string; index: number }>();
   const issues: Issue[] = [];
   const relations: Relation[] = [];

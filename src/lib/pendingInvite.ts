@@ -26,10 +26,12 @@ export function pendingInvite(): string | null {
 
 /** Join the invited workspace and open it. Throws the server's message on failure. */
 export async function acceptPendingInvite(code: string): Promise<void> {
-  try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
   const response = await apiFetch('/api/workspaces/join', { method: 'POST', body: JSON.stringify({ inviteCode: code }) });
   const data = await response.json();
   if (!data?.workspace?.id) throw new Error('پیوستن به فضای کاری انجام نشد.');
   localStorage.setItem('activeWorkspaceId', data.workspace.id);
+  // A failed join must remain retryable on reload. Do not clear a newer invite
+  // that was opened while this request was in flight.
+  try { if (pendingInvite() === code) sessionStorage.removeItem(KEY); } catch { /* ignore */ }
   window.location.reload();
 }

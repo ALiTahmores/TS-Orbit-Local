@@ -1,4 +1,4 @@
-import { apiFetch, publicFetch, ApiError, getApiIdentity } from './api';
+import { apiFetch, publicFetch, ApiError, getApiIdentity, getAuthHeaders } from './api';
 
 export interface ManagedAsset {
   id:string;name:string;byteSize?:number;size?:string;formattedSize?:string;mimeType?:string;sha256?:string;
@@ -29,7 +29,16 @@ export async function uploadAsset(file:File,metadata:Record<string,any>={},versi
   const controller=new AbortController(),identity=identityKey();if(!isPublic)operations.add(controller);
   try {
     const input=isPublic?{name:metadata.name || file.name,category:metadata.category,tag:metadata.tag}:assetMetadata({name:file.name,...metadata});
-    const response=await (isPublic?publicFetch:apiFetch)(path,{method:'POST',headers:{'Content-Type':file.type || 'application/octet-stream','X-File-Metadata':encodeURIComponent(JSON.stringify(input))},body:file,signal:signal?AbortSignal.any([signal,controller.signal]):controller.signal});
+    const runtime=await fetch('/api/runtime',{signal:controller.signal}).then(response=>{if(!response.ok)throw new ApiError(response.status,'RUNTIME_UNAVAILABLE','پیکربندی سرور در دسترس نیست.');return response.json();});
+    let response:Response;
+    if(runtime.directUpload){
+      const base=isPublic?publicBase(portalToken):'/api/files';
+      const request=isPublic?publicFetch:apiFetch;
+      const init=await request(base+'/direct-intents',{method:'POST',body:JSON.stringify({metadata:input,byteSize:file.size,mimeType:file.type||'application/octet-stream',...(versionOf?{versionOf}:{})}),signal:signal?AbortSignal.any([signal,controller.signal]):controller.signal}).then(response=>response.json());
+      const {upload}=await import('@vercel/blob/client');
+      await upload(init.pathname,file,{access:'private',handleUploadUrl:base+'/direct-token',clientPayload:JSON.stringify({uploadId:init.id}),headers:isPublic?{}:getAuthHeaders(),contentType:init.mimeType,abortSignal:signal?AbortSignal.any([signal,controller.signal]):controller.signal});
+      response=await request(base+'/direct-intents/'+encodeURIComponent(init.id)+'/finalize',{method:'POST',body:'{}',signal:signal?AbortSignal.any([signal,controller.signal]):controller.signal});
+    }else response=await (isPublic?publicFetch:apiFetch)(path,{method:'POST',headers:{'Content-Type':file.type || 'application/octet-stream','X-File-Metadata':encodeURIComponent(JSON.stringify(input))},body:file,signal:signal?AbortSignal.any([signal,controller.signal]):controller.signal});
     const saved=await response.json();if(controller.signal.aborted||signal?.aborted||!isPublic && identity!==identityKey())throw new ApiError(0,'STALE_REQUEST','فضای کاری یا لینک پورتال تغییر کرده است.');
     if(!saved?.id)throw new Error('فایل ذخیره‌شده دریافت نشد.');
     if(!isPublic)window.dispatchEvent(new Event('orbit:assets-updated'));return saved;

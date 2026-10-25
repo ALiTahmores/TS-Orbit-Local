@@ -1,5 +1,8 @@
 const definition = (method: string, path: string, fields: string[] = []) => ({method, path, fields});
 export const assetPortalContracts = [
+  definition('POST','/api/files/direct-intents',['metadata','byteSize','mimeType','versionOf']),
+  definition('POST','/api/files/direct-token',['type','payload']),
+  definition('POST','/api/files/direct-intents/:uploadId/finalize',[]),
   definition('GET', '/api/files'), definition('GET', '/api/files/:id'),
   definition('POST', '/api/files'), definition('POST', '/api/files/:id/versions'),
   definition('GET', '/api/files/:id/versions'), definition('GET', '/api/files/:id/download'),

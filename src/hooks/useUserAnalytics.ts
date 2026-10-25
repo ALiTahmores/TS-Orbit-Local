@@ -63,7 +63,7 @@ export const useUserAnalytics = (targetUserId?: string): UserAnalyticsResult => 
       pendingReviewsCount: byStatus('review').length,
       blockedTasksCount: byStatus('blocked').length,
       myProjectsCount: myProjects.length,
-      myFilesCount: files.filter((file: any) => file && (file.uploadedById === userId || file.ownerId === userId)).length,
+      myFilesCount: files.filter((file: any) => file && (file.uploadedBy?.id === userId || file.uploadedById === userId || file.ownerId === userId)).length,
       unreadMessagesCount: notifications.filter(n => n && !n.read).length,
       myTasks, myProjects,
       onTimeCompletedCount,

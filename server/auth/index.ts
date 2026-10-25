@@ -30,7 +30,7 @@ export function isAccountActive(user: any): boolean {
 
 export interface AuthOptions {
   state: DatabaseSchema;
-  jwtSecret: string;
+  jwtSecret: string | (() => string);
   appOrigin: string;
   afterCommit?: (operation: () => void) => void;
   onSessionsRevoked?: (sessionIds: string[]) => void;
@@ -75,7 +75,7 @@ export function createAuth(options: AuthOptions) {
     for (const session of state.userSessions.filter(item => item.userId === userId)) revokeSession(session, reason);
   };
   const verifyAccessToken = (token: string) => {
-    const claims = jwt.verify(token, jwtSecret, { algorithms: ['HS256'], issuer, audience: appOrigin }) as jwt.JwtPayload;
+    const claims = jwt.verify(token, typeof jwtSecret === 'function' ? jwtSecret() : jwtSecret, { algorithms: ['HS256'], issuer, audience: appOrigin }) as jwt.JwtPayload;
     if (!claims || typeof claims !== 'object' || typeof claims.sub !== 'string' || typeof claims.sid !== 'string' || typeof claims.jti !== 'string' || !Number.isFinite(claims.exp)) throw new Error('INVALID_TOKEN');
     const user = state.users.find(item => item.id === claims.sub);
     const session = state.userSessions.find(item => item.id === claims.sid && item.userId === claims.sub);
@@ -127,7 +127,7 @@ export function createAuth(options: AuthOptions) {
     state.userSessions.push(session);
     state.loginHistory.push({ id: 'lh_' + randomUUID(), userId: user.id, email: user.email, sessionId: id, loginDate: now.toISOString(), loginTime: now.toISOString(), logoutTime: null, loginResult: 'Successful', ipAddress: session.ipAddress, browser: session.browser, operatingSystem: session.operatingSystem, device: session.device, authenticationMethod: 'Local password' });
     user.lastLogin = now.toISOString(); user.loginCount = (Number(user.loginCount) || 0) + 1;
-    const token = jwt.sign({ userId: user.id, sid: id, jti: tokenId }, jwtSecret, { algorithm: 'HS256', subject: user.id, issuer, audience: appOrigin, expiresIn: lifetimeSeconds });
+    const token = jwt.sign({ userId: user.id, sid: id, jti: tokenId }, typeof jwtSecret === 'function' ? jwtSecret() : jwtSecret, { algorithm: 'HS256', subject: user.id, issuer, audience: appOrigin, expiresIn: lifetimeSeconds });
     return token;
   };
   // Compare unknown accounts against a real bcrypt hash too, reducing timing leakage.

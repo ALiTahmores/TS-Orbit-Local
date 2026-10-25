@@ -905,7 +905,7 @@ async function startServer() {
         const vite = await createViteServer({
             server: { middlewareMode: true, fs: {
                     allow: [config.rootDir],
-                    deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/server.ts',
+                    deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/application.ts', '**/server.js',
                         '**/server/**', '**/scripts/**', '**/dist/server/**', '**/src/data/dbService.ts',
                         '**/db.json', '**/*.sqlite', '**/*.sqlite-*', '**/*.lock', '**/jwt-secret', config.dataDir.replace(/\\/g, '/') + '/**'],
                 } },

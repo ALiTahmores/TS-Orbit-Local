@@ -20,7 +20,7 @@ for (const name of fs.readdirSync(assetsDir)) {
 }
 await buildServer({
   entryPoints: {
-    server: path.join(projectRoot, 'server.ts'),
+    server: path.join(projectRoot, 'application.ts'),
     'local-account': path.join(projectRoot, 'scripts', 'local-account.ts'),
     database: path.join(projectRoot, 'scripts', 'database.ts')
     ,'cloud-database': path.join(projectRoot, 'scripts', 'cloud-database.ts')

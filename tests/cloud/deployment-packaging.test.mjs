@@ -15,10 +15,12 @@ test('deployment exclusions cannot remove nested application source directories'
 
 test('the Vercel function explicitly includes its TypeScript runtime modules', () => {
   const config = JSON.parse(fs.readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
-  const includeFiles = config.functions?.['server.ts']?.includeFiles;
+  const includeFiles = config.functions?.['server.js']?.includeFiles;
 
-  assert.equal(includeFiles, '{server/**,src/data/**,src/lib/**}');
+  assert.equal(includeFiles, '{application.ts,server/**,src/data/**,src/lib/**}');
   for (const file of [
+    'application.ts',
+    'server.js',
     'server/domain/projects-tasks.ts',
     'server/local-config.ts',
     'src/data/dbService.ts',
@@ -26,4 +28,7 @@ test('the Vercel function explicitly includes its TypeScript runtime modules', (
   ]) {
     assert.ok(fs.existsSync(new URL('../../' + file, import.meta.url)), `${file} must be present in the function bundle inputs`);
   }
+
+  const entry = fs.readFileSync(new URL('../../server.js', import.meta.url), 'utf8');
+  assert.ok(entry.indexOf("import 'tsx/esm'") < entry.indexOf("import('./application.ts')"), 'the complete TypeScript loader must register before the application import');
 });

@@ -3,9 +3,9 @@
   "framework": "express",
   "buildCommand": "npm run build:vercel",
   "functions": {
-    "server.ts": {
+    "server.js": {
       "maxDuration": 300,
-      "includeFiles": "{server/**,src/data/**,src/lib/**}"
+      "includeFiles": "{application.ts,server/**,src/data/**,src/lib/**}"
     }
   },
   "headers": [

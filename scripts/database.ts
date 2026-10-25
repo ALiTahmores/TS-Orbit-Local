@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { acquireDataLock, config } from '../server/local-config.ts';
 import { analyzeLegacy, importLegacyFile, SqliteStore, validateDatabase } from '../server/db/store.ts';
 import { validateAssetContents } from '../server/db/assets.ts';
+if (config.cloud) throw new Error('SQLite maintenance is local only. Use npm run cloud:db for PostgreSQL.');
 
 type Manifest = { format: 'ts-orbit-private-backup'; version: 1; createdAt: string;
   database: ReturnType<typeof validateDatabase>; files: { path: string; bytes: number; sha256: string }[] };

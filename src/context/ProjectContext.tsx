@@ -1103,14 +1103,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     socket.on('wp_sites_updated', onWpSites);
     socket.on('wp_logs_updated', onWpLogs);
     socket.on('wp_webhooks_updated', onWpWebhooks);
-    socket.on('online_status',onPresence);socket.on('connect',onPresence);
+    socket.on('online_status',onPresence);socket.on('connect',onPresence);socket.on('connect',onTaskDomain);socket.on('connect',onOrgDomain);
 
     return () => {
       socket.off('app_tasks_updated',onTaskDomain); socket.off('app_projects_updated',onTaskDomain); socket.off('org_data_updated',onOrgDomain); socket.off('org_updated',onOrgDomain); socket.off('app_org_updated',onOrgDomain);
       socket.off('wp_sites_updated', onWpSites);
       socket.off('wp_logs_updated', onWpLogs);
       socket.off('wp_webhooks_updated', onWpWebhooks);
-      socket.off('online_status',onPresence);socket.off('connect',onPresence);
+      socket.off('online_status',onPresence);socket.off('connect',onPresence);socket.off('connect',onTaskDomain);socket.off('connect',onOrgDomain);
     };
   }, [isAuthenticated,currentUser?.id,activeWorkspaceId]);
 
@@ -1666,7 +1666,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const assetIdentity=()=>JSON.stringify(getApiIdentity());
   const requireAssetIdentity=(identity:string)=>{if(identity!==assetIdentity())throw new ApiError(0,'STALE_REQUEST','نشست یا فضای کاری تغییر کرده است.');};
   const fetchFiles = async()=>{const identity=assetIdentity(),sequence=++fileFetchSequence.current;const response=await apiFetch('/api/files');const files=await response.json();requireAssetIdentity(identity);if(sequence===fileFetchSequence.current)setFiles(files);};
-  useEffect(()=>{fileFetchSequence.current++;if(!isAuthenticated||!activeWorkspaceId)return;void fetchFiles().catch(()=>{});const refresh=()=>{void fetchFiles().catch(()=>{});};window.addEventListener('orbit:assets-updated',refresh);const socket=getSocket();socket?.on('app_files_updated',refresh);return()=>{fileFetchSequence.current++;window.removeEventListener('orbit:assets-updated',refresh);socket?.off('app_files_updated',refresh);};},[isAuthenticated,currentUser?.id,activeWorkspaceId]);
+  useEffect(()=>{fileFetchSequence.current++;if(!isAuthenticated||!activeWorkspaceId)return;void fetchFiles().catch(()=>{});const refresh=()=>{void fetchFiles().catch(()=>{});};window.addEventListener('orbit:assets-updated',refresh);const socket=getSocket();socket?.on('app_files_updated',refresh);socket?.on('connect',refresh);return()=>{fileFetchSequence.current++;window.removeEventListener('orbit:assets-updated',refresh);socket?.off('app_files_updated',refresh);socket?.off('connect',refresh);};},[isAuthenticated,currentUser?.id,activeWorkspaceId]);
   const uploadFile = async(input:any)=>{if(!(input.file instanceof Blob))throw new Error('یک فایل انتخاب کنید.');const identity=assetIdentity();await uploadAsset(input.file,{name:input.name,projectId:input.projectId || (selectedProject?.id!=='no_project'?selectedProject?.id:undefined),category:input.category,tag:input.tag});requireAssetIdentity(identity);await fetchFiles();};
   const deleteFileAsset = async(id:string)=>{const identity=assetIdentity();await apiFetch('/api/files/'+encodeURIComponent(id),{method:'DELETE'});requireAssetIdentity(identity);await fetchFiles();requireAssetIdentity(identity);window.dispatchEvent(new Event('orbit:assets-updated'));};
   const refreshFeedback = async(projectId:string)=>{const identity=assetIdentity();const response=await apiFetch('/api/projects/'+encodeURIComponent(projectId)+'/feedbacks');const feedback=await response.json();requireAssetIdentity(identity);setProjects(previous=>previous.map(project=>project.id===projectId?{...project,clientFeedbacks:feedback}:project));setSelectedProjectState(previous=>previous.id===projectId?{...previous,clientFeedbacks:feedback}:previous);return feedback;};

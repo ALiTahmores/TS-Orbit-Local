@@ -47,7 +47,7 @@ function safeJson(value: any, depth = 0): boolean {
 function validField(key: string, value: any): boolean {
   const booleans = ['enabled','isAllowed','completed','pin','isGroup','isBudgetConfidential','isConfidential','isActive','clientVisible','approved','closed','muted'];
   if (booleans.includes(key)) return typeof value === 'boolean';
-  if (['order','progress','estimatedHours','estimate','amount','hours','loggedHours'].includes(key)) return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= (key === 'progress' ? 100 : 1e12);
+  if (['byteSize','order','progress','estimatedHours','estimate','amount','hours','loggedHours'].includes(key)) return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= (key === 'progress' ? 100 : 1e12);
   if (['assignedMemberIds','assignedTeamIds','memberIds','userIds','attachmentIds','selectedTeams','dependencies','tags','ids'].includes(key)) return Array.isArray(value) && value.length <= 200 && value.every(item => typeof item === 'string' && item.length <= 200);
   if (key==='codeSnippet'&&value===null) return true;
   if (['codeSnippet','voiceNote'].includes(key)) return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -55,7 +55,7 @@ function validField(key: string, value: any): boolean {
   if (['assignees','subtasks'].includes(key)) return Array.isArray(value) && value.length <= 200 && value.every(item=>typeof item==='string'||!!item&&typeof item==='object'&&!Array.isArray(item));
   if (['links','initialComments'].includes(key)) return Array.isArray(value) && value.length<=100 && value.every(item=>typeof item==='string'&&item.length<=20_000);
   if (key==='name' && value && typeof value==='object' && !Array.isArray(value)) return Object.keys(value).every(key=>['fa','en'].includes(key)) && Object.values(value).every(item=>typeof item==='string'&&item.length<=200);
-  if (['config','credentials','metrics','projectSummary','taskSummary','custom','customFields','payload','data'].includes(key)) return value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (['metadata','config','credentials','metrics','projectSummary','taskSummary','custom','customFields','payload','data'].includes(key)) return value !== null && typeof value === 'object' && !Array.isArray(value);
   if (key === 'structure') return value !== null && typeof value === 'object';
   if (['clientProjectsMatrix','departmentBreakdown','memberBottlenecks','bottlenecks','keyTakeaways','defaultModules'].includes(key)) return Array.isArray(value);
   if (key.endsWith('Id') && value === null) return true;
@@ -190,6 +190,8 @@ export function sanitize(value: any, scope: Scope, scoped: ScopedState): any {
     if (!canManage && ((value.isBudgetConfidential || value.isConfidential) && ['budget','amount','currency','cost','revenue','expense'].includes(key) || key === 'budgetSum')) return false;
     if (key === 'apiKey' && canManage && /^\/api\/sites\/[^/]+\/key$/.test(scope.path)) return true;
     if (/password|passwd|secret|tokenIdHash|recovery|verification|credentials|api.?key|authorization|cookie/i.test(key)) return false;
+    // Only the scoped, short-lived provider upload capability may cross this exact endpoint.
+    if(key==='clientToken'&&scope.method==='POST'&&scope.path==='/api/files/direct-token'&&typeof value.clientToken==='string'&&value.type==='blob.generate-client-token')return true;
     if (/token/i.test(key)) return (['portalToken','clientPortalToken'].includes(key) || (key === 'token' && scope.path.endsWith('/portal-token'))) && canManage && scope.path.startsWith('/api/projects');
     if (key === 'inviteCode' || key === 'pendingInvites') return canManage && scope.path.startsWith('/api/workspaces');
     if (key==='permissions'&&conversationCapabilities) return true;

@@ -1,17 +1,17 @@
 import React, { useMemo } from 'react';
 import { Clock, ArrowUpRight } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
+import { weeklyTimeTotals } from '../../lib/taskAnalytics';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === undefined || n === null) return '';
   return n.toString().replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d, 10)]);
 };
 
-const DAY = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
 const formatHours = (hours: number) => {
-  const minutes = Math.round(hours * 60);
-  return toPersianDigits(`${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`);
+  const minutes = Math.round(Math.abs(hours) * 60);
+  return toPersianDigits(`${hours < 0 ? '−' : ''}${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}`);
 };
 
 export interface WeeklyTimesheetWidgetProps {
@@ -28,21 +28,11 @@ export const WeeklyTimesheetWidget: React.FC<WeeklyTimesheetWidgetProps> = ({
   const isRtl = locale === 'fa';
 
   const week = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const start = new Date(today.getTime() - ((today.getDay() + 1) % 7) * DAY); // Saturday
-    const days = Array.from({ length: 7 }, () => 0);
-    for (const task of tasks || []) for (const entry of (task as any)?.timeEntries || []) {
-      const at = new Date(entry?.createdAt || entry?.date || '');
-      const hours = Number(entry?.hours) || 0;
-      if (Number.isNaN(at.getTime()) || hours <= 0) continue;
-      const index = Math.floor((at.getTime() - start.getTime()) / DAY);
-      if (index >= 0 && index < 7) days[index] += hours;
-    }
-    const total = days.reduce((sum, hours) => sum + hours, 0);
-    const elapsed = Math.min(7, Math.floor((today.getTime() - start.getTime()) / DAY) + 1);
+    const totals = weeklyTimeTotals(tasks || []);
+    const { start } = totals;
     const label = (date: Date) => date.toLocaleDateString('fa-IR', { day: 'numeric', month: 'long' });
-    return { days, total, average: total / elapsed, max: Math.max(...days, 0), range: `${label(start)} تا ${label(new Date(start.getTime() + 6 * DAY))}`, todayIndex: elapsed - 1 };
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+    return { ...totals, range: `${label(start)} تا ${label(end)}` };
   }, [tasks]);
 
   const containerClasses = borderless
@@ -82,7 +72,7 @@ export const WeeklyTimesheetWidget: React.FC<WeeklyTimesheetWidgetProps> = ({
         </div>
       </div>
 
-      {week.total === 0 ? (
+      {week.max === 0 ? (
         <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
           هنوز زمانی در این هفته ثبت نشده است. زمان کار را از بخش «ثبت زمان» در جزئیات هر وظیفه ثبت کنید.
         </p>
@@ -92,8 +82,8 @@ export const WeeklyTimesheetWidget: React.FC<WeeklyTimesheetWidgetProps> = ({
             <div
               key={WEEKDAYS[index]}
               title={`${WEEKDAYS[index]}: ${formatHours(hours)} ساعت`}
-              className={`rounded-xs ${index === week.todayIndex ? 'bg-emerald-500' : 'bg-blue-500'} ${hours === 0 ? 'opacity-25' : ''}`}
-              style={{ height: `${week.max ? Math.max(8, hours / week.max * 100) : 8}%` }}
+              className={`rounded-xs ${hours < 0 ? 'bg-rose-500' : index === week.todayIndex ? 'bg-emerald-500' : 'bg-blue-500'} ${hours === 0 ? 'opacity-25' : ''}`}
+              style={{ height: `${week.max ? Math.max(8, Math.abs(hours) / week.max * 100) : 8}%` }}
             />
           ))}
         </div>

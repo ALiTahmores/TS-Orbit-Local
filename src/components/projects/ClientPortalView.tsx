@@ -37,8 +37,8 @@ const PortalControls:React.FC<{project:any}>=({project})=>{
   useEffect(()=>{
     const generation=++scope.current;
     const refresh=(event?:{projectId?:string})=>{if(event?.projectId&&event.projectId!==id)return;void load().catch(error=>{if(generation===scope.current)setError(error.message);});};
-    refresh();const socket=getSocket();socket?.on('app_feedback_updated',refresh);
-    return()=>{scope.current++;socket?.off('app_feedback_updated',refresh);};
+    refresh();const socket=getSocket();socket?.on('app_feedback_updated',refresh);socket?.on('connect',refresh);
+    return()=>{scope.current++;socket?.off('app_feedback_updated',refresh);socket?.off('connect',refresh);};
   },[id]);
   useEffect(()=>{
     const date=project.portalExpiresAt?new Date(project.portalExpiresAt):null;

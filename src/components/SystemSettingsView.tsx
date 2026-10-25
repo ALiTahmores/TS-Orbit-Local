@@ -26,6 +26,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { ActiveSessions } from './settings/ActiveSessions';
+import { changedAvatar } from '../lib/formValues';
 
 /** A square 256px WebP data URL cropped from the centre of the chosen image. */
 const resizeAvatar = (file: File) => new Promise<string>((resolve, reject) => {
@@ -232,7 +233,7 @@ export const SystemSettingsView: React.FC = () => {
     const success = await updateProfile(
       profileName,
       profilePhone,
-      profileAvatar,
+      changedAvatar(currentUser.avatar, profileAvatar),
       profileBio,
       profileEmail,
       profileJobTitle,

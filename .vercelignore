@@ -1,0 +1,14 @@
+node_modules
+npm-cache
+data
+backups
+tests
+dist
+Reports
+*.sqlite*
+*.zip
+*.log
+.env*
+.cloud-provider.env
+!.env.example
+.git

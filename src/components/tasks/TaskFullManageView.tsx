@@ -29,6 +29,7 @@ import { Task, SubTask, TaskPriority, TaskStatus, DepartmentKey } from '../../ty
 import { cn } from '../../lib/utils';
 import { JalaliDateInput } from '../common/JalaliDateInput';
 import { dueDate as canonicalDueDate } from '../../lib/taskAnalytics';
+import { deadlineEditPatch } from '../../lib/formValues';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === undefined || n === null) return '';
@@ -65,6 +66,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
   const [status, setStatus] = useState<string>(taskStatus(task?.status || 'pending'));
   const [priority, setPriority] = useState<string>(taskPriority(task?.priority || 'medium'));
   const [dueDate, setDueDate] = useState(canonicalDueDate(task) || '');
+  const [deadlineChanged, setDeadlineChanged] = useState(false);
   const [estimatedHours, setEstimatedHours] = useState(String(task?.estimatedHours || 0));
   const [entryHours, setEntryHours] = useState('');
   const [entryNote, setEntryNote] = useState('');
@@ -76,7 +78,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
   useEffect(() => {
     setTitle(task?.title || ''); setDescription(task?.description || '');
     setStatus(taskStatus(task?.status || 'pending')); setPriority(taskPriority(task?.priority || 'medium'));
-    setDueDate(canonicalDueDate(task) || ''); setEstimatedHours(String(task?.estimatedHours || 0));
+    setDueDate(canonicalDueDate(task) || ''); setDeadlineChanged(false); setEstimatedHours(String(task?.estimatedHours || 0));
     setSubtasks(task?.subtasks || []); setMemberIds(assignedIds(task)); setDependencies(task?.dependencies || []); setLinksText((task?.links || []).join('\n'));
   },[task?.id]);
   const [subtasks, setSubtasks] = useState<SubTask[]>(task?.subtasks || []);
@@ -108,11 +110,12 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
     setSaving(true); setSaveError(''); setIsSaved(false);
     try {
       const saved = await updateTask(task.id, {title,description,status,priority,
-        ...(dueDate ? {deadline:dueDate,dueDate} : {deadline:'',dueDate:''}),
+        ...deadlineEditPatch(dueDate, deadlineChanged),
         estimatedHours:Number(estimatedHours),subtasks,assignedMemberIds:memberIds,dependencies,
         links:linksText.split('\n').map(link=>link.trim()).filter(Boolean)});
       setSubtasks(saved.subtasks || []);
       setStatus(taskStatus(saved.status));setPriority(taskPriority(saved.priority));
+      setDeadlineChanged(false);
       setIsSaved(true);
     } catch(error) { setSaveError(error instanceof Error ? error.message : 'ذخیره انجام نشد.'); }
     finally { setSaving(false); }
@@ -395,7 +398,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
               <label htmlFor="task-manage-due-date" className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 {isRtl ? 'سررسید' : 'Due Date'}
               </label>
-              <JalaliDateInput id="task-manage-due-date" value={dueDate} onChange={setDueDate} placeholder="بدون سررسید" className="[&>button]:h-11" />
+              <JalaliDateInput id="task-manage-due-date" value={dueDate} onChange={value => { setDueDate(value); setDeadlineChanged(true); }} placeholder="بدون سررسید" className="[&>button]:h-11" />
             </div>
           </div>
 

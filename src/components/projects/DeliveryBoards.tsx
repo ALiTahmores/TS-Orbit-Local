@@ -52,7 +52,7 @@ export const DeliveryBoards:React.FC = () => {
     setRows(rows);return true;
   };
   useEffect(()=>{setProjectId('');setRows([]);setEditingId(null);setForm({});setFormOpen(false);setError('');void load().catch(()=>{});},[board,activeWorkspaceId]);
-  useEffect(()=>{const socket=getSocket();const event=({'wordpress-checklist':'wordpressChecklist_updated','seo-checklist':'seoChecklist_updated','content-center':'contentCenter_updated','qa-bugs':'qaBugs_updated'})[board];const refresh=()=>{void load().catch(()=>{});};socket?.on(event,refresh);return()=>{socket?.off(event,refresh);};},[board,activeWorkspaceId]);
+  useEffect(()=>{const socket=getSocket();const event=({'wordpress-checklist':'wordpressChecklist_updated','seo-checklist':'seoChecklist_updated','content-center':'contentCenter_updated','qa-bugs':'qaBugs_updated'})[board];const refresh=()=>{void load().catch(()=>{});};socket?.on(event,refresh);socket?.on('connect',refresh);return()=>{socket?.off(event,refresh);socket?.off('connect',refresh);};},[board,activeWorkspaceId]);
   const update=(field:string,value:any)=>setForm(previous=>({...previous,[field]:value}));
   const reset=()=>{setEditingId(null);setForm({});setFormOpen(false);};
   const save=async(event:React.FormEvent)=>{

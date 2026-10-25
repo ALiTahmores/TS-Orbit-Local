@@ -1,12 +1,13 @@
 // Task metrics derived only from stored task data: status history timestamps,
 // canonical due dates and assignments. Nothing here is estimated or seeded.
 import { assignedIds } from './domain';
+import { calendarDay } from './formValues';
 
 export type SeriesPeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly';
 export interface SeriesPoint { name: string; Completed: number; OnTime: number | null }
 
 const DAY = 24 * 60 * 60 * 1000;
-const isoDate = (value: unknown) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : undefined;
+const isoDate = calendarDay;
 
 /** When the task last entered "completed" (status history), else its last update while completed. */
 export function completedAt(task: any): Date | undefined {
@@ -24,18 +25,48 @@ export function dueDate(task: any): string | undefined {
 
 export const todayISO = (now = new Date()) => new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const isOpen = (task: any) => !['completed', 'cancelled'].includes(String(task?.status).toLowerCase());
-export const isOverdue = (task: any, today = todayISO()) => isOpen(task) && !!dueDate(task) && dueDate(task)! < today;
+const deadlineInstant = (task: any): Date | undefined => {
+  const value = task?.deadlineCanonical || task?.dueDateCanonical || task?.deadline || task?.dueDate;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(value)) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+export const isOverdue = (task: any, today = todayISO(), now = new Date()) => {
+  if (!isOpen(task)) return false;
+  const instant = deadlineInstant(task);
+  return instant ? instant.getTime() < now.getTime() : !!dueDate(task) && dueDate(task)! < today;
+};
 export const isDueToday = (task: any, today = todayISO()) => isOpen(task) && dueDate(task) === today;
 
 /** Completed on or before its due date; undefined when the task had no due date. */
 export function deliveredOnTime(task: any): boolean | undefined {
   const done = completedAt(task), due = dueDate(task);
   if (!done || !due) return undefined;
+  const instant = deadlineInstant(task);
+  if (instant) return done.getTime() <= instant.getTime();
   return todayISO(done) <= due;
 }
 
 export const tasksAssignedTo = (tasks: any[], userId: string) =>
   userId ? tasks.filter(task => task && (assignedIds(task).includes(userId) || task.assigneeId === userId)) : [];
+
+/** Net recorded hours, including durable corrections; calendar days follow the viewer's zone. */
+export function weeklyTimeTotals(tasks: any[], now = new Date()) {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (today.getDay() + 1) % 7);
+  const calendarNumber = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY;
+  const days = Array.from({ length: 7 }, () => 0);
+  for (const task of tasks || []) for (const entry of task?.timeEntries || []) {
+    const at = new Date(entry?.createdAt || entry?.date || '');
+    const hours = Number(entry?.hours);
+    if (Number.isNaN(at.getTime()) || !Number.isFinite(hours)) continue;
+    const index = calendarNumber(at) - calendarNumber(start);
+    if (index >= 0 && index < 7) days[index] += hours;
+  }
+  const total = days.reduce((sum, hours) => sum + hours, 0);
+  const elapsed = Math.min(7, calendarNumber(today) - calendarNumber(start) + 1);
+  return { days, total, average: total / elapsed, max: Math.max(...days.map(Math.abs), 0), start, todayIndex: elapsed - 1 };
+}
 
 const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
 const persianYearMonth = new Intl.DateTimeFormat('en-US-u-ca-persian', { year: 'numeric', month: 'numeric' });

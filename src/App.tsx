@@ -27,6 +27,42 @@ const ScreenFallback = () => (
   </div>
 );
 
+class AppErrorBoundary extends React.Component<{ children?: React.ReactNode }, { failed: boolean }> {
+  declare readonly props: { children?: React.ReactNode };
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error('TS Orbit could not render the current release.', error);
+  }
+
+  private retry = () => {
+    const next = new URL(window.location.href);
+    next.searchParams.set('__orbit_release', String(Date.now()));
+    window.location.replace(next.toString());
+  };
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <main className="min-h-screen w-full flex items-center justify-center bg-bg-app p-6" dir="rtl">
+        <section className="w-full max-w-md rounded-2xl border border-border-primary bg-bg-surface p-8 text-center shadow-xl">
+          <h1 className="text-xl font-bold text-text-primary">بارگذاری برنامه کامل نشد</h1>
+          <p className="mt-3 text-sm leading-7 text-text-secondary">
+            نسخهٔ تازه را دریافت می‌کنیم. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.
+          </p>
+          <button type="button" onClick={this.retry} className="mt-6 rounded-xl bg-brand-accent px-5 py-3 text-sm font-semibold text-white">
+            تلاش دوباره
+          </button>
+        </section>
+      </main>
+    );
+  }
+}
+
 function AppContent() {
   const { isAuthenticated, currentUser, refreshAllData } = useProject();
   // Captured before the sign-in page renders, so it can tell the visitor about the invite.
@@ -95,13 +131,15 @@ function AppContent() {
 
 export default function App() {
   return (
-    <LoadingProvider>
-      <ProjectProvider>
-        <Suspense fallback={<ScreenFallback />}>
-          <AppWithSpark />
-        </Suspense>
-      </ProjectProvider>
-    </LoadingProvider>
+    <AppErrorBoundary>
+      <LoadingProvider>
+        <ProjectProvider>
+          <Suspense fallback={<ScreenFallback />}>
+            <AppWithSpark />
+          </Suspense>
+        </ProjectProvider>
+      </LoadingProvider>
+    </AppErrorBoundary>
   );
 }
 

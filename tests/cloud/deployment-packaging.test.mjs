@@ -33,3 +33,14 @@ test('the Vercel function explicitly includes its TypeScript runtime modules', (
   const entry = fs.readFileSync(new URL('../../server.js', import.meta.url), 'utf8');
   assert.ok(entry.indexOf("import 'tsx/esm'") < entry.indexOf("import('./application.ts')"), 'the complete TypeScript loader must register before the application import');
 });
+
+test('the Vercel client is a clean atomic release without lazy runtime chunks', () => {
+  const buildScript = fs.readFileSync(new URL('../../scripts/build-vercel.mjs', import.meta.url), 'utf8');
+  const viteConfig = fs.readFileSync(new URL('../../vite.config.ts', import.meta.url), 'utf8');
+
+  assert.match(buildScript, /mode:\s*['"]vercel['"]/);
+  assert.match(buildScript, /public['"],['"]assets/);
+  assert.match(buildScript, /emptyOutDir:\s*false/);
+  assert.match(viteConfig, /mode\s*===\s*['"]vercel['"]/);
+  assert.match(viteConfig, /inlineDynamicImports:\s*true/);
+});

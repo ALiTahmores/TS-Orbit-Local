@@ -5,7 +5,7 @@ const reloadKey = 'orbit_chunk_reload_at';
 // After a new release the hashed chunk names change; a tab still running the old
 // release then fails to fetch a view. Reload once to pick up the new release, but
 // never loop if the failure persists (offline, server down).
-function reloadForNewRelease(error: unknown): boolean {
+export function recoverFromStaleRelease(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   if (!/dynamically imported module|Importing a module script failed|Failed to fetch/i.test(message)) return false;
   try {
@@ -13,8 +13,19 @@ function reloadForNewRelease(error: unknown): boolean {
     if (Date.now() - last < 30_000) return false;
     sessionStorage.setItem(reloadKey, String(Date.now()));
   } catch { return false; }
-  window.location.reload();
+  const next = new URL(window.location.href);
+  next.searchParams.set('__orbit_release', String(Date.now()));
+  window.location.replace(next.toString());
   return true;
+}
+
+// Vite emits this event before a stale preload becomes an unhandled module
+// error. Installing the listener before React renders prevents a blank root.
+export function installChunkRecovery() {
+  window.addEventListener('vite:preloadError', (event) => {
+    const cause = (event as Event & { payload?: unknown }).payload ?? event;
+    if (recoverFromStaleRelease(cause)) event.preventDefault();
+  });
 }
 
 // React.lazy for modules with named exports. `preload` starts the download early
@@ -24,7 +35,7 @@ export function lazyNamed<M extends Record<K, React.ComponentType<any>>, K exten
   const load = () => (pending ??= loader().catch(error => { pending = undefined; throw error; }));
   const component = React.lazy(() => load().then(module => ({ default: module[name] }), error => {
     // Keep the fallback on screen while the page reloads instead of flashing an error.
-    if (reloadForNewRelease(error)) return new Promise<never>(() => {});
+    if (recoverFromStaleRelease(error)) return new Promise<never>(() => {});
     throw error;
   }));
   return Object.assign(component, { preload: load });

@@ -11,7 +11,8 @@ const vendorChunks: [RegExp, string][] = [
   [/[\\/]node_modules[\\/](socket\.io-client|socket\.io-parser|engine\.io-client|engine\.io-parser|@socket\.io[\\/]component-emitter|xmlhttprequest-ssl)[\\/]/, 'vendor-socket'],
 ];
 
-export default defineConfig(() => {
+export default defineConfig(({mode}) => {
+  const isVercelBuild = mode === 'vercel';
   return {
     base: '/',
     plugins: [react(), tailwindcss()],
@@ -24,11 +25,17 @@ export default defineConfig(() => {
       outDir: 'dist/client',
       emptyOutDir: true,
       rollupOptions: {
-        output: {
-          manualChunks(id) {
-            return vendorChunks.find(([pattern]) => pattern.test(id))?.[1];
-          },
-        },
+        // Vercel serves this client from the serverless package. Keeping the
+        // release in one module prevents a successful sign-in from depending on
+        // a separately packaged lazy chunk. Local/standalone builds keep the
+        // smaller cache-friendly chunks.
+        output: isVercelBuild
+          ? { inlineDynamicImports: true }
+          : {
+              manualChunks(id) {
+                return vendorChunks.find(([pattern]) => pattern.test(id))?.[1];
+              },
+            },
       },
     },
     server: { host: '127.0.0.1' },

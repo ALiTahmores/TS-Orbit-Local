@@ -16,6 +16,7 @@ import { ScopedState, membership, accessibleWorkspaces, manager } from './server
 import { createPolicy } from './server/policy/index.ts';
 import { attachRealtime } from './server/realtime.ts';
 import { createCloudRealtime } from './server/cloud/realtime.ts';
+import { cloudFailureLabel, retryCloudStartup } from './server/cloud/startup.ts';
 import { VercelBlobStorage } from './server/cloud/blob-storage.ts';
 import { createPublicRouter } from './server/public/router.ts';
 import { createWordPressReceiver } from './server/integrations/wordpress.ts';
@@ -444,15 +445,15 @@ ProjectSyncConnector::get_instance();
 export async function initializeApplication() {
 // Local SQLite or remote PostgreSQL share the same business-contract boundary.
 const db = DbService.getInstance();
-await db.initializeCloud();
+await retryCloudStartup('database', () => db.initializeCloud());
 // All identity upgrades and private data boundaries use the same durable store.
-await migrateIdentity(db);
+await retryCloudStartup('identity', () => Promise.resolve(migrateIdentity(db)));
 const RAW = db.getState();
 const scoped = new ScopedState(RAW);
 const STATE = scoped.state;
 const persistence = new PersistenceCoordinator(db);
 const cloudHub = db.cloudStore ? createCloudRealtime({query: (sql:string, values?:any[]) => db.cloudStore!.transactionQuery(sql, values)}) : undefined;
-if (cloudHub) await persistence.mutateResult(async () => { await cloudHub.initialize(); });
+if (cloudHub) await retryCloudStartup('realtime', () => persistence.mutateResult(async () => { await cloudHub.initialize(); }));
 let realtime: ReturnType<typeof attachRealtime>;
 let chat: ChatService;
 const auth = createAuth({ state: RAW, jwtSecret: config.cloud ? getJwtSecret : getJwtSecret(), appOrigin: config.appOrigin,
@@ -925,5 +926,6 @@ await startServer();
 return {app,httpServer,db,persistence,realtime};
 }
 export const ready = initializeApplication();
-ready.catch(error => { console.error('Application initialization failed:', error?.code || error?.name || 'storage error'); if(!config.cloud)process.exitCode=1; });
+ready.catch(error => { console.error('Application initialization failed:', cloudFailureLabel(error)); if(!config.cloud)process.exitCode=1; });
 export default httpServer;
+

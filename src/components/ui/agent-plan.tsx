@@ -188,7 +188,7 @@ export const AgentPlan: React.FC<AgentPlanProps> = ({
     : (totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0);
 
   return (
-    <div dir="rtl" className={`text-right w-full font-vazirmatn ${embedded ? '' : 'space-y-4'} ${className}`}>
+    <div className={`text-start w-full font-vazirmatn ${embedded ? '' : 'space-y-4'} ${className}`}>
       
       {/* CARD CONTAINER (TS Orbit Design Tokens) */}
       <div className={embedded ? 'w-full text-slate-800 dark:text-slate-100 transition-colors' : 'w-full bg-white dark:bg-[#0d121f] border border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-100 shadow-sm rounded-2xl p-4 sm:p-6 transition-colors'}>
@@ -287,7 +287,7 @@ export const AgentPlan: React.FC<AgentPlanProps> = ({
                           <span>{completedSubtasks}</span>
                           <span>/</span>
                           <span>{subtasksCount}</span>
-                          <span className="mr-1 text-[10px] text-slate-400">تسک</span>
+                          <span className="ms-1 text-[10px] text-slate-400">وظیفه</span>
                         </span>
                       )}
 
@@ -306,7 +306,7 @@ export const AgentPlan: React.FC<AgentPlanProps> = ({
                   </div>
 
                   {/* BOTTOM INFO BAR: Description, Dependencies & Tool Badges */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pr-8 text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 ps-8 text-[11px] text-slate-500 dark:text-slate-400">
                     <p className="line-clamp-1 max-w-2xl">
                       {task.description}
                     </p>
@@ -373,11 +373,11 @@ export const AgentPlan: React.FC<AgentPlanProps> = ({
                       className="overflow-hidden"
                     >
                       {/* TREE WRAPPER: Dashed line anchored to the RIGHT side */}
-                      <div className="relative mt-2 mr-4 sm:mr-6 pb-2">
+                      <div className="relative mt-2 ms-4 sm:ms-6 pb-2">
                         
                         {/* Connecting Dashed Tree Line: Right side */}
                         <div 
-                          className="absolute right-[20px] top-1 bottom-4 w-0 border-r-2 border-dashed border-slate-200 dark:border-slate-800 pointer-events-none"
+                          className="absolute start-[20px] top-1 bottom-4 w-0 border-s-2 border-dashed border-slate-200 dark:border-slate-800 pointer-events-none"
                         />
 
                         {/* SUBTASK ITEMS */}
@@ -394,10 +394,10 @@ export const AgentPlan: React.FC<AgentPlanProps> = ({
                                     onSubtaskToggle(task.id, subtask.id, !isDone);
                                   }
                                 }}
-                                className="group/sub relative flex items-start justify-between gap-3 pr-7 pl-2 py-2 rounded-xl hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors cursor-pointer"
+                                className="group/sub relative flex items-start justify-between gap-3 ps-7 pe-2 py-2 rounded-xl hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors cursor-pointer"
                               >
                                 {/* SUBTASK CONNECTOR BULLET / CHECKBOX (Right side) */}
-                                <div className="absolute right-[14px] top-3.5 z-10 flex items-center justify-center">
+                                <div className="absolute start-[14px] top-3.5 z-10 flex items-center justify-center">
                                   <motion.div
                                     whileTap={readOnly ? undefined : { scale: 0.8 }}
                                     className={`w-3.5 h-3.5 rounded-md border flex items-center justify-center transition-all ${
@@ -411,7 +411,7 @@ export const AgentPlan: React.FC<AgentPlanProps> = ({
                                 </div>
 
                                 {/* SUBTASK TEXT & DETAILS */}
-                                <div className="space-y-0.5 min-w-0 pr-1">
+                                <div className="space-y-0.5 min-w-0 ps-1">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className={`font-bold text-xs transition-colors ${
                                       isDone 

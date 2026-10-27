@@ -21,7 +21,7 @@ export const TeamDashboardView: React.FC<TeamDashboardViewProps> = ({ teamId, de
 
   if (!team) return <div className="text-center py-12 text-xs text-text-secondary">تیم مورد نظر یافت نشد</div>;
   return (
-    <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-6 text-right" style={{ direction: 'rtl' }}>
+    <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-6 text-start">
       {/* Right Column: Team Meta & Members (1/3 width) */}
       <div className="space-y-6">
         {/* Team Details */}

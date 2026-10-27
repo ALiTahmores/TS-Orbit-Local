@@ -1,13 +1,12 @@
-// Vercel transpiles only the detected Express entrypoint. Register the full
-// TypeScript loader before importing the application so runtime modules can use
-// TypeScript syntax that Node's strip-only mode does not support.
-import 'tsx/esm';
+// Vercel's Express entrypoint. `npm run build:vercel` bundles the TypeScript
+// application into one ES module, so a cold start loads a single prebuilt file
+// instead of transpiling every server module at runtime.
 import express from 'express';
 
 // Keep framework detection explicit while the actual application is loaded below.
 void express;
 
-const application = await import('./application.ts');
+const application = await import('./build/vercel/application.mjs');
 
 export const ready = application.ready;
 export default application.default;

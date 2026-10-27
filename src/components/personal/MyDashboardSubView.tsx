@@ -27,16 +27,19 @@ export const MyDashboardSubView: React.FC = () => {
   ];
 
   return (
-    <div className="w-full space-y-6 font-sans text-right" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="w-full space-y-6 font-sans text-start" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="bg-white dark:bg-[#121621] border border-slate-200/80 dark:border-slate-800/80 shadow-sm rounded-3xl p-6 transition-colors duration-200 space-y-5">
         <div className="space-y-1.5">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-            سلام{analytics.userName ? `، ${analytics.userName}` : ''} 👋
+            {analytics.userName ? `سلام، ${analytics.userName}` : 'سلام'} 👋
           </h1>
+          {/* Whole sentences, so each language keeps its own word order. */}
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
             {analytics.totalMyTasks === 0
               ? 'هنوز وظیفه‌ای به شما واگذار نشده است. وقتی وظیفه‌ای به شما سپرده شود، خلاصهٔ آن اینجا نمایش داده می‌شود.'
-              : <>شما <b className="text-slate-900 dark:text-white">{toPersianDigits(analytics.activeTasksCount)} وظیفهٔ باز</b> در <b className="text-slate-900 dark:text-white">{toPersianDigits(analytics.myProjectsCount)} پروژه</b> دارید{analytics.pendingReviewsCount > 0 && <>، و <b className="text-slate-900 dark:text-white">{toPersianDigits(analytics.pendingReviewsCount)} مورد</b> در انتظار بررسی است</>}.</>}
+              : analytics.pendingReviewsCount > 0
+                ? `شما ${toPersianDigits(analytics.activeTasksCount)} وظیفهٔ باز در ${toPersianDigits(analytics.myProjectsCount)} پروژه دارید و ${toPersianDigits(analytics.pendingReviewsCount)} مورد در انتظار بررسی است.`
+                : `شما ${toPersianDigits(analytics.activeTasksCount)} وظیفهٔ باز در ${toPersianDigits(analytics.myProjectsCount)} پروژه دارید.`}
           </p>
         </div>
 
@@ -46,7 +49,7 @@ export const MyDashboardSubView: React.FC = () => {
               key={stat.label}
               type="button"
               onClick={openMyTasks}
-              className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 hover:border-blue-300 dark:hover:border-blue-800 transition-colors text-right cursor-pointer"
+              className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 hover:border-blue-300 dark:hover:border-blue-800 transition-colors text-start cursor-pointer"
             >
               <span className={`p-2 rounded-xl ${stat.tone}`}><stat.icon size={18} /></span>
               <span>

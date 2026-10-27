@@ -24,6 +24,8 @@ export function recordActivity(context: DomainContext, action: string, targetId:
   const targetCollection=collections.find(name=>(context.scoped.raw[name]||[]).some((row:any)=>row.id===targetId&&context.scoped.scopeOf(name,row)===scope.workspaceId));
   const target=targetCollection?context.scoped.raw[targetCollection].find((row:any)=>row.id===targetId):undefined;
   const accessSnapshot=target?{departmentIds:context.scoped.departmentIdsOf(targetCollection!,target),...(target.conversationId?{conversationId:target.conversationId}:{})}:undefined;
-  context.scoped.state.auditLogs.unshift({ id: identifier('audit'), workspaceId: scope.workspaceId, userId: scope.user.id, action, targetId, details, timestamp: now(),...(targetCollection?{targetCollection,accessSnapshot}:{}) });
+  // The display name at the time of the action keeps the log readable after a rename or delete.
+  const label=target&&typeof (target.title??target.name)==='string'?String(target.title??target.name).slice(0,200):'';
+  context.scoped.state.auditLogs.unshift({ id: identifier('audit'), workspaceId: scope.workspaceId, userId: scope.user.id, action, targetId, details, timestamp: now(),...(targetCollection?{targetCollection,accessSnapshot}:{}),...(label?{targetName:label}:{}) });
   context.broadcast('app_activity_updated',{type:'data_changed'});
 }

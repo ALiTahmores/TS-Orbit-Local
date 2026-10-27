@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
-  Sparkles,
   Layers,
   ArrowUpRight,
   ShieldAlert,
@@ -168,7 +167,7 @@ export const MyProjectsView: React.FC = () => {
           <div className="p-4 rounded-2xl bg-white dark:bg-[#121526] border border-slate-200/90 dark:border-[#1e2338] shadow-sm flex flex-wrap items-center justify-between gap-3">
             {/* Search Input */}
             <div className="relative flex-1 min-w-[220px]">
-              <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute start-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
@@ -177,7 +176,7 @@ export const MyProjectsView: React.FC = () => {
                   setCurrentPage(1);
                 }}
                 placeholder={isRtl ? "جستجوی پروژه، کارفرما یا توضیحات..." : "Search project, client, or details..."}
-                className="w-full h-10 pr-9 pl-4 text-xs rounded-xl bg-slate-50 dark:bg-[#171b2f] border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full h-10 ps-9 pe-4 text-xs rounded-xl bg-slate-50 dark:bg-[#171b2f] border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 transition-all"
               />
             </div>
 
@@ -185,8 +184,8 @@ export const MyProjectsView: React.FC = () => {
             <div className="flex items-center gap-1.5 overflow-x-auto py-1">
               {[
                 { id: 'ALL', label: isRtl ? 'همه' : 'All' },
-                { id: 'IN_PROGRESS', label: isRtl ? 'در جریان' : 'In Progress' },
-                { id: 'COMPLETED', label: isRtl ? 'تکمیل شده' : 'Completed' },
+                { id: 'IN_PROGRESS', label: isRtl ? 'در حال انجام' : 'In Progress' },
+                { id: 'COMPLETED', label: isRtl ? 'تکمیل‌شده' : 'Completed' },
                 { id: 'URGENT', label: isRtl ? 'فوری' : 'Urgent' },
               ].map((tab) => (
                 <button
@@ -265,8 +264,8 @@ export const MyProjectsView: React.FC = () => {
                               : "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40"
                           )}>
                             {project.status === 'COMPLETED' || progressVal === 100 
-                              ? (isRtl ? 'تکمیل شده' : 'Completed') 
-                              : (isRtl ? 'در جریان' : 'In Progress')}
+                              ? (isRtl ? 'تکمیل‌شده' : 'Completed') 
+                              : (isRtl ? 'در حال انجام' : 'In Progress')}
                           </span>
                         </div>
                       </div>
@@ -359,7 +358,7 @@ export const MyProjectsView: React.FC = () => {
                   disabled={currentPage === 1}
                   className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-[#171b2f] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
-                  <ChevronLeft className="w-4 h-4"/>
+                  <ChevronRight className="w-4 h-4"/>
                 </button>
 
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
@@ -382,7 +381,7 @@ export const MyProjectsView: React.FC = () => {
                   disabled={currentPage === totalPages}
                   className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-[#171b2f] disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
-                  <ChevronRight className="w-4 h-4"/>
+                  <ChevronLeft className="w-4 h-4"/>
                 </button>
               </div>
             </div>
@@ -478,7 +477,7 @@ export const MyProjectsView: React.FC = () => {
               {/* Item 2: Completed */}
               <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 flex flex-col justify-between">
                 <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                  {isRtl ? 'تکمیل شده' : 'Completed'}
+                  {isRtl ? 'تکمیل‌شده' : 'Completed'}
                 </span>
                 <span className="text-xl font-black text-emerald-700 dark:text-emerald-300 mt-1 font-mono">
                   {toPersianDigits(metrics.completed)}
@@ -504,23 +503,6 @@ export const MyProjectsView: React.FC = () => {
                   {toPersianDigits(metrics.atRisk)}
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* CARD 3: QUICK PRO TIP / NOTICE */}
-          <div className="p-5 rounded-3xl bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-transparent border border-blue-500/20 flex items-start gap-3.5">
-            <div className="p-2 rounded-xl bg-blue-600 text-white shrink-0 shadow-md shadow-blue-500/20">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-slate-800 dark:text-slate-100">
-                {isRtl ? 'همگام‌سازی خودکار و زنده' : 'Live Auto-Sync'}
-              </h4>
-              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                {isRtl 
-                  ? 'تمامی پروژه‌های ایجاد شده بلافاصله در پایگاه داده محلی ذخیره شده و با فضای کاری شما همگام می‌شوند.'
-                  : 'All created projects are instantly synced with local storage and accessible across your workspace.'}
-              </p>
             </div>
           </div>
 

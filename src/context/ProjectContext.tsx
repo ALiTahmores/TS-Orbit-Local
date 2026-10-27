@@ -3,7 +3,7 @@ import { uploadAsset } from '../lib/assets';
 import {commitPortalChange} from '../lib/portal';
 import { taskTransport, taskStatus, assignedIds } from '../lib/domain';
 import { apiFetch,getApiIdentity } from '../lib/api';
-import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { getSocket, disconnectSocket } from '../lib/socket';
 import { notifyStandaloneMode, ApiError, reportApiError, setApiIdentity, clearCredential, clearBusinessCaches, redactClientLog, getAuthHeaders as sharedAuthHeaders } from '../lib/api';
 import { 
@@ -56,6 +56,8 @@ import {
 } from '../data/mockData';
 import { INITIAL_USERS, INITIAL_WORKSPACES } from '../services/db';
 import { Locale, getTranslation } from '../lib/i18n';
+import { getLocale, setActiveLocale } from '../lib/locale';
+import { startDomTranslation, stopDomTranslation } from '../lib/domTranslation';
 import { roleLabel } from '../lib/roles';
 import { localAvatar } from '../lib/localAssets';
 export { INITIAL_USERS, INITIAL_WORKSPACES } from '../services/db';
@@ -222,6 +224,9 @@ interface ProjectContextType {
   userRole: string;
   setUserRole: (role: string) => void;
   isAuthenticated: boolean;
+  /** 'checking' while a stored sign-in is being confirmed, 'offline' when the server could not be reached. */
+  sessionStatus: 'checking' | 'offline' | 'ready';
+  retrySession: () => void;
   login: (identifier: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, name: string, phone: string, role?: string, username?: string) => Promise<any>;
   logout: () => Promise<void>;
@@ -323,6 +328,8 @@ export const NULL_PROJECT: Project = {
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 const DEFAULT_SEED_PROJECTS: Project[] = [];
+/** The page this tab was showing, restored after a reload. */
+const VIEW_KEY = 'orbit_current_view';
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const socketRef = useRef<any>(null);
@@ -615,7 +622,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } else if (taskDiff > 0 && projectDiff === 0) {
         showToast({
           title: 'وظایف جدید ثبت گردید',
-          description: `تعداد ${taskDiff} تسک و وظیفه جدید بارگذاری شد.`,
+          description: `تعداد ${taskDiff} وظیفهٔ جدید بارگذاری شد.`,
           targetView: 'technical_tasks',
           actionText: 'مشاهده وظایف ←',
           type: 'success'
@@ -748,10 +755,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
 
   // i18n and Theme support implementation
-  const [locale, setLocaleState] = useState<Locale>(() => {
-    const saved = localStorage.getItem('wp_manager_locale');
-    return (saved === 'en' || saved === 'fa') ? saved : 'fa';
-  });
+  const [locale, setLocaleState] = useState<Locale>(getLocale);
+  // Formatting helpers and the translation layer read the module-level locale
+  // while this render's children render, so it is updated before them.
+  if (getLocale() !== locale) setActiveLocale(locale);
+  useLayoutEffect(() => {
+    if (locale === 'en') startDomTranslation(); else stopDomTranslation();
+  }, [locale]);
 
   const [theme, setThemeState] = useState<'light' | 'dark' | 'system'>(() => {
     const saved = localStorage.getItem('wp_manager_theme');
@@ -760,7 +770,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);
-    localStorage.setItem('wp_manager_locale', newLocale);
     if (currentUser && currentUser.id) {
       try {
         const userSetKey = `userSettings_${currentUser.id}`;
@@ -796,31 +805,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return getTranslation(locale, key);
   };
 
-  // Sync theme and locale only for authenticated dashboard views
+  // Direction and language follow the chosen locale on every screen. The theme
+  // applies to the workspace; the sign-in page and the client portal style
+  // themselves, so the document carries no theme class while signed out.
   useEffect(() => {
-    if (!isAuthenticated) {
-      // For unauthenticated/Auth screens, ensure clean Light mode and Persian RTL defaults
-      const root = document.documentElement;
-      root.classList.remove('dark');
-      root.setAttribute('dir', 'rtl');
-      root.setAttribute('lang', 'fa');
-      document.body.style.direction = 'rtl';
-      document.body.style.textAlign = 'right';
-      return;
-    }
-
     const applyThemeAndLocale = () => {
       const root = document.documentElement;
       let actualTheme = theme;
       if (theme === 'system') {
         actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       }
-      
-      if (actualTheme === 'dark') {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
+      root.classList.toggle('dark', isAuthenticated && actualTheme === 'dark');
 
       const dir = locale === 'fa' ? 'rtl' : 'ltr';
       root.setAttribute('dir', dir);
@@ -831,7 +826,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     applyThemeAndLocale();
 
-    if (theme === 'system') {
+    if (theme === 'system' && isAuthenticated) {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const listener = () => applyThemeAndLocale();
       mediaQuery.addEventListener('change', listener);
@@ -996,50 +991,57 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
-  // Session Persistence and validation on app boot
+  // Session persistence on app boot. Only the server rejecting the sign-in (401)
+  // ends it: a cold start, a 5xx or a dropped connection is retried, so reloading
+  // the page never signs the user out.
+  const [sessionStatus, setSessionStatus] = useState<'checking' | 'offline' | 'ready'>(() => {
+    try { return localStorage.getItem('token') ? 'checking' : 'ready'; } catch { return 'ready'; }
+  });
+  const [sessionAttempt, setSessionAttempt] = useState(0);
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    if (!isAuthenticated || !currentUser?.id) return;
+    try { sessionStorage.setItem(VIEW_KEY, JSON.stringify({ userId: currentUser.id, tab: activeTab, subTab: activeSubTab })); } catch { /* storage unavailable */ }
+  }, [isAuthenticated, currentUser?.id, activeTab, activeSubTab]);
+  const retrySession = () => { setSessionStatus('checking'); setSessionAttempt(value => value + 1); };
+  useEffect(() => {
     const query=new URLSearchParams(window.location.search);
-    if(query.get('view')==='client'||query.has('portalToken')||query.has('token')||window.location.pathname.includes('/portal')) return;
+    const portal=query.get('view')==='client'||query.has('portalToken')||query.has('token')||window.location.pathname.includes('/portal');
+    if (portal || !localStorage.getItem('token')) { setSessionStatus('ready'); return; }
     const rememberedWorkspace=localStorage.getItem('activeWorkspaceId') || '';
-    if (token) {
-      apiFetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const check = async (attempt: number) => {
+      try {
+        const data = await (await apiFetch('/api/auth/me')).json() as any;
+        if (cancelled) return;
+        if (!data?.user?.id) throw new ApiError(401, 'INVALID_SESSION', 'Invalid session response');
+        acceptSession(data.user,rememberedWorkspace || data.user.personalWorkspaceId);
+        // A reload returns to the page the user was on in this tab.
+        try {
+          const view = JSON.parse(sessionStorage.getItem(VIEW_KEY) || 'null');
+          if (view?.userId === data.user.id && typeof view.tab === 'string') { setActiveTab(view.tab); setActiveSubTab(typeof view.subTab === 'string' ? view.subTab : ''); }
+        } catch { /* no saved view */ }
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        setStorageItem('TS_ORBIT_USER_PROFILE', JSON.stringify(data.user));
+        localStorage.setItem('userRole', data.user.role);
+        localStorage.setItem('isAuthenticated', 'true');
+        updateLastActive();
+        setSessionStatus('ready');
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          clearCredential();
+          setCurrentUser(null); setUserRoleState(''); setIsAuthenticated(false);
+          setSessionStatus('ready');
+          return;
         }
-      })
-      .then(res => {
-        if (res.ok) {
-          return res.json();
-        } else {
-          throw new Error('Invalid token');
-        }
-      })
-      .then(data => {
-        if (!data?.user?.id) throw new Error('Invalid session response');
-        if (data && data.user) {
-          acceptSession(data.user,rememberedWorkspace || data.user.personalWorkspaceId);
-          localStorage.setItem('currentUser', JSON.stringify(data.user));
-          setStorageItem('TS_ORBIT_USER_PROFILE', JSON.stringify(data.user));
-          localStorage.setItem('userRole', data.user.role);
-          localStorage.setItem('isAuthenticated', 'true');
-          updateLastActive();
-        }
-      })
-      .catch(() => {
-        clearCredential();
-        setCurrentUser(null);
-        setUserRoleState('');
-        setIsAuthenticated(false);
-        localStorage.removeItem('token');
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('TS_ORBIT_USER_PROFILE');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('isAuthenticated');
-        localStorage.removeItem('session_last_active');
-      });
-    }
-  }, []);
+        if (attempt < 4) { timer = setTimeout(() => void check(attempt + 1), 1000 * 2 ** attempt); return; }
+        setSessionStatus('offline');
+      }
+    };
+    void check(0);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [sessionAttempt]);
 
   // Tehran Timezone Jalali Date Formatting Helper
   const getTehranJalaliFormattedDateTime = () => {
@@ -1776,7 +1778,7 @@ triggerSuccessEvent(
     if (!response.ok || !saved?.id) throw new Error(saved?.message || 'پروژه ذخیره نشد؛ دوباره تلاش کنید.');
     setProjects(prev => [saved, ...prev.filter(project => project.id !== saved.id)]);
     setSelectedProject(saved);
-    triggerSuccessEvent('پروژه با موفقیت ایجاد شد', `پروژه «${saved.title}» در دیتابیس ذخیره گردید.`);
+    triggerSuccessEvent('پروژه با موفقیت ایجاد شد', `پروژه «${saved.title}» ذخیره شد.`);
   };
 
   const updateProject = async (projectId: string, updates: Partial<Project>) => {
@@ -2024,7 +2026,7 @@ triggerSuccessEvent(
     setIsLoading(false);
     addNotification(
       "خطای خودکارسازی وظایف",
-      "سیستم خودکار تولید تسک غیرفعال شده است. کلیه وظایف باید به طور دستی توسط صاحب سیستم یا مدیر پروژه تعریف گردند.",
+      "سیستم خودکار تولید وظیفه غیرفعال شده است. کلیه وظایف باید به طور دستی توسط صاحب سیستم یا مدیر پروژه تعریف گردند.",
       "deadline_warning"
     );
   };
@@ -2038,7 +2040,7 @@ triggerSuccessEvent(
       approval: "نیاز به بازخورد و تایید کارفرما",
       connect: "اتصال موفق هاب وردپرس",
       launch: "آماده راه‌اندازی و لانچ",
-      delay: "هشدار تاخیر در ددلاین پروژه"
+      delay: "هشدار تاخیر در سررسید پروژه"
     };
     
     addNotification(
@@ -2211,7 +2213,7 @@ triggerSuccessEvent(
           syncProjectProgress(updated);
           return updated;
         });
-        outcomeText = `وضعیت تسک «طراحی موکاپ نسخه دسکتاپ» به تکمیل شده تغییر یافت.`;
+        outcomeText = `وضعیت وظیفه «طراحی موکاپ نسخه دسکتاپ» به تکمیل شده تغییر یافت.`;
         break;
       }
       case 'mark_store_setup_complete': {
@@ -2313,7 +2315,7 @@ triggerSuccessEvent(
       triggerEvent: `${rule.trigger} (بر پایه ${isThen ? 'تطبیق شرط اصلی' : 'شرط Else'})`,
       status: "success",
       details: rule.description,
-      actionTaken: outcomeText || "شرایط دیتابیس لوکال تایید شد."
+      actionTaken: outcomeText || "شرایط قانون بررسی شد."
     };
 
     setAutomationLogs(prev => [newLog, ...prev]);
@@ -2957,6 +2959,8 @@ triggerSuccessEvent(
       userRole,
       setUserRole,
       isAuthenticated,
+      sessionStatus,
+      retrySession,
       login,
       register,
       logout,

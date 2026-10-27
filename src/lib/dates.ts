@@ -1,10 +1,15 @@
-// One place for showing dates: the Persian calendar with Persian digits, from ISO values.
+// One place for showing dates: the Persian calendar from ISO values, with Persian
+// month names and digits in Persian and their English transliteration in English.
 import { jalaliToISO, persianDateParts } from './domain';
+import { isEnglish } from './locale';
 
 export const JALALI_MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+export const JALALI_MONTHS_EN = ['Farvardin', 'Ordibehesht', 'Khordad', 'Tir', 'Mordad', 'Shahrivar', 'Mehr', 'Aban', 'Azar', 'Dey', 'Bahman', 'Esfand'];
 export const JALALI_WEEKDAYS_SHORT = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+const JALALI_WEEKDAYS_SHORT_EN = ['Sa', 'Su', 'Mo', 'Tu', 'We', 'Th', 'Fr'];
 
 const faDigits = (value: number | string) => String(value).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+const localDigits = (value: number | string) => (isEnglish() ? String(value) : faDigits(value));
 
 /** A date-only value ("2026-10-24") is a calendar day; anything longer is an instant. */
 const toDate = (value?: string | number | Date | null) => {
@@ -13,17 +18,35 @@ const toDate = (value?: string | number | Date | null) => {
   return Number.isNaN(date.getTime()) ? undefined : date;
 };
 
-/** "۲ آبان ۱۴۰۵", or '' when the value is not a date. */
+/** Month name for a 1-based Persian month. */
+export const jalaliMonthName = (month: number) => (isEnglish() ? JALALI_MONTHS_EN : JALALI_MONTHS)[month - 1] || '';
+/** Saturday-first short weekday names. */
+export const jalaliWeekdaysShort = () => (isEnglish() ? JALALI_WEEKDAYS_SHORT_EN : JALALI_WEEKDAYS_SHORT);
+
+/** "۲ آبان ۱۴۰۵" / "2 Aban 1405", or '' when the value is not a date. */
 export function formatJalaliDate(value?: string | number | Date | null): string {
   const date = toDate(value);
-  return date ? date.toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  if (!date) return '';
+  if (!isEnglish()) return date.toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' });
+  const parts = persianDateParts(date);
+  return `${parts.day} ${JALALI_MONTHS_EN[parts.month - 1]} ${parts.year}`;
 }
 
-/** "۲ آبان ۱۴۰۵، ۱۴:۳۰", or '' when the value is not a date. */
+/** "۲ آبان" / "2 Aban", or '' when the value is not a date. */
+export function formatJalaliDayMonth(value?: string | number | Date | null): string {
+  const date = toDate(value);
+  if (!date) return '';
+  if (!isEnglish()) return date.toLocaleDateString('fa-IR', { day: 'numeric', month: 'long' });
+  const parts = persianDateParts(date);
+  return `${parts.day} ${JALALI_MONTHS_EN[parts.month - 1]}`;
+}
+
+/** "۲ آبان ۱۴۰۵، ۱۴:۳۰" / "2 Aban 1405, 14:30", or '' when the value is not a date. */
 export function formatJalaliDateTime(value?: string | number | Date | null): string {
   const date = toDate(value);
   if (!date) return '';
-  return `${formatJalaliDate(date)}، ${date.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  const time = date.toLocaleTimeString(isEnglish() ? 'en-GB' : 'fa-IR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${formatJalaliDate(date)}${isEnglish() ? ',' : '،'} ${time}`;
 }
 
 /** Today in the local time zone as YYYY-MM-DD. */
@@ -54,5 +77,6 @@ export function jalaliMonthGrid({ year, month }: JalaliMonth): { leading: number
   return { leading: (start.getUTCDay() + 1) % 7, days };
 }
 
-export const jalaliMonthLabel = ({ year, month }: JalaliMonth) => `${JALALI_MONTHS[month - 1]} ${faDigits(year)}`;
-export const persianNumber = faDigits;
+export const jalaliMonthLabel = ({ year, month }: JalaliMonth) => `${jalaliMonthName(month)} ${localDigits(year)}`;
+/** Digits in the interface language (Persian digits in Persian). */
+export const persianNumber = localDigits;

@@ -67,7 +67,7 @@ const MemberCardItem: React.FC<MemberCardProps> = ({ member, tasks, roleLabel, d
       }`}
     >
       {/* MEMBER MENU */}
-      <div ref={menuRef} className="absolute top-3.5 right-3.5 z-20">
+      <div ref={menuRef} className="absolute top-3.5 start-3.5 z-20">
         <button
           type="button"
           onClick={(e) => {
@@ -82,7 +82,7 @@ const MemberCardItem: React.FC<MemberCardProps> = ({ member, tasks, roleLabel, d
         </button>
 
         {isMenuOpen && (
-          <div className="absolute top-10 right-0 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 w-52 text-xs font-sans text-right animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute top-10 start-0 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 w-52 text-xs font-sans text-start animate-in fade-in zoom-in-95 duration-150">
             <button
               type="button"
               onClick={(e) => {
@@ -90,7 +90,7 @@ const MemberCardItem: React.FC<MemberCardProps> = ({ member, tasks, roleLabel, d
                 setIsMenuOpen(false);
                 onOpenProfile(member);
               }}
-              className="w-full text-right px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold flex items-center gap-2 rounded-xl cursor-pointer transition-colors"
+              className="w-full text-start px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-200 font-bold flex items-center gap-2 rounded-xl cursor-pointer transition-colors"
             >
               <UserCheck size={14} className="text-blue-500 shrink-0" />
               <span>مشاهدهٔ پروفایل و وظایف</span>
@@ -106,7 +106,7 @@ const MemberCardItem: React.FC<MemberCardProps> = ({ member, tasks, roleLabel, d
                     setIsMenuOpen(false);
                     onRemove(member);
                   }}
-                  className="w-full text-right px-3 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold flex items-center gap-2 rounded-xl cursor-pointer transition-colors"
+                  className="w-full text-start px-3 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold flex items-center gap-2 rounded-xl cursor-pointer transition-colors"
                 >
                   <UserMinus size={14} className="text-rose-500 shrink-0" />
                   <span>حذف از فضای کاری</span>
@@ -131,7 +131,7 @@ const MemberCardItem: React.FC<MemberCardProps> = ({ member, tasks, roleLabel, d
           />
           <span
             title={member.status === 'online' ? 'آنلاین' : 'آفلاین'}
-            className={`absolute bottom-0 left-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 ${
+            className={`absolute bottom-0 end-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 ${
               member.status === 'online' ? 'bg-emerald-500' : 'bg-slate-400'
             }`}
           />
@@ -148,7 +148,7 @@ const MemberCardItem: React.FC<MemberCardProps> = ({ member, tasks, roleLabel, d
 
       {/* ROLE AND WORKLOAD */}
       <div className="py-2.5 my-1 border-y border-slate-100 dark:border-slate-800/80 grid grid-cols-2 gap-2 text-xs font-sans">
-        <div className="space-y-0.5 pr-1 min-w-0">
+        <div className="space-y-0.5 ps-1 min-w-0">
           <span className="text-[10px] text-slate-400 font-bold block">نقش</span>
           <span className="font-bold text-slate-800 dark:text-slate-200 text-xs block truncate">{roleLabel}</span>
           {departmentNames.length > 0 && (
@@ -156,7 +156,7 @@ const MemberCardItem: React.FC<MemberCardProps> = ({ member, tasks, roleLabel, d
           )}
         </div>
 
-        <div className="space-y-0.5 pl-1 border-r border-slate-100 dark:border-slate-800/80 pr-2 min-w-0">
+        <div className="space-y-0.5 pe-1 border-s border-slate-100 dark:border-slate-800/80 ps-2 min-w-0">
           <span className="text-[10px] text-slate-400 font-bold block">وظایف باز</span>
           <span className="font-black text-slate-800 dark:text-slate-100 text-xs block">
             {openTasks.length ? toPersianDigits(openTasks.length) : 'ندارد'}
@@ -261,7 +261,7 @@ export const SpecialistsView: React.FC = () => {
   };
 
   return (
-    <div className="w-full space-y-4 font-sans text-right pt-1" dir="rtl">
+    <div className="w-full space-y-4 font-sans text-start pt-1">
 
       {/* HEADER */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -301,14 +301,14 @@ export const SpecialistsView: React.FC = () => {
       {/* SEARCH & FILTERS */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         <div className="relative flex-1">
-          <Search size={16} className="absolute right-3.5 top-3 text-slate-400" />
+          <Search size={16} className="absolute start-3.5 top-3 text-slate-400" />
           <input
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="جستجو بر اساس نام، ایمیل یا نقش…"
             aria-label="جستجوی اعضا"
-            className="w-full pr-10 pl-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+            className="w-full ps-10 pe-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
           />
         </div>
 

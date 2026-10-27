@@ -6,6 +6,7 @@ import { X, Briefcase, CheckCircle2, Mail, Phone, AlertTriangle, ListTodo, Clock
 import { useProject } from '../context/ProjectContext';
 import { deliveredOnTime, dueDate, isOverdue, tasksAssignedTo } from '../lib/taskAnalytics';
 import { priorityKey, priorityLabel, statusLabel } from '../lib/taskLabels';
+import { formatJalaliDate } from '../lib/dates';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === null || n === undefined) return '';
@@ -15,7 +16,7 @@ const toPersianDigits = (n: string | number): string => {
 
 const jalali = (iso?: string) => {
   const date = iso ? new Date(`${iso}T00:00:00`) : undefined;
-  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }) : 'بدون سررسید';
+  return date && !Number.isNaN(date.getTime()) ? formatJalaliDate(date) : 'بدون سررسید';
 };
 
 const PRIORITY_CLASS: Record<string, string> = {
@@ -86,7 +87,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
   ];
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 overflow-y-auto font-sans" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="member-profile-title">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 overflow-y-auto font-sans" role="dialog" aria-modal="true" aria-labelledby="member-profile-title">
       <div onClick={handleClose} className="fixed inset-0 z-0 bg-black/30 dark:bg-black/60 backdrop-blur-[1.5px] cursor-pointer" />
 
       <div
@@ -100,7 +101,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
               <LocalImage src={member.avatar} alt={member.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-blue-500/80 shadow-md" />
               <span
                 title={member.status === 'online' ? 'آنلاین' : 'آفلاین'}
-                className={`absolute -bottom-1 -left-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-950 ${member.status === 'online' ? 'bg-emerald-500' : 'bg-slate-400'}`}
+                className={`absolute -bottom-1 -end-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-950 ${member.status === 'online' ? 'bg-emerald-500' : 'bg-slate-400'}`}
               />
             </div>
             <div className="space-y-1 min-w-0">
@@ -169,7 +170,7 @@ export const MemberProfileModal: React.FC<MemberProfileModalProps> = ({
               <p className="text-sm text-slate-500 dark:text-slate-400 py-6 text-center">هنوز وظیفه‌ای به این عضو سپرده نشده است.</p>
             ) : (
               <div className="w-full overflow-x-auto scrollbar-thin">
-                <table className="w-full text-right text-xs min-w-[560px]">
+                <table className="w-full text-start text-xs min-w-[560px]">
                   <thead>
                     <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-bold">
                       <th className="py-3 px-2">عنوان</th>

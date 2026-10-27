@@ -63,9 +63,9 @@ const navigationGroups = [
     label: { fa: 'گزارش‌ها', en: 'Reports' },
     icon: 'Sparkles',
     tabs: [
-      { id: 'analytics', name: { fa: 'تحلیل عملکرد', en: 'Performance' }, icon: 'BarChart3' },
+      { id: 'analytics', name: { fa: 'تحلیل عملکرد', en: 'Performance analysis' }, icon: 'BarChart3' },
       { id: 'roadmap', name: { fa: 'نقشهٔ راه پروژه', en: 'Project roadmap' }, icon: 'Network' },
-      { id: 'bottlenecks', name: { fa: 'موانع و تأخیرها', en: 'Blockers & delays' }, icon: 'AlertTriangle' },
+      { id: 'bottlenecks', name: { fa: 'موانع و تأخیرها', en: 'Blockers and delays' }, icon: 'AlertTriangle' },
       { id: 'timeline', name: { fa: 'زمان‌بندی وظایف', en: 'Task schedule' }, icon: 'Calendar' }
     ]
   },
@@ -74,11 +74,11 @@ const navigationGroups = [
     label: { fa: 'پروژه‌ها', en: 'Projects' },
     icon: 'FolderGit',
     tabs: [
-      { id: 'overview', name: { fa: 'همه پروژه‌ها', en: 'All Projects' }, icon: 'Folder' },
+      { id: 'overview', name: { fa: 'همه پروژه‌ها', en: 'All projects' }, icon: 'Folder' },
       { id: 'active_projects', name: { fa: 'طرح‌های فعال', en: 'Active Initiatives' }, icon: 'TrendingUp' },
       { id: 'development', name: { fa: 'یکپارچه‌سازی و سرویس‌ها', en: 'Integrations & Services' }, icon: 'Code' },
       { id: 'files', name: { fa: 'اسناد و فایل‌ها', en: 'Project Files' }, icon: 'FolderOpen' },
-      { id: 'clients', name: { fa: 'تاییدیه و فیدبک کارفرما', en: 'Client Approval' }, icon: 'UserCheck' }
+      { id: 'clients', name: { fa: 'تاییدیه و بازخورد کارفرما', en: 'Client Approval' }, icon: 'UserCheck' }
     ]
   },
   {
@@ -86,9 +86,9 @@ const navigationGroups = [
     label: { fa: 'وظایف', en: 'Tasks' },
     icon: 'CheckSquare',
     tabs: [
-      { id: 'kanban_board', name: { fa: 'برد کانبان وظایف', en: 'Kanban Board' }, icon: 'Trello' },
-      { id: 'team_matrix', name: { fa: 'دسته‌بندی و لیست تیم‌ها', en: 'Team Task Matrix' }, icon: 'LayoutGrid' },
-      { id: 'timeline', name: { fa: 'تقویم و گانت سررسیدها', en: 'Deadlines & Timeline' }, icon: 'Calendar' }
+      { id: 'kanban_board', name: { fa: 'برد کانبان وظایف', en: 'Task Kanban board' }, icon: 'Trello' },
+      { id: 'team_matrix', name: { fa: 'دسته‌بندی و لیست تیم‌ها', en: 'Teams and lists' }, icon: 'LayoutGrid' },
+      { id: 'timeline', name: { fa: 'تقویم و گانت سررسیدها', en: 'Due date calendar' }, icon: 'Calendar' }
     ]
   },
   {
@@ -133,10 +133,13 @@ const navigationGroups = [
     label: { fa: 'تنظیمات', en: 'Settings' },
     icon: 'Settings',
     tabs: [
-      { id: 'appearance', name: { fa: 'ظاهر و تم پوسته', en: 'Appearance Mode' }, icon: 'Palette' },
-      { id: 'profile', name: { fa: 'پروفایل پرسنلی', en: 'My profile' }, icon: 'User' },
-      { id: 'organization', name: { fa: 'هویت سازمانی', en: 'Enterprise Profile' }, icon: 'Building2' },
-      { id: 'security', name: { fa: 'امنیت و گذرواژه', en: 'Security Guard' }, icon: 'Lock' }
+      { id: 'appearance', name: { fa: 'ظاهر و تم', en: 'Appearance' }, icon: 'Palette' },
+      { id: 'localization', name: { fa: 'زبان', en: 'Language' }, icon: 'Globe' },
+      { id: 'notifications', name: { fa: 'اعلان‌ها', en: 'Notifications' }, icon: 'Bell' },
+      { id: 'profile', name: { fa: 'حساب کاربری', en: 'Account' }, icon: 'User' },
+      { id: 'organization', name: { fa: 'فضای کاری', en: 'Workspace' }, icon: 'Building2' },
+      { id: 'security', name: { fa: 'امنیت', en: 'Security' }, icon: 'ShieldCheck' },
+      { id: 'modules', name: { fa: 'ماژول‌ها', en: 'Modules' }, icon: 'Sliders' }
     ]
   }
 ];
@@ -209,9 +212,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         label: { fa: 'گزارش‌ها', en: 'Reports' },
         icon: 'Sparkles',
         tabs: [
-          { id: 'analytics', name: { fa: 'تحلیل عملکرد', en: 'Performance' }, icon: 'BarChart3' },
+          { id: 'analytics', name: { fa: 'تحلیل عملکرد', en: 'Performance analysis' }, icon: 'BarChart3' },
           { id: 'roadmap', name: { fa: 'نقشهٔ راه پروژه', en: 'Project roadmap' }, icon: 'Network' },
-          { id: 'bottlenecks', name: { fa: 'موانع و تأخیرها', en: 'Blockers & delays' }, icon: 'AlertTriangle' },
+          { id: 'bottlenecks', name: { fa: 'موانع و تأخیرها', en: 'Blockers and delays' }, icon: 'AlertTriangle' },
           { id: 'timeline', name: { fa: 'زمان‌بندی وظایف', en: 'Task schedule' }, icon: 'Calendar' }
         ]
       }
@@ -271,10 +274,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         label: { fa: 'پروژه‌ها', en: 'Projects' },
         icon: 'FolderGit',
         tabs: [
-          { id: 'overview', name: { fa: 'همه پروژه‌ها', en: 'All Projects' }, icon: 'Folder' },
-          { id: 'tasks', name: { fa: 'تسک‌ها و زمان‌بندی', en: 'Tasks & Scheduling' }, icon: 'CheckSquare' },
-          { id: 'files', name: { fa: 'فایل‌ها و مدارک', en: 'Project Files' }, icon: 'FolderOpen' },
-          { id: 'clients', name: { fa: 'فیدبک کارفرمایان', en: 'Client Approval' }, icon: 'UserCheck' }
+          { id: 'overview', name: { fa: 'همه پروژه‌ها', en: 'All projects' }, icon: 'Folder' },
+          { id: 'tasks', name: { fa: 'وظایف و زمان‌بندی', en: 'Tasks and schedule' }, icon: 'CheckSquare' },
+          { id: 'files', name: { fa: 'فایل‌ها و مدارک', en: 'Files and documents' }, icon: 'FolderOpen' },
+          { id: 'clients', name: { fa: 'بازخورد کارفرمایان', en: 'Client feedback' }, icon: 'UserCheck' }
         ]
       },
       {
@@ -282,9 +285,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         label: { fa: 'وظایف', en: 'Tasks' },
         icon: 'CheckSquare',
         tabs: [
-          { id: 'kanban_board', name: { fa: 'برد کانبان وظایف', en: 'Kanban Board' }, icon: 'Trello' },
-          { id: 'team_matrix', name: { fa: 'دسته‌بندی و لیست تیم‌ها', en: 'Team Task Matrix' }, icon: 'LayoutGrid' },
-          { id: 'timeline', name: { fa: 'تقویم و گانت سررسیدها', en: 'Deadlines & Timeline' }, icon: 'Calendar' }
+          { id: 'kanban_board', name: { fa: 'برد کانبان وظایف', en: 'Task Kanban board' }, icon: 'Trello' },
+          { id: 'team_matrix', name: { fa: 'دسته‌بندی و لیست تیم‌ها', en: 'Teams and lists' }, icon: 'LayoutGrid' },
+          { id: 'timeline', name: { fa: 'تقویم و گانت سررسیدها', en: 'Due date calendar' }, icon: 'Calendar' }
         ]
       },
       {
@@ -350,10 +353,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         label: { fa: 'تنظیمات', en: 'Settings' },
         icon: 'Settings',
         tabs: [
-          { id: 'appearance', name: { fa: 'ظاهر و تم پوسته', en: 'Appearance Mode' }, icon: 'Palette' },
-          { id: 'profile', name: { fa: 'پروفایل پرسنلی', en: 'My profile' }, icon: 'User' },
-          { id: 'organization', name: { fa: 'مشخصات فضای کاری', en: 'Workspace' }, icon: 'Building2' },
-          { id: 'security', name: { fa: 'امنیت و گذرواژه', en: 'Security Guard' }, icon: 'Lock' }
+          { id: 'appearance', name: { fa: 'ظاهر و تم', en: 'Appearance' }, icon: 'Palette' },
+          { id: 'localization', name: { fa: 'زبان', en: 'Language' }, icon: 'Globe' },
+          { id: 'notifications', name: { fa: 'اعلان‌ها', en: 'Notifications' }, icon: 'Bell' },
+          { id: 'profile', name: { fa: 'حساب کاربری', en: 'Account' }, icon: 'User' },
+          ...(['OWNER', 'ADMIN'].includes(userRole) ? [{ id: 'organization', name: { fa: 'فضای کاری', en: 'Workspace' }, icon: 'Building2' }] : []),
+          { id: 'security', name: { fa: 'امنیت', en: 'Security' }, icon: 'ShieldCheck' },
+          ...(userRole === 'OWNER' ? [{ id: 'modules', name: { fa: 'ماژول‌ها', en: 'Modules' }, icon: 'Sliders' }] : [])
         ]
       }
     );
@@ -438,7 +444,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   });
   const [expandedSection, setExpandedSection] = useState<string | null>(() => activeTab);
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
-  const [sidebarMode, setSidebarMode] = useState<'personal' | 'business'>('business');
+  // Opening on a personal page (for example after a reload) shows the personal menu.
+  const [sidebarMode, setSidebarMode] = useState<'personal' | 'business'>(() => activeTab === 'personal_tasks' ? 'personal' : 'business');
   const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
 
   // Native Dynamic Bottom Scroll Cue
@@ -893,7 +900,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 const personalNavItems = [
                   { id: 'my_dashboard', label: { fa: 'داشبورد من', en: 'My Dashboard' }, icon: 'LayoutDashboard' },
                   { id: 'my_projects', label: { fa: 'پروژه‌های من', en: 'My Projects' }, icon: 'FolderGit2' },
-                  { id: 'my_tasks', label: { fa: 'تسک‌های من', en: 'My Tasks' }, icon: 'CheckSquare' },
+                  { id: 'my_tasks', label: { fa: 'وظایف من', en: 'My Tasks' }, icon: 'CheckSquare' },
                   { id: 'my_files', label: { fa: 'فایل‌های من', en: 'My Files' }, icon: 'Files' },
                   { id: 'activity-feed', label: { fa: 'فعالیت‌های من', en: 'My Activity' }, icon: 'Activity' },
                   { id: 'messages', label: { fa: 'پیام‌ها', en: 'Messages' }, icon: 'MessageSquare' },
@@ -904,7 +911,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 return (
                   <div className="space-y-2">
                     {!isMenuCollapsed ? (
-                      <div className="px-3.5 flex items-center gap-1.5 text-[9px] font-black tracking-wider uppercase text-slate-400 dark:text-slate-500 flex-row justify-start text-right">
+                      <div className="px-3.5 flex items-center gap-1.5 text-[9px] font-black tracking-wider uppercase text-slate-400 dark:text-slate-500 flex-row justify-start text-start">
                         <span>{isRtl ? 'فضای شخصی شما' : 'Personal Space'}</span>
                       </div>
                     ) : (
@@ -937,7 +944,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 setActiveTab('personal_tasks');
                                 setActiveSubTab(item.id);
                               }}
-                              className={`w-full group/l1 flex items-center transition-all duration-300 ease-in-out cursor-pointer text-right ${
+                              className={`w-full group/l1 flex items-center transition-all duration-300 ease-in-out cursor-pointer text-start ${
                                 isMenuCollapsed ? 'justify-center p-1.5' : 'justify-between px-3 py-2.5'
                               } rounded-[18px] ${styles.rowClass} flex-row`}
                             >
@@ -989,7 +996,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div key={sec.key} className="space-y-2">
                   {/* Section Label */}
                   {!isMenuCollapsed ? (
-                    <div className="px-3.5 flex items-center gap-1.5 text-[9px] font-black tracking-wider uppercase text-slate-400 dark:text-slate-500 flex-row justify-start text-right">
+                    <div className="px-3.5 flex items-center gap-1.5 text-[9px] font-black tracking-wider uppercase text-slate-400 dark:text-slate-500 flex-row justify-start text-start">
                       <span>{isRtl ? sec.label.fa : sec.label.en}</span>
                     </div>
                   ) : (
@@ -1031,7 +1038,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                     handleSubTabClick(group.id, group.tabs[0].id);
                                   }
                                 }}
-                                className={`w-full group/l1 flex items-center transition-all duration-300 ease-in-out cursor-pointer text-right ${
+                                className={`w-full group/l1 flex items-center transition-all duration-300 ease-in-out cursor-pointer text-start ${
                                   isMenuCollapsed ? 'justify-center p-1.5' : 'justify-between px-3 py-2.5'
                                 } rounded-[18px] ${styles.rowClass} flex-row`}
                               >
@@ -1099,7 +1106,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                           <button
                                             key={tab.id}
                                             onClick={() => handleSubTabClick(group.id, tab.id)}
-                                            className={`w-full group/l2 flex items-center justify-between px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer text-right border flex-row ${
+                                            className={`w-full group/l2 flex items-center justify-between px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer text-start border flex-row ${
                                               isTabActive
                                                 ? 'bg-slate-100/90 dark:bg-[#161926] text-[#155DFC] dark:text-white font-semibold border-slate-200/40 dark:border-[#222638] shadow-xs'
                                                 : 'text-slate-500 hover:bg-slate-100/50 dark:hover:bg-[#121522] hover:text-slate-800 dark:hover:text-slate-200 border-transparent'
@@ -1139,7 +1146,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 animate={{ opacity: 1, x: 0, scale: 1 }}
                                 exit={{ opacity: 0, x: -15, scale: 0.95 }}
                                 transition={{ duration: 0.15 }}
-                                className="absolute z-50 left-[68px] top-0 w-60 bg-white/95 dark:bg-[#121522]/95 backdrop-blur-xl border border-slate-200/80 dark:border-[#1A1D2B] rounded-[20px] shadow-2xl p-2 space-y-1"
+                                className="absolute z-50 end-[68px] top-0 w-60 bg-white/95 dark:bg-[#121522]/95 backdrop-blur-xl border border-slate-200/80 dark:border-[#1A1D2B] rounded-[20px] shadow-2xl p-2 space-y-1"
                               >
                                 {/* Popover Header */}
                                 <div className="px-3.5 py-2.5 border-b border-slate-100 dark:border-white/[0.04] mb-1 text-start">
@@ -1161,7 +1168,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                           handleSubTabClick(group.id, tab.id);
                                           setHoveredGroupId(null);
                                         }}
-                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer text-right border flex-row ${
+                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer text-start border flex-row ${
                                           isTabActive
                                             ? 'bg-slate-100/90 dark:bg-white/[0.05] text-[#155DFC] dark:text-blue-400 font-semibold border-slate-200/40 dark:border-white/[0.04] shadow-[0_1px_3px_rgba(0,0,0,0.01)]'
                                             : 'text-slate-500 hover:bg-slate-100/50 dark:hover:bg-white/[0.01] hover:text-slate-800 dark:hover:text-slate-200 border-transparent'
@@ -1204,7 +1211,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     ? "bg-blue-50/60 dark:bg-blue-950/30 border-blue-500/50 dark:border-blue-500/40 shadow-sm"
                     : "bg-white dark:bg-[#0d121f] border-slate-200/90 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-[#131b2e] hover:border-slate-300 dark:hover:border-slate-700"
                 )}
-                dir="rtl"
               >
                 {/* Right: User Avatar & Info */}
                 <div className="flex items-center gap-2.5">
@@ -1214,10 +1220,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       alt={currentUser?.name || "User"}
                       className="w-10 h-10 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 group-hover:scale-105 transition-transform"
                     />
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -right-0.5 border-2 border-white dark:border-[#0d121f]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -start-0.5 border-2 border-white dark:border-[#0d121f]" />
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-start">
                     <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       {currentUser?.name || ''}
                     </h4>
@@ -1262,7 +1268,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     alt={currentUser?.name || "User"}
                     className="w-10 h-10 rounded-2xl object-cover border border-slate-200 dark:border-slate-700 group-hover:scale-105 transition-transform"
                   />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -right-0.5 border-2 border-white dark:border-[#0d121f]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -start-0.5 border-2 border-white dark:border-[#0d121f]" />
                 </div>
 
                 {/* Logout in collapsed view */}
@@ -1293,7 +1299,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <button
                 onClick={toggleMenu}
                 className="p-1.5 rounded-xl text-text-secondary hover:bg-hover-overlay transition-all cursor-pointer shrink-0 hidden lg:flex"
-                title={isMenuCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                title={isMenuCollapsed ? (isRtl ? 'باز کردن منو' : 'Expand sidebar') : (isRtl ? 'جمع کردن منو' : 'Collapse sidebar')}
+                aria-label={isMenuCollapsed ? (isRtl ? 'باز کردن منو' : 'Expand sidebar') : (isRtl ? 'جمع کردن منو' : 'Collapse sidebar')}
               >
                 <Menu size={15} />
               </button>
@@ -1304,11 +1311,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   setActiveTab('settings');
                   setActiveSubTab('profile');
                 }}
-                className={`flex items-center gap-1.5 p-1 pr-2.5 pl-1.5 bg-bg-app/50 dark:bg-slate-900/40 border border-border-primary/50 dark:border-white/5 rounded-xl cursor-pointer active:scale-95 hover:bg-hover-overlay transition-all shrink-0 select-none lg:hidden ${
+                className={`flex items-center gap-1.5 p-1 ps-2.5 pe-1.5 bg-bg-app/50 dark:bg-slate-900/40 border border-border-primary/50 dark:border-white/5 rounded-xl cursor-pointer active:scale-95 hover:bg-hover-overlay transition-all shrink-0 select-none lg:hidden ${
                   isRtl ? 'flex-row-reverse' : 'flex-row'
                 }`}
               >
-                <div className={`min-w-0 ${isRtl ? 'text-right' : 'text-left'}`}>
+                <div className={`min-w-0 ${isRtl ? 'text-start' : 'text-left'}`}>
                   <h4 className="text-[9px] font-black text-text-primary dark:text-white truncate max-w-[70px] leading-tight">{currentUser?.name || 'User'}</h4>
                   <span className="text-[7.5px] text-[#155DFC] font-black block mt-0.5 leading-none">
                     {getRoleLabel(currentUser?.role)}
@@ -1325,7 +1332,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
               {/* Live Search Input box */}
               <div ref={searchContainerRef} className="hidden md:block relative w-56 lg:w-72">
-                <Search className={`absolute top-3 text-text-secondary ${isRtl ? 'right-3.5' : 'left-3.5'}`} size={12} />
+                <Search className={`absolute top-3 text-text-secondary ${isRtl ? 'start-3.5' : 'end-3.5'}`} size={12} />
                 <input 
                   type="text" 
                   placeholder={t('search_placeholder')}
@@ -1337,14 +1344,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   onFocus={() => { if(layoutSearchQuery) setShowSearchResults(true); }}
                   onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
                   className={`w-full bg-bg-app border border-border-primary text-xs text-text-primary py-2.5 rounded-full focus:outline-none focus:border-brand-accent focus:bg-surface-primary transition-all ${
-                    isRtl ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'
+                    isRtl ? 'ps-10 pe-4 text-start' : 'pe-10 ps-4 text-left'
                   }`}
                 />
 
                 {/* Search popover */}
                 {showSearchResults && (
-                  <div className={`absolute top-12 bg-surface-primary border border-border-strong w-80 rounded-2xl shadow-2xl p-4 space-y-3 max-h-72 overflow-y-auto z-50 text-right ${
-                    isRtl ? 'right-0' : 'left-0'
+                  <div className={`absolute top-12 bg-surface-primary border border-border-strong w-80 rounded-2xl shadow-2xl p-4 space-y-3 max-h-72 overflow-y-auto z-50 text-start ${
+                    isRtl ? 'start-0' : 'end-0'
                   }`}>
                     <h4 className="text-[10px] font-black text-[#155DFC] border-b border-border-primary/40 pb-1.5">{t('search_live_results')}</h4>
                     
@@ -1397,13 +1404,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 >
                   <Bell size={16} />
                   {unreadNotifsCount > 0 && (
-                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                    <span className="absolute top-2 start-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
                   )}
                 </button>
 
                 {showNotificationDropdown && (
                   <div className={`absolute top-12 z-50 bg-white dark:bg-[#121526] border border-slate-200 dark:border-[#22273e] w-72 rounded-2xl p-4 shadow-2xl space-y-3 ${
-                    isRtl ? 'left-0 text-right' : 'right-0 text-left'
+                    isRtl ? 'end-0 text-start' : 'start-0 text-left'
                   }`} style={{ minWidth: '280px' }}>
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-[#1e2338] pb-2">
                       <span className="font-extrabold text-[11px] text-slate-800 dark:text-white block">{t('notification_center')}</span>
@@ -1462,7 +1469,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         className="w-full text-center text-[10px] font-black text-[#155DFC] dark:text-blue-400 hover:bg-[#155DFC]/10 py-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
                       >
                         <span>{isRtl ? 'مشاهده همه اعلان‌ها' : 'View All Notifications'}</span>
-                        <ArrowLeft size={12} className={isRtl ? 'rotate-0' : 'rotate-180'} />
+                        <ArrowLeft size={12} />
                       </button>
                     </div>
                   </div>
@@ -1477,11 +1484,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     setShowNotificationDropdown(false);
                   }}
                   className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white transition-all relative cursor-pointer shadow-sm active:scale-95"
-                  title={isRtl ? 'پیام‌های خوانده‌نشده (PV)' : 'Unread Messages'}
+                  title={isRtl ? 'پیام‌های خوانده‌نشده' : 'Unread messages'}
                 >
                   <MessageSquare size={16} />
                   {(unreadMessages || []).filter(m => m && !m.read).length > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse">
+                    <span className="absolute -top-1 -start-1 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-black flex items-center justify-center animate-pulse">
                       {(unreadMessages || []).filter(m => m && !m.read).length}
                     </span>
                   )}
@@ -1489,12 +1496,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
                 {showMessagesDropdown && (
                   <div className={`absolute top-12 z-50 bg-white dark:bg-[#121526] border border-slate-200 dark:border-[#22273e] w-80 rounded-2xl p-4 shadow-2xl space-y-3 ${
-                    isRtl ? 'left-0 text-right' : 'right-0 text-left'
+                    isRtl ? 'end-0 text-start' : 'start-0 text-left'
                   }`} style={{ minWidth: '300px' }}>
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-[#1e2338] pb-2">
                       <span className="font-extrabold text-[11px] text-slate-800 dark:text-white block flex items-center gap-1.5">
                         <MessageSquare size={13} className="text-blue-500" />
-                        <span>{isRtl ? 'پیام‌های خوانده‌نشده (PV)' : 'Unread Messages'}</span>
+                        <span>{isRtl ? 'پیام‌های خوانده‌نشده' : 'Unread messages'}</span>
                       </span>
                       <span className="text-[9px] bg-blue-600 text-white font-black px-2 py-0.5 rounded-full font-mono">
                         {(unreadMessages || []).filter(m => m && !m.read).length}
@@ -1530,7 +1537,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                               <div className="mt-1.5 flex justify-end">
                                 <span className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
                                   <span>{isRtl ? 'مشاهده و پاسخ' : 'View & Reply'}</span>
-                                  <ArrowLeft size={10} className={isRtl ? 'rotate-0' : 'rotate-180'} />
+                                  <ArrowLeft size={10} />
                                 </span>
                               </div>
                             </div>
@@ -1636,7 +1643,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.15 }}
-                    className="space-y-6 text-right"
+                    className="space-y-6 text-start"
                     style={{ direction: isRtl ? 'rtl' : 'ltr' }}
                   >
                     <Suspense fallback={<StrandsLoader variant="workspace" />}>
@@ -1699,7 +1706,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div
               id="bottom-scroll-cue-shadow"
               aria-hidden="true"
-              className={`pointer-events-none absolute bottom-0 left-0 right-0 h-10 sm:h-12 z-20 bg-gradient-to-t from-slate-900/10 via-slate-900/5 to-transparent dark:from-black/50 dark:via-black/20 dark:to-transparent transition-opacity duration-300 ${
+              className={`pointer-events-none absolute bottom-0 end-0 start-0 h-10 sm:h-12 z-20 bg-gradient-to-t from-slate-900/10 via-slate-900/5 to-transparent dark:from-black/50 dark:via-black/20 dark:to-transparent transition-opacity duration-300 ${
                 showBottomScrollCue ? 'opacity-100' : 'opacity-0'
               }`}
               style={{ pointerEvents: 'none' }}
@@ -1727,7 +1734,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 15, opacity: 0, scale: 0.96 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="fixed bottom-[calc(var(--bottom-nav-height,72px)+16px)] right-4 left-4 sm:left-auto sm:right-6 sm:w-96 max-h-[65dvh] bg-white dark:bg-[#131b2e] border border-slate-200/90 dark:border-[#232f48] rounded-2xl shadow-2xl p-5 flex flex-col overflow-hidden z-[90]"
+              className="fixed bottom-[calc(var(--bottom-nav-height,72px)+16px)] start-4 end-4 sm:end-auto sm:start-6 sm:w-96 max-h-[65dvh] bg-white dark:bg-[#131b2e] border border-slate-200/90 dark:border-[#232f48] rounded-2xl shadow-2xl p-5 flex flex-col overflow-hidden z-[90]"
               style={{ direction: isRtl ? 'rtl' : 'ltr' }}
             >
               {(() => {
@@ -1757,7 +1764,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <div className="flex flex-col h-full w-full min-h-0">
                     {/* Floating Sheet Brand Header */}
                     <div className="shrink-0 pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                      <div className="flex items-center gap-2.5 flex-row text-right">
+                      <div className="flex items-center gap-2.5 flex-row text-start">
                         <div className="w-8 h-8 bg-gradient-to-tr from-[#155DFC] to-[#3B82F6] rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-[0_4px_12px_rgba(21,93,252,0.25)]">
                           TS
                         </div>
@@ -1778,7 +1785,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </div>
 
                     {/* Scrollable Container */}
-                    <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y space-y-4 my-2 pr-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y space-y-4 my-2 ps-1" style={{ WebkitOverflowScrolling: 'touch' }}>
                       {/* Personal vs Business mode switch */}
                       <div className="mt-4 mb-2">
                         <div className="bg-gray-100 dark:bg-[#121420] p-1 rounded-2xl border border-gray-200/50 dark:border-[#1A1D2B] flex items-center gap-1">
@@ -1816,7 +1823,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                             {[
                               { id: 'my-dashboard', label: { fa: 'داشبورد من', en: 'My Dashboard' }, icon: 'LayoutDashboard' },
                               { id: 'my-projects', label: { fa: 'پروژه‌های من', en: 'My Projects' }, icon: 'FolderKanban' },
-                              { id: 'my-tasks', label: { fa: 'تسک‌های من', en: 'My Tasks' }, icon: 'CheckSquare' },
+                              { id: 'my-tasks', label: { fa: 'وظایف من', en: 'My Tasks' }, icon: 'CheckSquare' },
                               { id: 'today-planner', label: { fa: 'امروز', en: 'Today' }, icon: 'Sun' },
                               { id: 'my-collaborations', label: { fa: 'مشارکت‌های من', en: 'My Collaborations' }, icon: 'Users' },
                               { id: 'work-calendar', label: { fa: 'تقویم کاری', en: 'Work Calendar' }, icon: 'Calendar' },
@@ -2024,7 +2031,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
               transition={{ type: "spring", damping: 25, stiffness: 350 }}
-              className="relative bg-surface-primary/95 dark:bg-[#1A1A24]/95 border border-border-primary/90 dark:border-white/5 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4 text-right backdrop-blur-md"
+              className="relative bg-surface-primary/95 dark:bg-[#1A1A24]/95 border border-border-primary/90 dark:border-white/5 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4 text-start backdrop-blur-md"
               style={{ direction: isRtl ? 'rtl' : 'ltr' }}
             >
               <div className="flex justify-between items-center border-b border-border-primary/50 dark:border-white/5 pb-2.5">
@@ -2042,7 +2049,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
               {/* Search input field */}
               <div className="relative">
-                <Search className={`absolute top-3.5 text-text-secondary ${isRtl ? 'right-3.5' : 'left-3.5'}`} size={13} />
+                <Search className={`absolute top-3.5 text-text-secondary ${isRtl ? 'start-3.5' : 'end-3.5'}`} size={13} />
                 <input 
                   type="text"
                   autoFocus
@@ -2050,18 +2057,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   value={mobileSearchQuery}
                   onChange={(e) => setMobileSearchQuery(e.target.value)}
                   className={`w-full bg-bg-app dark:bg-slate-900 border border-border-primary dark:border-white/5 p-3 rounded-xl focus:outline-none focus:border-brand-accent font-bold text-xs text-text-primary dark:text-white ${
-                    isRtl ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'
+                    isRtl ? 'ps-10 pe-4 text-start' : 'pe-10 ps-4 text-left'
                   }`}
                 />
               </div>
 
               {/* Search results cards exactly below the search field */}
-              <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1 scrollbar-thin">
+              <div className="space-y-2.5 max-h-64 overflow-y-auto ps-1 scrollbar-thin">
                 {mobileSearchQuery.trim().length > 0 ? (
                   <>
                     {matchingProjects.length > 0 && (
                       <div className="space-y-1.5">
-                        <span className="text-[10px] text-text-secondary font-black block border-b border-border-primary/30 pb-1 mr-1">
+                        <span className="text-[10px] text-text-secondary font-black block border-b border-border-primary/30 pb-1 ms-1">
                           {isRtl ? 'پروژه‌های پیدا شده' : 'Projects Found'}
                         </span>
                         <div className="grid grid-cols-1 gap-2">
@@ -2084,7 +2091,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
                     {matchingTasks.length > 0 && (
                       <div className="space-y-1.5 pt-1">
-                        <span className="text-[10px] text-text-secondary font-black block border-b border-border-primary/30 pb-1 mr-1">
+                        <span className="text-[10px] text-text-secondary font-black block border-b border-border-primary/30 pb-1 ms-1">
                           {isRtl ? 'وظایف پیدا شده' : 'Tasks Found'}
                         </span>
                         <div className="grid grid-cols-1 gap-2">
@@ -2125,7 +2132,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* MOBILE BOTTOM TAB BAR */}
       <nav 
         dir={isRtl ? 'rtl' : 'ltr'} 
-        className="fixed bottom-4 left-4 right-4 h-16 bg-surface-primary/80 dark:bg-[#1A1A24]/90 backdrop-blur-xl border border-border-primary/80 dark:border-white/5 z-[95] lg:hidden flex justify-around items-center px-2 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
+        className="fixed bottom-4 end-4 start-4 h-16 bg-surface-primary/80 dark:bg-[#1A1A24]/90 backdrop-blur-xl border border-border-primary/80 dark:border-white/5 z-[95] lg:hidden flex justify-around items-center px-2 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
       >
         {[
           { id: 'menu', label: { fa: 'منو', en: 'Menu' }, icon: 'Menu', defaultSubTab: '' },

@@ -13,25 +13,19 @@ test('deployment exclusions cannot remove nested application source directories'
   }
 });
 
-test('the Vercel function explicitly includes its TypeScript runtime modules', () => {
+test('the Vercel function loads one prebuilt server bundle and includes it with the client', () => {
   const config = JSON.parse(fs.readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
   const includeFiles = config.functions?.['server.js']?.includeFiles;
 
-  assert.equal(includeFiles, '{application.ts,server/**,src/data/**,src/lib/**,public/**}');
-  for (const file of [
-    'application.ts',
-    'server.js',
-    'server/domain/projects-tasks.ts',
-    'server/local-config.ts',
-    'src/data/dbService.ts',
-    'src/lib/localAssets.ts',
-    'public/index.html',
-  ]) {
-    assert.ok(fs.existsSync(new URL('../../' + file, import.meta.url)), `${file} must be present in the function bundle inputs`);
-  }
+  assert.equal(includeFiles, '{build/vercel/**,public/**}');
+  const buildScript = fs.readFileSync(new URL('../../scripts/build-vercel.mjs', import.meta.url), 'utf8');
+  assert.match(buildScript, /entryPoints:\[path\.join\(projectRoot,'application\.ts'\)\]/);
+  assert.match(buildScript, /outfile:path\.join\(projectRoot,'build','vercel','application\.mjs'\)/);
+  assert.match(buildScript, /packages:'external'/);
 
   const entry = fs.readFileSync(new URL('../../server.js', import.meta.url), 'utf8');
-  assert.ok(entry.indexOf("import 'tsx/esm'") < entry.indexOf("import('./application.ts')"), 'the complete TypeScript loader must register before the application import');
+  assert.match(entry, /import\('\.\/build\/vercel\/application\.mjs'\)/);
+  assert.doesNotMatch(entry, /tsx/, 'cold starts must not transpile TypeScript at runtime');
 });
 
 test('the Vercel client is a clean atomic release without lazy runtime chunks', () => {

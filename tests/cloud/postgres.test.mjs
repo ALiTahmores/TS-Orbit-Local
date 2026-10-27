@@ -91,14 +91,18 @@ test('quarantine/import archives and security metadata persist only on successfu
 });
 
 test('corrupt ordering, nonfinite payloads and unresolved validator output fail without resetting data', async () => {
-  const { pool, store } = await setup(); await seed(store);
+  const { pool, store: writer } = await setup(); await seed(writer);
+  // A fresh instance reads the full snapshot (the writer's cache is only reused
+  // while state_revision is unchanged).
+  const store = new PostgresStore({ pool, validateState }); await store.initialize();
   pool.state.records.get(key('users', 0)).ordinal = 3;
   await store.begin(); await assert.rejects(store.loadState(), /ordering\/schema is corrupt/); await store.rollback(); assert.equal(pool.state.records.get(key('users', 0)).ordinal, 3);
   pool.state.records.get(key('users', 0)).ordinal = 0;
   await store.begin(); const state = await store.loadState(); state.projects[0].amount = Infinity;
   await assert.rejects(store.saveState(state), { code: 'DATA_VALIDATION_FAILED' }); await store.rollback();
   const wrong = new PostgresStore({ pool, validateState: () => ({ relations: [{ sourceCollection: 'projects', sourceId: 'project-a', field: 'workspaceId', targetCollection: 'workspaces', targetId: 'does-not-exist' }] }) });
-  await wrong.initialize(); await wrong.begin(); const input = await wrong.loadState(); await assert.rejects(wrong.saveState(input), /unresolved relation/); await wrong.rollback();
+  // A no-op save writes nothing and skips validation, so change one record.
+  await wrong.initialize(); await wrong.begin(); const input = await wrong.loadState(); input.projects[0].title = 'Revalidated'; await assert.rejects(wrong.saveState(input), /unresolved relation/); await wrong.rollback();
 });
 
 test('transactionQuery uses the locked client and sharedQuery uses the pool explicitly', async () => {
@@ -113,6 +117,22 @@ test('begin/save requirements and closed units prevent stale state reuse', async
   assert.throws(() => new PostgresStore({ pool: new FakePool(), validateState, lockTimeoutMs: 0 }), /timeouts/);
 });
 
+
+test('an unchanged revision reuses the committed snapshot; another instance commit forces a reload', async () => {
+  const { pool, store } = await setup(); await seed(store);
+  const snapshots = () => pool.log.filter(entry => entry.sql.includes('AS state_snapshot')).length;
+  let before = snapshots();
+  await store.begin(); const cached = await store.loadState(); cached.projects[0].title = 'Local edit, rolled back'; await store.rollback();
+  await store.begin(); const again = await store.loadState(); await store.saveState(again); await store.commit();
+  assert.equal(snapshots(), before, 'no snapshot transfer while the revision is unchanged');
+  assert.equal(again.projects[0].title, 'Original', 'a rolled-back edit never leaks into the cache');
+  const other = new PostgresStore({ pool, validateState }); await other.initialize();
+  await other.begin(); const remote = await other.loadState(); remote.projects[0].title = 'Changed elsewhere'; await other.saveState(remote); await other.commit();
+  before = snapshots();
+  await store.begin(); const fresh = await store.loadState(); await store.rollback();
+  assert.equal(snapshots(), before + 1); assert.equal(fresh.projects[0].title, 'Changed elsewhere');
+  await store.begin(); assert.match(String(store.transactionSecret ?? ''), /^$|^[0-9a-f]{96}$/); await store.rollback();
+});
 
 test('bulk entity mutations share one network write and no-op snapshots avoid registry reads/writes',async()=>{
  const {pool,store}=await setup();await store.begin();const state=await store.loadState();state.workspaces.push({id:'bulk-workspace'});for(let i=0;i<30;i++)state.projects.push({id:'bulk-'+i,workspaceId:'bulk-workspace'});pool.log.length=0;await store.saveState(state);await store.commit();

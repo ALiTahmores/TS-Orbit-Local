@@ -17,6 +17,7 @@ import { ProjectRoadmapPlan } from './roadmap/ProjectRoadmapPlan';
 import { assignedIds } from '../../lib/domain';
 import { deliveredOnTime, dueDate, isOverdue, todayISO } from '../../lib/taskAnalytics';
 import { statusLabel } from '../../lib/taskLabels';
+import { formatJalaliDate } from '../../lib/dates';
 
 export type SubReportTab = 'analytics' | 'roadmap' | 'bottlenecks' | 'timeline';
 
@@ -29,7 +30,7 @@ const fa = (value: number | string) => String(value).replace(/\d/g, d => '۰۱۲
 const DAY = 24 * 60 * 60 * 1000;
 const jalali = (iso?: string) => {
   const date = iso ? new Date(`${iso.slice(0, 10)}T00:00:00`) : undefined;
-  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  return date && !Number.isNaN(date.getTime()) ? formatJalaliDate(date) : '';
 };
 const daysBetween = (fromISO: string, toISO: string) => Math.round((new Date(`${toISO}T00:00:00`).getTime() - new Date(`${fromISO}T00:00:00`).getTime()) / DAY);
 
@@ -112,7 +113,7 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
 
   return (
     <div className="w-full space-y-6 font-vazirmatn transition-colors duration-200">
-      <div className="flex items-center gap-2 justify-start overflow-x-auto pb-1 select-none scrollbar-none" dir="rtl">
+      <div className="flex items-center gap-2 justify-start overflow-x-auto pb-1 select-none scrollbar-none">
         <TabButton active={currentSubTab === 'analytics'} onClick={() => handleTabChange('analytics')} icon={BarChart3} label="تحلیل عملکرد" />
         <TabButton active={currentSubTab === 'roadmap'} onClick={() => handleTabChange('roadmap')} icon={Network} label="نقشهٔ راه پروژه" />
         <TabButton active={currentSubTab === 'bottlenecks'} onClick={() => handleTabChange('bottlenecks')} icon={AlertTriangle} label="موانع و تأخیرها" badge={issueRows.length} />
@@ -123,7 +124,7 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
         <div className="w-full animate-in fade-in duration-300">
           <DepartmentReportsView
             kpiCards={
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" dir="rtl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className={card}>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-500 dark:text-slate-400">میانگین پیشرفت پروژه‌ها</span>
@@ -187,7 +188,7 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
       )}
 
       {currentSubTab === 'bottlenecks' && (
-        <div className="space-y-6 animate-in fade-in duration-300" dir="rtl">
+        <div className="space-y-6 animate-in fade-in duration-300">
           <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-50 via-white to-slate-50 dark:from-rose-950/40 dark:via-[#0d1424] dark:to-[#070b14] border border-rose-200 dark:border-rose-800/40 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <div className="p-3 rounded-2xl bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30"><ShieldAlert size={24} /></div>
@@ -216,7 +217,7 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
                     <div className="flex items-center gap-3 text-[11px] font-bold">
                       {blocked > 0 && <span className="text-rose-600 dark:text-rose-400">{fa(blocked)} متوقف</span>}
                       {overdue > 0 && <span className="text-amber-600 dark:text-amber-400">{fa(overdue)} دارای تأخیر</span>}
-                      <span className="text-slate-400 mr-auto">پیشرفت {fa(project.progress || 0)}٪</span>
+                      <span className="text-slate-400 ms-auto">پیشرفت {fa(project.progress || 0)}٪</span>
                     </div>
                   </div>
                 ))}
@@ -237,7 +238,7 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-right text-xs min-w-[640px]">
+                <table className="w-full text-start text-xs min-w-[640px]">
                   <thead>
                     <tr className="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                       <th className="pb-3 font-bold">عنوان وظیفه</th>
@@ -272,7 +273,7 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
       )}
 
       {currentSubTab === 'timeline' && (
-        <div className="space-y-6 animate-in fade-in duration-300" dir="rtl">
+        <div className="space-y-6 animate-in fade-in duration-300">
           <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1424]/90 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>

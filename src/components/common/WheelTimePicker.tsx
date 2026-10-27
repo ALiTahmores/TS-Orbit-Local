@@ -279,7 +279,7 @@ export const WheelTimePicker: React.FC<WheelTimePickerProps> = ({
     : `${selectedHour}:${selectedMinute} ${periodLabel(selectedPeriod)}`;
 
   return (
-    <div className="relative w-full text-right font-sans" dir="rtl">
+    <div className="relative w-full text-start font-sans">
       {/* Trigger Button */}
       <button
         ref={triggerRef}
@@ -308,8 +308,7 @@ export const WheelTimePicker: React.FC<WheelTimePickerProps> = ({
               width: `${popoverPos.width}px`,
               zIndex: 99999
             }}
-            className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 shadow-2xl rounded-2xl p-4 space-y-3 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 dir-rtl font-sans text-right"
-            dir="rtl"
+            className="bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 shadow-2xl rounded-2xl p-4 space-y-3 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150 dir-rtl font-sans text-start"
           >
             {/* Header Action Bar */}
             <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800 text-xs font-extrabold text-slate-800 dark:text-slate-200">
@@ -328,7 +327,7 @@ export const WheelTimePicker: React.FC<WheelTimePickerProps> = ({
             </div>
 
             {/* THREE WHEEL COLUMNS IN RTL ORDER (RIGHT: Period, CENTER: Minutes, LEFT: Hours) */}
-            <div className="relative flex flex-row justify-center items-center gap-1 h-44 overflow-hidden rounded-xl bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/40 dark:border-slate-800/40 p-1" dir="rtl">
+            <div className="relative flex flex-row justify-center items-center gap-1 h-44 overflow-hidden rounded-xl bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/40 dark:border-slate-800/40 p-1">
               {/* Horizontal Center Active Row Highlight Line */}
               <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-10 bg-slate-200/60 dark:bg-slate-800/60 rounded-xl pointer-events-none z-0 border border-slate-300/40 dark:border-slate-700/40" />
 

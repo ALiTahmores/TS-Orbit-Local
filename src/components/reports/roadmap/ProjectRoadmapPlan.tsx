@@ -99,7 +99,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
             },
             {
               id: 'st_01_3',
-              title: 'تعیین متولیان دپارتمان‌ها و تقویم ددلاین‌ها',
+              title: 'تعیین متولیان دپارتمان‌ها و تقویم سررسیدها',
               description: 'تعیین متولیان فرانت، بک‌اند، کنترل کیفیت و تدوین مایلستون‌های تحویل',
               status: 'completed',
               required: true,
@@ -561,7 +561,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
   // write here was rejected, re-rendered and retried in an endless loop.
 
   return (
-    <div dir="rtl" className="w-full text-right font-vazirmatn">
+    <div className="w-full text-start font-vazirmatn">
       {/* SINGLE UNIFIED WHITE CARD CONTAINER */}
       <div className="bg-white dark:bg-[#0d121f] rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-sm p-6 sm:p-7 space-y-6 overflow-hidden">
         
@@ -691,7 +691,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
               </span>
 
               <span className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1 rounded-lg border border-slate-100 dark:border-slate-800/80">
-                <span>تسک‌های تکمیل‌شده:</span>
+                <span>وظایف تکمیل‌شده:</span>
                 <strong className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">
                   {completedSubtasksCount} / {totalSubtasks}
                 </strong>
@@ -699,7 +699,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
 
               <button
                 onClick={() => setTasks(templateTasks(activeDomain, webBranch))}
-                className="inline-flex items-center gap-1 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer mr-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900/40"
+                className="inline-flex items-center gap-1 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer ms-1 px-2 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900/40"
                 title="پاک کردن همهٔ تیک‌ها"
               >
                 <RotateCcw size={12} />

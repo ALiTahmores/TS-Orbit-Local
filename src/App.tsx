@@ -48,7 +48,7 @@ class AppErrorBoundary extends React.Component<{ children?: React.ReactNode }, {
   render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <main className="min-h-screen w-full flex items-center justify-center bg-bg-app p-6" dir="rtl">
+      <main className="min-h-screen w-full flex items-center justify-center bg-bg-app p-6">
         <section className="w-full max-w-md rounded-2xl border border-border-primary bg-bg-surface p-8 text-center shadow-xl">
           <h1 className="text-xl font-bold text-text-primary">بارگذاری برنامه کامل نشد</h1>
           <p className="mt-3 text-sm leading-7 text-text-secondary">
@@ -63,8 +63,24 @@ class AppErrorBoundary extends React.Component<{ children?: React.ReactNode }, {
   }
 }
 
+// A stored sign-in that the server could not confirm yet (offline, or a cold start
+// that kept failing). The sign-in is kept; the visitor decides when to try again.
+const SessionOffline = ({ onRetry }: { onRetry: () => void }) => (
+  <main className="min-h-screen w-full flex items-center justify-center bg-bg-app p-6">
+    <section className="w-full max-w-md rounded-2xl border border-border-primary bg-bg-surface p-8 text-center shadow-xl">
+      <h1 className="text-xl font-bold text-text-primary">ارتباط با سرور برقرار نشد</h1>
+      <p className="mt-3 text-sm leading-7 text-text-secondary">
+        ورود شما محفوظ است. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.
+      </p>
+      <button type="button" onClick={onRetry} className="mt-6 rounded-xl bg-brand-accent px-5 py-3 text-sm font-semibold text-white">
+        تلاش دوباره
+      </button>
+    </section>
+  </main>
+);
+
 function AppContent() {
-  const { isAuthenticated, currentUser, refreshAllData } = useProject();
+  const { isAuthenticated, currentUser, refreshAllData, sessionStatus, retrySession } = useProject();
   // Captured before the sign-in page renders, so it can tell the visitor about the invite.
   const [inviteCode] = React.useState(captureInviteFromUrl);
   const [address,setAddress]=React.useState(()=>window.location.href);
@@ -104,6 +120,8 @@ function AppContent() {
     );
   }
 
+  if (!isAuthenticated && sessionStatus === 'checking') return <ScreenFallback />;
+  if (!isAuthenticated && sessionStatus === 'offline') return <SessionOffline onRetry={retrySession} />;
   if (!isAuthenticated) {
     return <AuthPortal />;
   }
@@ -144,7 +162,7 @@ export default function App() {
 }
 
 function AppWithSpark() {
-  const { theme } = useProject();
+  const { theme, locale } = useProject();
   const isDarkMode = typeof document !== 'undefined'
     ? document.documentElement.classList.contains('dark') || (theme === 'dark' || (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches))
     : false;
@@ -158,7 +176,9 @@ function AppWithSpark() {
       sparkCount={8}
       duration={350}
     >
-      <AppContent />
+      {/* A language switch renders the interface afresh, so text, numbers and
+          dates are all produced in the new language. */}
+      <AppContent key={locale} />
     </ClickSpark>
   );
 }

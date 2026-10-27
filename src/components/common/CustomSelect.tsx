@@ -34,7 +34,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   className = '',
   buttonClassName = '',
   disabled = false,
-  dir = 'rtl',
+  // Without an explicit direction the select follows the interface language.
+  dir,
   icon
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -115,7 +116,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
 
   return (
     <div 
-      className={`relative inline-block w-full text-right ${className}`}
+      className={`relative inline-block w-full text-start ${className}`}
       dir={dir}
     >
       <button
@@ -153,7 +154,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
             width: `${popoverPos.width}px`,
             zIndex: 99999
           }}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-1.5 space-y-1 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-100 font-sans text-right"
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-1.5 space-y-1 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-100 font-sans text-start"
           dir={dir}
         >
           {options.length > 0 ? (

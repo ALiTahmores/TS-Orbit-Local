@@ -23,7 +23,7 @@ export const MetricCard: React.FC<ComponentProps & {
       id={id}
       className={`bg-surface-primary dark:bg-[#1A1A24] border border-border-primary/85 dark:border-white/5 rounded-xl p-5 hover:border-brand-accent/30 transition-all duration-300 shadow-sm relative overflow-hidden group ${className}`}
     >
-      <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-accent/0 group-hover:bg-brand-accent/40 transition-all duration-300" />
+      <div className="absolute top-0 end-0 w-1.5 h-full bg-brand-accent/0 group-hover:bg-brand-accent/40 transition-all duration-300" />
       <div className="flex justify-between items-start mb-2.5">
         <span className="text-[10px] uppercase tracking-wider font-extrabold text-text-secondary dark:text-slate-400">
           {title}
@@ -100,7 +100,7 @@ export const ProjectCard: React.FC<ComponentProps & {
       } ${className}`}
     >
       <div className="flex justify-between items-start gap-2">
-        <div className="text-right">
+        <div className="text-start">
           <h4 className="text-xs font-black text-text-primary dark:text-white truncate">
             {title}
           </h4>
@@ -194,7 +194,7 @@ export const TeamCard: React.FC<ComponentProps & {
             {Array.from(name.trim())[0] || '?'}
           </div>
           {isOnline && (
-            <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-surface-primary dark:border-[#1A1A24] rounded-full" />
+            <span className="absolute bottom-0 start-0 w-2 h-2 bg-emerald-500 border border-surface-primary dark:border-[#1A1A24] rounded-full" />
           )}
         </div>
         <div className="min-w-0">
@@ -224,9 +224,9 @@ export const ActivityCard: React.FC<ComponentProps & {
   return (
     <div 
       id={id}
-      className={`text-right border-r-2 border-brand-accent/40 pr-3.5 space-y-0.5 relative py-1 ${className}`}
+      className={`text-start border-s-2 border-brand-accent/40 ps-3.5 space-y-0.5 relative py-1 ${className}`}
     >
-      <div className="absolute right-[-5px] top-2.5 w-2 h-2 rounded-full bg-brand-accent" />
+      <div className="absolute start-[-5px] top-2.5 w-2 h-2 rounded-full bg-brand-accent" />
       <h4 className="text-xs font-black text-text-primary dark:text-white line-clamp-1 leading-tight">
         {title}
       </h4>
@@ -285,8 +285,7 @@ export const Dialog: React.FC<{
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ type: "spring", damping: 25, stiffness: 350 }}
-            className="relative bg-surface-primary dark:bg-[#1A1A24] border border-border-primary/90 dark:border-white/5 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-right"
-            style={{ direction: 'rtl' }}
+            className="relative bg-surface-primary dark:bg-[#1A1A24] border border-border-primary/90 dark:border-white/5 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-start"
           >
             <div className="flex justify-between items-center pb-2 border-b border-border-primary/50 dark:border-white/5">
               <h3 className="text-xs font-black text-text-primary dark:text-white flex items-center gap-1.5">

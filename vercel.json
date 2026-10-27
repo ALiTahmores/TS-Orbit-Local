@@ -5,10 +5,19 @@
   "functions": {
     "server.js": {
       "maxDuration": 300,
-      "includeFiles": "{application.ts,server/**,src/data/**,src/lib/**,public/**}"
+      "includeFiles": "{build/vercel/**,public/**}"
     }
   },
   "headers": [
+    {
+      "source": "/fonts/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000"
+        }
+      ]
+    },
     {
       "source": "/assets/(.*)",
       "headers": [

@@ -1,4 +1,4 @@
-import { formatJalaliDate } from '../lib/dates';
+import { formatJalaliDate, formatJalaliDateTime } from '../lib/dates';
 import { publicFetch as apiFetch } from '../lib/api';
 import { downloadAsset,uploadAsset,canPreviewAsset,type ManagedAsset } from '../lib/assets';
 import {AssetImagePreview} from './assets/AssetImagePreview';
@@ -22,7 +22,6 @@ import {
   Rocket, 
   Building2, 
   ArrowLeft,
-  ArrowRight,
   Check,
   Tag,
   Paperclip,
@@ -97,7 +96,7 @@ const texts = {
     statusInProgress: 'در حال بررسی 🛠',
     statusPending: 'در انتظار بررسی ⏳',
     footer: 'پورتال اختصاصی کارفرما • ساخته‌شده با TS Orbit',
-    tasksSuffix: 'تسک'
+    tasksSuffix: 'وظیفه'
   },
   en: {
     loading: 'Loading Client Portal information...',
@@ -183,17 +182,13 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
     return (localStorage.getItem('portal_theme') as 'light' | 'dark') || 'dark';
   });
 
-  const [lang, setLang] = useState<'fa' | 'en'>(() => {
-    return (localStorage.getItem('portal_lang') as 'fa' | 'en') || 'fa';
-  });
+  // The portal speaks the interface language; its switch changes that language.
+  const lang = privateContext.locale;
+  const toggleLang = () => privateContext.setLocale(lang === 'fa' ? 'en' : 'fa');
 
   useEffect(() => {
     localStorage.setItem('portal_theme', theme);
   }, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem('portal_lang', lang);
-  }, [lang]);
 
   const txt = texts[lang];
 
@@ -335,7 +330,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
               className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1 min-h-[36px]"
             >
               <span>{txt.exitPreview}</span>
-              {lang === 'fa' ? <ArrowLeft size={14} /> : <ArrowRight size={14} />}
+              <ArrowLeft size={14} />
             </button>
           )}
         </div>
@@ -364,16 +359,16 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
           {/* RIGHT ACTION CONTROLS & METRIC */}
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             
-            {/* LANGUAGE SWITCHER BUTTON */}
-            <button
+            {/* LANGUAGE SWITCHER BUTTON: a preview follows the workspace language */}
+            {!isPreview && <button
               type="button"
-              onClick={() => setLang(prev => prev === 'fa' ? 'en' : 'fa')}
+              onClick={toggleLang}
               className="px-3 py-2.5 min-h-[44px] rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 transition-all cursor-pointer flex items-center gap-1.5 font-bold text-xs shadow-2xs"
-              title="Switch Language"
+              title={lang === 'fa' ? 'تغییر زبان' : 'Switch language'}
             >
               <Languages size={16} className="text-blue-600 dark:text-blue-400" />
-              <span>{lang === 'fa' ? 'EN' : 'فا'}</span>
-            </button>
+              <span data-no-translate lang={lang === 'fa' ? 'en' : 'fa'}>{lang === 'fa' ? 'EN' : 'فا'}</span>
+            </button>}
 
             {/* RETURN TO ADMIN: only for a signed-in team member, never for the client */}
             {(isPreview ? !onClosePreview : privateContext.isAuthenticated) && (
@@ -383,14 +378,14 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
                 className="px-3.5 py-2.5 min-h-[44px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs shrink-0"
                 title={txt.returnAdmin}
               >
-                {lang === 'fa' ? <ArrowLeft size={14} /> : <ArrowRight size={14} />}
+                <ArrowLeft size={14} />
                 <span className="hidden sm:inline">{txt.returnAdmin}</span>
               </button>
             )}
 
             {/* PROGRESS METRIC (DESKTOP) */}
             <div className="hidden md:flex items-center gap-3 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 px-4 py-2 rounded-2xl shrink-0">
-              <div className="text-right">
+              <div className="text-start">
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">{txt.progress}</p>
                 <p className="text-xs font-black text-emerald-600 dark:text-emerald-400">{formatNum(project.progress)}٪</p>
               </div>
@@ -487,7 +482,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-bold">{txt.deadline}</span>
                     <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
                       <Calendar size={13} />
-                      {(lang === 'fa' ? formatJalaliDate(project.deadline) : project.deadline && new Date(project.deadline).toLocaleDateString('en-US', { dateStyle: 'medium' })) || '—'}
+                      {formatJalaliDate(project.deadline) || '—'}
                     </span>
                   </div>
                 </div>
@@ -505,7 +500,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 p-3.5 rounded-2xl">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">{txt.startDate}</span>
-                  <span className="text-sm font-black text-slate-900 dark:text-slate-100 mt-1 block">{(lang === 'fa' ? formatJalaliDate(project.startDate) : project.startDate && new Date(project.startDate).toLocaleDateString('en-US', { dateStyle: 'medium' })) || '—'}</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-slate-100 mt-1 block">{formatJalaliDate(project.startDate) || '—'}</span>
                 </div>
                 <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 p-3.5 rounded-2xl">
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">{txt.activeStatus}</span>
@@ -625,7 +620,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
                           <span>{file.formattedSize || file.size}</span>
                           <span>•</span>
-                          <span>{formatNum(file.uploadDate)}</span>
+                          <span>{formatJalaliDate(file.uploadDate) || formatNum(file.uploadDate)}</span>
                         </p>
                       </div>
                     </div>
@@ -706,8 +701,20 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
                   />
                 </div>
 
-                <label className="block text-xs">پیوست بازخورد<input aria-label="پیوست بازخورد" type="file" disabled={isPreview||isSubmitting||attachmentBusy} onChange={async event=>{const element=event.target,file=element.files?.[0];if(!file)return;const operation=publicScope.current;const current=()=>operation===publicScope.current&&!operation.controller.signal.aborted;setAttachmentBusy(true);setPortalError('');try{const saved=await uploadAsset(file,{name:file.name},undefined,queryToken,operation.controller.signal);if(current()){setPendingAttachments(previous=>[...previous,saved]);element.value='';}}catch(error){if(current())setPortalError(error instanceof Error?error.message:'پیوست ذخیره نشد.');}finally{if(current())setAttachmentBusy(false);}}}/></label>
-                {pendingAttachments.map(file=><p key={file.id} className="text-xs">{file.name}<button type="button" onClick={()=>setPendingAttachments(previous=>previous.filter(item=>item.id!==file.id))}>حذف از بازخورد</button></p>)}
+                <div className="space-y-2">
+                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">پیوست بازخورد</span>
+                  <label className={`flex items-center justify-center gap-2 w-full min-h-[44px] rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 transition-colors ${isPreview||isSubmitting||attachmentBusy?'opacity-60 cursor-not-allowed':'cursor-pointer hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400'}`}>
+                    <Paperclip size={14} className="shrink-0" />
+                    <span>{attachmentBusy?'در حال بارگذاری…':'انتخاب فایل'}</span>
+                    <input aria-label="پیوست بازخورد" type="file" className="sr-only" disabled={isPreview||isSubmitting||attachmentBusy} onChange={async event=>{const element=event.target,file=element.files?.[0];if(!file)return;const operation=publicScope.current;const current=()=>operation===publicScope.current&&!operation.controller.signal.aborted;setAttachmentBusy(true);setPortalError('');try{const saved=await uploadAsset(file,{name:file.name},undefined,queryToken,operation.controller.signal);if(current()){setPendingAttachments(previous=>[...previous,saved]);element.value='';}}catch(error){if(current())setPortalError(error instanceof Error?error.message:'پیوست ذخیره نشد.');}finally{if(current())setAttachmentBusy(false);}}}/>
+                  </label>
+                  {pendingAttachments.map(file=>(
+                    <div key={file.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs">
+                      <span className="flex items-center gap-1.5 min-w-0 text-slate-700 dark:text-slate-200"><FileText size={13} className="shrink-0 text-blue-500" /><span className="truncate">{file.name}</span></span>
+                      <button type="button" onClick={()=>setPendingAttachments(previous=>previous.filter(item=>item.id!==file.id))} className="shrink-0 font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer">حذف از بازخورد</button>
+                    </div>
+                  ))}
+                </div>
                 <button
                   type="submit"
                   disabled={isPreview || attachmentBusy || isSubmitting || !message.trim() || !senderName.trim()}
@@ -729,7 +736,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
               {feedbacks.length === 0 ? (
                 <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-12">{txt.noFeedback}</p>
               ) : (
-                <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[480px] overflow-y-auto ps-1">
                   {feedbacks.map((fb) => (
                     <div 
                       key={fb.id}
@@ -742,7 +749,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
                             {fb.category === 'design' ? txt.catDesign.split(' ')[0] : fb.category === 'technical' ? txt.catTechnical.split(' ')[0] : fb.category === 'content' ? txt.catContent.split(' ')[0] : txt.catGeneral.split(' ')[0]}
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">{formatNum(fb.createdAt)}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">{formatJalaliDateTime(fb.createdAt) || formatNum(fb.createdAt)}</span>
                       </div>
 
                       <p className="text-slate-700 dark:text-slate-300 font-bold leading-relaxed">{fb.message}</p>
@@ -778,7 +785,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
       </main>
 
       {/* MOBILE STICKY BOTTOM NAVIGATION BAR */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/90 dark:border-slate-800 px-3 py-2 flex items-center justify-around shadow-2xl transition-colors">
+      <div className="lg:hidden fixed bottom-0 end-0 start-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200/90 dark:border-slate-800 px-3 py-2 flex items-center justify-around shadow-2xl transition-colors">
         <button
           type="button"
           onClick={() => setActiveTab('roadmap')}

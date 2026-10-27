@@ -113,12 +113,12 @@ export const TabManager: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-slate-200 shadow-sm p-6 rounded-2xl max-w-5xl mx-auto space-y-6 text-right" id="tab-manager-section">
+    <div className="bg-white border border-slate-200 shadow-sm p-6 rounded-2xl max-w-5xl mx-auto space-y-6 text-start dark:bg-slate-900 dark:border-slate-800" id="tab-manager-section">
       
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+      <div className="flex justify-between items-center border-b border-slate-100 pb-4 dark:border-slate-800">
         <div>
-          <h2 className="text-base font-black text-slate-800 flex items-center gap-2">
+          <h2 className="text-base font-black text-slate-800 flex items-center gap-2 dark:text-slate-100">
             <Sliders size={18} className="text-blue-600" /> مدیریت تب‌ها و منوهای ناوبری (SaaS Modules)
           </h2>
           <p className="text-[11px] text-slate-500 mt-1">مدیر کل سیستم می‌تواند تب‌های پیش‌فرض را مدیریت کرده، دسترسی نقش‌ها را محدود کرده یا تب سفارشی بسازد.</p>
@@ -133,8 +133,8 @@ export const TabManager: React.FC = () => {
 
       {/* 1. Add Custom Tab Form */}
       {isAdding && (
-        <form onSubmit={handleCreateCustom} className="bg-slate-50 border border-slate-200/60 p-5 rounded-2xl space-y-4">
-          <h3 className="font-bold text-xs text-slate-700 border-b border-slate-200/50 pb-2 flex items-center gap-1.5">
+        <form onSubmit={handleCreateCustom} className="bg-slate-50 border border-slate-200/60 p-5 rounded-2xl space-y-4 dark:bg-slate-800/50">
+          <h3 className="font-bold text-xs text-slate-700 border-b border-slate-200/50 pb-2 flex items-center gap-1.5 dark:text-slate-300">
             <Plus size={14} className="text-blue-600" /> افزودن تب سفارشی جدید
           </h3>
           
@@ -146,7 +146,7 @@ export const TabManager: React.FC = () => {
                 placeholder="مثال: آموزش وردپرس برای کلاینت"
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
-                className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
                 required
               />
             </div>
@@ -163,14 +163,14 @@ export const TabManager: React.FC = () => {
 
           <div>
             <label className="text-[10px] font-bold text-slate-550 block mb-1">نقش‌های مجاز به دسترسی (خالی بودن به معنای دسترسی همگانی است)</label>
-            <div className="flex flex-wrap gap-3 bg-white p-3 border border-slate-200 rounded-xl">
+            <div className="flex flex-wrap gap-3 bg-white p-3 border border-slate-200 rounded-xl dark:bg-slate-900 dark:border-slate-800">
               {availableRoles.map(role => (
                 <label key={role.key} className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
                   <input 
                     type="checkbox" 
                     checked={newRoles.includes(role.key)}
                     onChange={() => toggleRole(newRoles, setNewRoles, role.key)}
-                    className="rounded border-slate-300 text-blue-600"
+                    className="rounded border-slate-300 text-blue-600 dark:border-slate-700"
                   />
                   <span>{role.label}</span>
                 </label>
@@ -185,7 +185,7 @@ export const TabManager: React.FC = () => {
               placeholder="یک متن راهنما یا محتوای سفارشی که با کلیک روی این تب به کاربران نمایش داده می‌شود..."
               value={newContent}
               onChange={e => setNewContent(e.target.value)}
-              className="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 font-sans leading-relaxed"
+              className="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 font-sans leading-relaxed dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
             />
           </div>
 
@@ -199,7 +199,7 @@ export const TabManager: React.FC = () => {
             <button 
               type="button"
               onClick={() => setIsAdding(false)}
-              className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl"
+              className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold px-4 py-2 rounded-xl dark:bg-slate-700 dark:text-slate-300"
             >
               انصراف
             </button>
@@ -208,10 +208,10 @@ export const TabManager: React.FC = () => {
       )}
 
       {/* 2. Modules List Table */}
-      <div className="border border-slate-100 rounded-2xl overflow-hidden">
-        <table className="w-full text-right border-collapse">
+      <div className="border border-slate-100 rounded-2xl overflow-hidden dark:border-slate-800">
+        <table className="w-full text-start border-collapse">
           <thead>
-            <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold border-b border-slate-100">
+            <tr className="bg-slate-50 text-slate-500 text-[10px] font-bold border-b border-slate-100 dark:bg-slate-800/50 dark:border-slate-800">
               <th className="p-3">ترتیب</th>
               <th className="p-3">آیکون</th>
               <th className="p-3">عنوان تب ناوبری</th>
@@ -234,7 +234,7 @@ export const TabManager: React.FC = () => {
                         type="number"
                         value={editOrder}
                         onChange={e => setEditOrder(Number(e.target.value))}
-                        className="w-12 bg-white border border-slate-200 px-1 py-1 rounded text-center text-xs font-bold"
+                        className="w-12 bg-white border border-slate-200 px-1 py-1 rounded text-center text-xs font-bold dark:bg-slate-900 dark:border-slate-800"
                       />
                     ) : (
                       module.order
@@ -263,17 +263,17 @@ export const TabManager: React.FC = () => {
                         type="text"
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
-                        className="bg-white border border-slate-200 px-2 py-1 rounded text-xs font-bold text-slate-800"
+                        className="bg-white border border-slate-200 px-2 py-1 rounded text-xs font-bold text-slate-800 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100"
                       />
                     ) : (
-                      <span className="font-extrabold text-slate-800">{module.name}</span>
+                      <span className="font-extrabold text-slate-800 dark:text-slate-100">{module.name}</span>
                     )}
                   </td>
 
                   {/* Roles */}
                   <td className="p-3">
                     {isEditing ? (
-                      <div className="flex flex-col gap-1 bg-white p-2 border border-slate-200 rounded-lg max-w-xs">
+                      <div className="flex flex-col gap-1 bg-white p-2 border border-slate-200 rounded-lg max-w-xs dark:bg-slate-900 dark:border-slate-800">
                         {availableRoles.map(role => (
                           <label key={role.key} className="flex items-center gap-1.5 text-[10px] text-slate-600">
                             <input 
@@ -288,7 +288,7 @@ export const TabManager: React.FC = () => {
                     ) : (
                       <div className="flex flex-wrap gap-1">
                         {!module.accessRoles || module.accessRoles.length === 0 ? (
-                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">✓ همگانی</span>
+                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold dark:bg-slate-800">✓ همگانی</span>
                         ) : (
                           module.accessRoles.map(r => (
                             <span key={r} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-extrabold flex items-center gap-0.5">
@@ -305,7 +305,7 @@ export const TabManager: React.FC = () => {
                     {module.isCustom ? (
                       <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-bold">سفارشی</span>
                     ) : (
-                      <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium">پیش‌فرض سیستم</span>
+                      <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-medium dark:bg-slate-800">پیش‌فرض سیستم</span>
                     )}
                   </td>
 
@@ -316,7 +316,7 @@ export const TabManager: React.FC = () => {
                       className={`p-1.5 rounded-lg transition-all ${
                         module.enabled 
                           ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' 
-                          : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                          : 'bg-slate-100 text-slate-400 hover:bg-slate-200 dark:bg-slate-800'
                       }`}
                       title={module.enabled ? 'غیرفعال کردن تب ناوبری' : 'فعال کردن تب ناوبری'}
                     >
@@ -338,7 +338,7 @@ export const TabManager: React.FC = () => {
                           </button>
                           <button 
                             onClick={() => setEditingModuleId(null)}
-                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 p-1 rounded-lg transition-all"
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 p-1 rounded-lg transition-all dark:bg-slate-700 dark:text-slate-300"
                             title="انصراف"
                           >
                             <Plus className="rotate-45" size={14} />

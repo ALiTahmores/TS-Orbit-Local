@@ -110,7 +110,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ isRtl = tr
       >
         <Building2 className="w-4 h-4 text-slate-600 dark:text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
         {/* Active workspace indicator dot */}
-        <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111322]" />
+        <span className="absolute top-2 start-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#111322]" />
       </button>
 
       {/* 100% Solid Opaque Background Popover Dropdown */}
@@ -122,7 +122,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ isRtl = tr
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ duration: 0.15 }}
             className={`absolute top-12 z-50 w-72 rounded-2xl bg-white dark:bg-[#121526] border border-slate-200 dark:border-[#22273e] shadow-2xl p-3 space-y-2 ${
-              isRtl ? 'left-0 text-right' : 'right-0 text-left'
+              isRtl ? 'end-0 text-start' : 'start-0 text-left'
             }`}
             style={{ backgroundColor: undefined }}
           >
@@ -163,7 +163,7 @@ export const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({ isRtl = tr
                       }`}>
                         <Building2 size={14} />
                       </div>
-                      <div className="min-w-0 text-right">
+                      <div className="min-w-0 text-start">
                         <div className="text-xs truncate font-bold text-slate-800 dark:text-slate-100">{ws.name}</div>
                         <div className="text-[9.5px] text-slate-400 dark:text-slate-400 font-medium">
                           {isOwner ? (isRtl ? 'فضای کاری شما (مالک)' : 'Your Workspace (Owner)') : (isRtl ? 'عضو همکار' : 'Collaborator')}

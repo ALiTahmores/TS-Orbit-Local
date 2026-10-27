@@ -22,6 +22,7 @@ import {
   Globe
 } from 'lucide-react';
 import StrandsLoader from '../loading/StrandsLoader';
+import { BrandLogo } from '../common/BrandLogo';
 
 export interface AuthModalProps {
   isOpen?: boolean;
@@ -387,10 +388,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               transition={{ duration: 0.25 }}
               className="flex flex-col items-center w-full"
             >
-              {/* 1. Top TS Squircle Brand Badge */}
-              <div className="h-14 w-14 mx-auto mb-6 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/25 border border-white/20">
-                <span className="text-xl font-black tracking-wider text-white font-sans">TS</span>
-              </div>
+              {/* 1. Brand logo */}
+              <BrandLogo className="h-14 w-14 mx-auto mb-6 shadow-lg shadow-black/40" />
 
               {/* 2. Welcome Headline & Subtitle */}
               <h1 className="text-2xl md:text-3xl font-bold text-white/95 tracking-tight mb-2">
@@ -425,10 +424,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               transition={{ duration: 0.25 }}
               className="flex flex-col items-center w-full"
             >
-              {/* Brand Logo Badge */}
-              <div className="h-14 w-14 mx-auto mb-6 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/25 border border-white/20">
-                <span className="text-xl font-black tracking-wider text-white font-sans">TS</span>
-              </div>
+              {/* Brand logo */}
+              <BrandLogo className="h-14 w-14 mx-auto mb-6 shadow-lg shadow-black/40" />
 
               {/* Title */}
               <h1 className="text-2xl md:text-3xl font-bold text-white/95 tracking-tight mb-2">

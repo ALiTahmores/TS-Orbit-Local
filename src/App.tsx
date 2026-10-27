@@ -10,6 +10,7 @@ import { acceptPendingInvite, captureInviteFromUrl } from './lib/pendingInvite';
 import { ProjectProvider, useProject } from './context/ProjectContext';
 import { LoadingProvider } from './components/loading/LoadingProvider';
 import ClickSpark from './components/ui/ClickSpark';
+import { BrandLogo } from './components/common/BrandLogo';
 import { SmartRefreshNotifier } from './components/common/SmartRefreshNotifier';
 import { useSmartRefresh } from './hooks/useSmartRefresh';
 
@@ -50,6 +51,7 @@ class AppErrorBoundary extends React.Component<{ children?: React.ReactNode }, {
     return (
       <main className="min-h-screen w-full flex items-center justify-center bg-bg-app p-6">
         <section className="w-full max-w-md rounded-2xl border border-border-primary bg-bg-surface p-8 text-center shadow-xl">
+          <BrandLogo className="w-12 h-12 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-text-primary">بارگذاری برنامه کامل نشد</h1>
           <p className="mt-3 text-sm leading-7 text-text-secondary">
             نسخهٔ تازه را دریافت می‌کنیم. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.
@@ -68,6 +70,7 @@ class AppErrorBoundary extends React.Component<{ children?: React.ReactNode }, {
 const SessionOffline = ({ onRetry }: { onRetry: () => void }) => (
   <main className="min-h-screen w-full flex items-center justify-center bg-bg-app p-6">
     <section className="w-full max-w-md rounded-2xl border border-border-primary bg-bg-surface p-8 text-center shadow-xl">
+      <BrandLogo className="w-12 h-12 mx-auto mb-4" />
       <h1 className="text-xl font-bold text-text-primary">ارتباط با سرور برقرار نشد</h1>
       <p className="mt-3 text-sm leading-7 text-text-secondary">
         ورود شما محفوظ است. اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.

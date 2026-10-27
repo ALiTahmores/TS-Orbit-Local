@@ -31,6 +31,7 @@ import {
   Moon,
   Languages
 } from 'lucide-react';
+import { BrandLogo } from './common/BrandLogo';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === null || n === undefined) return '';
@@ -828,7 +829,7 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
 
       {/* FOOTER BRANDING */}
       <footer className="border-t border-slate-200 dark:border-slate-900 bg-white dark:bg-slate-950 py-4 text-center text-[11px] text-slate-500 dark:text-slate-400 font-bold transition-colors">
-        <span>{txt.footer}</span>
+        <span className="inline-flex items-center gap-2"><BrandLogo className="w-5 h-5" /><span>{txt.footer}</span></span>
       </footer>
 
     </div>

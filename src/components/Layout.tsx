@@ -22,6 +22,7 @@ import { PageLoadingBoundary } from './loading/PageLoadingBoundary';
 import { useLoading } from '../context/LoadingContext';
 import { WorkspaceSwitcher } from './workspace/WorkspaceSwitcher';
 import { GlobalSyncAndToast } from './common/GlobalSyncAndToast';
+import { BrandLogo } from './common/BrandLogo';
 
 // Each view is its own chunk: the shell renders first, a view downloads when it
 // is opened, and the rest are warmed in idle time after the shell has mounted.
@@ -834,19 +835,15 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Title / Brand Block */}
             {!isMenuCollapsed ? (
               <div className="flex items-center gap-2.5 flex-row text-start">
-                <div className="w-8 h-8 bg-gradient-to-tr from-[#155DFC] to-[#3B82F6] rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-[0_4px_12px_rgba(21,93,252,0.25)]">
-                  TS
-                </div>
+                <BrandLogo className="w-8 h-8" />
                 <div className="flex flex-col min-w-0">
                   <span className="text-xs font-black text-slate-800 dark:text-white leading-tight truncate">TS Orbit</span>
-                  <span className="text-[8.5px] text-slate-400 dark:text-slate-500 font-bold block mt-0.5 truncate">Business Operations Platform</span>
+                  <span className="text-[8.5px] text-slate-400 dark:text-slate-500 font-bold block mt-0.5 truncate">{isRtl ? 'پلتفرم عملیات کسب‌وکار' : 'Business Operations Platform'}</span>
                 </div>
               </div>
             ) : (
               <div className="flex justify-center py-1">
-                <div className="w-8 h-8 bg-gradient-to-tr from-[#155DFC] to-[#3B82F6] rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-[0_4px_12px_rgba(21,93,252,0.25)] hover:scale-105 transition-transform">
-                  TS
-                </div>
+                <BrandLogo className="w-8 h-8 hover:scale-105 transition-transform" />
               </div>
             )}
           </div>
@@ -1765,9 +1762,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {/* Floating Sheet Brand Header */}
                     <div className="shrink-0 pb-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                       <div className="flex items-center gap-2.5 flex-row text-start">
-                        <div className="w-8 h-8 bg-gradient-to-tr from-[#155DFC] to-[#3B82F6] rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0 shadow-[0_4px_12px_rgba(21,93,252,0.25)]">
-                          TS
-                        </div>
+                        <BrandLogo className="w-8 h-8" />
                         <div className="flex flex-col min-w-0 text-start">
                           <span className="text-xs font-black text-slate-800 dark:text-white leading-tight truncate">TS Orbit</span>
                           <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold block mt-0.5 truncate">

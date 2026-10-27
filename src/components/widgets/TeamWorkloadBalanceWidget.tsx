@@ -70,7 +70,7 @@ export const TeamWorkloadBalanceWidget: React.FC<TeamWorkloadBalanceWidgetProps>
       {memberWorkloads.length === 0 ? (
         <p className="text-[11px] text-slate-500 dark:text-slate-400">هنوز عضوی در این فضای کاری نیست.</p>
       ) : (
-        <div className="space-y-3 max-h-[300px] overflow-y-auto ps-1 scrollbar-thin">
+        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
           {memberWorkloads.map(({ member, activeTaskCount, overdueCount, sharePct }) => (
             <div
               key={member.id}
@@ -85,7 +85,7 @@ export const TeamWorkloadBalanceWidget: React.FC<TeamWorkloadBalanceWidgetProps>
                       className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700"
                     />
                     {member.status === 'online' && (
-                      <span className="absolute -bottom-0.5 -start-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
                     )}
                   </div>
                   <div className="min-w-0">

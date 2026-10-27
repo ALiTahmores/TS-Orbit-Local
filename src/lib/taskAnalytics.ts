@@ -2,8 +2,6 @@
 // canonical due dates and assignments. Nothing here is estimated or seeded.
 import { assignedIds } from './domain';
 import { calendarDay } from './formValues';
-import { jalaliMonthName, persianNumber } from './dates';
-import { isEnglish } from './locale';
 
 export type SeriesPeriod = 'daily' | 'weekly' | 'monthly' | 'quarterly';
 export interface SeriesPoint { name: string; Completed: number; OnTime: number | null }
@@ -70,12 +68,15 @@ export function weeklyTimeTotals(tasks: any[], now = new Date()) {
   return { days, total, average: total / elapsed, max: Math.max(...days.map(Math.abs), 0), start, todayIndex: elapsed - 1 };
 }
 
+const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
 const persianYearMonth = new Intl.DateTimeFormat('en-US-u-ca-persian', { year: 'numeric', month: 'numeric' });
+const persianWeekday = new Intl.DateTimeFormat('fa-IR', { weekday: 'short' });
 const jalaliParts = (date: Date) => {
   const parts = Object.fromEntries(persianYearMonth.formatToParts(date).filter(p => p.type === 'year' || p.type === 'month').map(p => [p.type, Number(p.value)]));
   return { year: parts.year as number, month: parts.month as number };
 };
-const SEASONS = { fa: ['بهار', 'تابستان', 'پاییز', 'زمستان'], en: ['Spring', 'Summer', 'Autumn', 'Winter'] };
+const SEASONS = ['بهار', 'تابستان', 'پاییز', 'زمستان'];
+const faDigits = (value: number | string) => String(value).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
 
 /** Completed-task counts and on-time rate per bucket, oldest bucket first. */
 export function completionSeries(tasks: any[], period: SeriesPeriod, now = new Date()): SeriesPoint[] {
@@ -86,12 +87,12 @@ export function completionSeries(tasks: any[], period: SeriesPeriod, now = new D
   if (period === 'daily') {
     for (let i = 6; i >= 0; i--) {
       const day = new Date(today.getTime() - i * DAY);
-      buckets.push({ name: day.toLocaleDateString(isEnglish() ? 'en-US' : 'fa-IR', { weekday: 'short' }), match: date => startOfDay(date).getTime() === day.getTime() });
+      buckets.push({ name: persianWeekday.format(day), match: date => startOfDay(date).getTime() === day.getTime() });
     }
   } else if (period === 'weekly') {
     for (let i = 3; i >= 0; i--) {
       const end = new Date(today.getTime() + DAY - i * 7 * DAY), start = new Date(end.getTime() - 7 * DAY);
-      buckets.push({ name: i === 0 ? (isEnglish() ? 'This week' : 'این هفته') : isEnglish() ? `${i} week${i > 1 ? 's' : ''} ago` : `${persianNumber(i)} هفته پیش`, match: date => date >= start && date < end });
+      buckets.push({ name: i === 0 ? 'این هفته' : `${faDigits(i)} هفته پیش`, match: date => date >= start && date < end });
     }
   } else {
     const span = period === 'monthly' ? 1 : 3, count = period === 'monthly' ? 6 : 4;
@@ -101,7 +102,7 @@ export function completionSeries(tasks: any[], period: SeriesPeriod, now = new D
     const currentIndex = index(current), currentStart = currentIndex - (span === 3 ? (current.month - 1) % 3 : 0);
     for (let i = count - 1; i >= 0; i--) {
       const first = currentStart - i * span, year = Math.floor(first / 12), month = first % 12 + 1;
-      const name = span === 1 ? jalaliMonthName(month) : `${SEASONS[isEnglish() ? 'en' : 'fa'][Math.floor((month - 1) / 3)]} ${persianNumber(year)}`;
+      const name = span === 1 ? MONTHS[month - 1] : `${SEASONS[Math.floor((month - 1) / 3)]} ${faDigits(year)}`;
       buckets.push({ name, match: date => { const at = index(jalaliParts(date)); return at >= first && at < first + span; } });
     }
   }
@@ -113,7 +114,7 @@ export function completionSeries(tasks: any[], period: SeriesPeriod, now = new D
 }
 
 export function seriesToCsv(points: SeriesPoint[]): string {
-  const rows = [isEnglish() ? ['Period', 'Completed tasks', 'On-time delivery (%)'] : ['بازه', 'وظایف تکمیل‌شده', 'درصد تحویل به‌موقع'], ...points.map(p => [p.name, String(p.Completed), p.OnTime === null ? '' : String(p.OnTime)])];
+  const rows = [['بازه', 'تسک‌های تکمیل‌شده', 'درصد تحویل به‌موقع'], ...points.map(p => [p.name, String(p.Completed), p.OnTime === null ? '' : String(p.OnTime)])];
   return '﻿' + rows.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\r\n');
 }
 

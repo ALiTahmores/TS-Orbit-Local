@@ -39,7 +39,7 @@ export const SmartRefreshNotifier: React.FC<SmartRefreshNotifierProps> = ({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className={`fixed z-40 ${isRtl ? 'end-5 bottom-5' : 'start-5 bottom-5'} max-w-sm w-full pointer-events-auto select-none`}
+        className={`fixed z-40 ${isRtl ? 'left-5 bottom-5' : 'right-5 bottom-5'} max-w-sm w-full pointer-events-auto select-none`}
         dir={isRtl ? 'rtl' : 'ltr'}
       >
         <div className="p-3.5 rounded-2xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-blue-200/70 dark:border-blue-900/50 shadow-[0_10px_30px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.05)] text-slate-800 dark:text-neutral-100 flex items-start gap-3 transition-all">
@@ -49,14 +49,14 @@ export const SmartRefreshNotifier: React.FC<SmartRefreshNotifierProps> = ({
             <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/60 flex items-center justify-center text-blue-600 dark:text-blue-400">
               <Sparkles className="w-4 h-4" />
             </div>
-            <span className="absolute -top-1 -start-1 flex h-2.5 w-2.5">
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
             </span>
           </div>
 
           {/* Content info */}
-          <div className="flex-1 min-w-0 ps-1">
+          <div className="flex-1 min-w-0 pr-1">
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                 {title}

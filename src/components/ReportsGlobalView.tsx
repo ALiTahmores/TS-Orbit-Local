@@ -67,7 +67,7 @@ export const ReportsGlobalView: React.FC = () => {
 
   if (projects.length === 0) {
     return (
-      <div className="p-4">
+      <div className="p-4" dir="rtl">
         <EmptyState
           id="global_reports_empty"
           title="هنوز گزارشی برای نمایش نیست"
@@ -96,7 +96,7 @@ export const ReportsGlobalView: React.FC = () => {
   }`;
 
   return (
-    <div id="reports_center" className="w-full space-y-6">
+    <div id="reports_center" className="w-full space-y-6" dir="rtl">
 
       {/* EXPORT AND ACTIONS BAR */}
       <div className="flex flex-wrap justify-between items-center gap-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl">
@@ -119,9 +119,9 @@ export const ReportsGlobalView: React.FC = () => {
             {exportOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
-                <div className="absolute end-0 mt-1.5 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-20 overflow-hidden">
-                  <button type="button" onClick={() => handleExportCSV('projects')} className="w-full text-start px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 block font-medium cursor-pointer">فهرست پروژه‌ها</button>
-                  <button type="button" onClick={() => handleExportCSV('tasks')} className="w-full text-start px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 block font-medium cursor-pointer">فهرست وظایف</button>
+                <div className="absolute left-0 mt-1.5 w-44 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-20 overflow-hidden">
+                  <button type="button" onClick={() => handleExportCSV('projects')} className="w-full text-right px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 block font-medium cursor-pointer">فهرست پروژه‌ها</button>
+                  <button type="button" onClick={() => handleExportCSV('tasks')} className="w-full text-right px-4 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 block font-medium cursor-pointer">فهرست وظایف</button>
                 </div>
               </>
             )}
@@ -175,7 +175,7 @@ export const ReportsGlobalView: React.FC = () => {
                   <YAxis stroke="#64748b" tickLine={false} domain={[0, 100]} orientation="right" />
                   <Tooltip
                     formatter={(value: any) => [`${fa(value)}٪`, 'پیشرفت']}
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', direction: 'rtl', textAlign: 'right' }}
                   />
                   <Bar dataKey="progress" radius={[6, 6, 0, 0]}>
                     {projectChartData.map((_, index) => (

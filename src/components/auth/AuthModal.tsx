@@ -1,5 +1,5 @@
 import { apiFetch } from '../../lib/api';
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useProject } from '../../context/ProjectContext';
 import { MultiStepForm, StepItem } from '../ui/multistep-form';
@@ -34,12 +34,33 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen = true,
   initialNotice = '',
 }) => {
-  const { login, register, locale, setLocale } = useProject();
+  const { 
+    login, 
+    register, 
 
-  // The sign-in page has its own dark design; the language is the app's language.
-  const isRtl = locale !== 'en';
-  const ArrowForward = ArrowLeft;
-  const toggleAuthLocale = () => setLocale(isRtl ? 'en' : 'fa');
+  } = useProject();
+
+  // Authentication page is permanently dark mode, with Persian/English localization toggle
+  const [authLocale, setAuthLocale] = useState<'fa' | 'en'>('fa');
+
+  const isRtl = authLocale !== 'en';
+  const ArrowForward = isRtl ? ArrowLeft : ArrowRight;
+
+  // Apply dark mode & locale to the document root only for the active auth screen
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add('dark');
+
+    const dir = authLocale === 'fa' ? 'rtl' : 'ltr';
+    root.setAttribute('dir', dir);
+    root.setAttribute('lang', authLocale);
+    document.body.style.direction = dir;
+    document.body.style.textAlign = authLocale === 'fa' ? 'right' : 'left';
+  }, [authLocale]);
+
+  const toggleAuthLocale = () => {
+    setAuthLocale((prev) => (prev === 'fa' ? 'en' : 'fa'));
+  };
 
   // Flow State Machine
   // 'email_entry' -> 'login_password' OR 'register_stepper' | 'pending_success' | 'forgot_password'
@@ -73,16 +94,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   }>({ type: initialNotice ? 'info' : null, message: initialNotice });
 
   const clearFeedback = () => setFeedback({ type: null, message: '' });
-
-  // Recovery runs where the database lives: on a hosted workspace only its
-  // administrator can reset a password, on a local install the host owner can.
-  const [hosted, setHosted] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (currentFlow !== 'forgot_password' || hosted !== null) return;
-    fetch('/api/runtime').then(response => response.ok ? response.json() : null)
-      .then(runtime => setHosted(Boolean(runtime?.cloud)))
-      .catch(() => setHosted(false));
-  }, [currentFlow, hosted]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -312,14 +323,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div
-      className="dark fixed inset-0 z-50 flex flex-col items-center justify-center min-h-screen p-4 overflow-y-auto select-none text-neutral-100"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center min-h-screen p-4 overflow-y-auto select-none text-neutral-100"
       dir={isRtl ? 'rtl' : 'ltr'}
+      style={{ fontFeatureSettings: '"ss01" 1' }}
     >
       {/* ========================================================
           ISOLATED FLOATING CONTROLS (Language Switcher Only - Permanently Top-Right)
          ======================================================== */}
       <div
-        className="fixed top-5 start-5 z-50 flex items-center p-1 rounded-full border border-white/[0.12] bg-[#11131d]/70 backdrop-blur-xl transition-all shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
+        className="fixed top-5 right-5 z-50 flex items-center p-1 rounded-full border border-white/[0.12] bg-[#11131d]/70 backdrop-blur-xl transition-all shadow-[0_4px_20px_rgba(0,0,0,0.35)]"
       >
         {/* Language switch */}
         <button
@@ -327,11 +339,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onClick={toggleAuthLocale}
           className="h-8 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer text-white/85 hover:text-white hover:bg-white/10"
           title={isRtl ? 'تغییر زبان به انگلیسی' : 'Switch language to Persian'}
-          lang={isRtl ? 'en' : 'fa'}
-          data-no-translate
         >
           <Globe className="w-3.5 h-3.5 text-blue-400" />
-          <span>{isRtl ? 'English' : 'فارسی'}</span>
+          <span>{authLocale === 'fa' ? 'فارسی' : 'EN'}</span>
         </button>
       </div>
 
@@ -398,7 +408,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </h1>
 
               <p className="text-xs md:text-sm text-white/60 font-medium mb-6">
-                {isRtl ? 'برای ورود یا ساخت حساب کاربری ادامه دهید' : 'Sign in or create an account to get started'}
+                {isRtl ? 'برای ورود یا عضویت در سامانه، ایمیل خود را وارد کنید' : 'Sign in or create an account to get started'}
               </p>
 
               {/* 5. Smart Email Input with Optional Domain Badge Pill */}
@@ -506,7 +516,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     }}
                     className="hover:text-white transition-colors cursor-pointer"
                   >
-                    {isRtl ? '→ ورود با حساب دیگر' : '← Use another account'}
+                    {isRtl ? '← تغییر نشانی ایمیل' : '← Change email'}
                   </button>
 
                   <button
@@ -575,7 +585,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div className="space-y-1">
-                <h2 className="text-2xl md:text-3xl font-bold text-white/95 tracking-tight">
+                <h2 className="text-2xl md:text-3xl font-serif text-white/95 tracking-tight font-normal">
                   {isRtl ? 'حساب کاربری شما ایجاد شد' : "You're all set"}
                 </h2>
                 <p className="text-xs text-white/60 leading-relaxed max-w-sm mx-auto">
@@ -628,30 +638,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               exit={{ opacity: 0, y: -10 }}
               className="flex flex-col items-center w-full"
             >
-              <h2 className="text-2xl md:text-3xl font-bold text-white/95 tracking-tight mb-2">
+              <h2 className="text-2xl font-serif text-white/95 mb-2 font-normal">
                 {isRtl ? 'بازیابی کلمه عبور' : 'Reset Password'}
               </h2>
-              {hosted ? (
-                <p className="text-sm text-white/70 mb-6 leading-7 text-center">
-                  {isRtl
-                    ? 'برای تعیین رمز تازه با مدیر سامانه تماس بگیرید. شناسه و داده‌های حساب شما حفظ می‌شوند.'
-                    : 'Contact the workspace administrator to set a new password. Your account ID and data are preserved.'}
-                </p>
-              ) : (
-                <>
-                  <p className="text-sm text-white/70 mb-6 leading-7 text-center">
-                    {isRtl
-                      ? 'بازیابی رمز روی سیستم میزبان توسط صاحب سیستم انجام می‌شود. در پوشه پروژه دستور زیر را اجرا کنید؛ رمز جدید در ترمینال به صورت مخفی دریافت می‌شود. شناسه و داده‌های حساب حفظ می‌شوند.'
-                      : 'The host computer owner can reset the password locally. Run the command below in the project folder; the terminal asks for the new password privately. Your account ID and data are preserved.'}
-                  </p>
-                  <code dir="ltr" className="block w-full break-words rounded-xl bg-black/30 p-4 text-xs text-blue-200 select-text">
-                    npm run local:account -- set-password --email EMAIL
-                  </code>
-                  <p className="text-xs text-white/60 my-4">
-                    {isRtl ? 'EMAIL را با ایمیل حساب جایگزین کنید. هیچ کد یا ایمیلی ارسال نمی‌شود.' : 'Replace EMAIL with the account email. No code or email is sent.'}
-                  </p>
-                </>
-              )}
+              <p className="text-sm text-white/70 mb-6 leading-7 text-center">
+                {isRtl
+                  ? 'بازیابی رمز روی سیستم میزبان توسط صاحب سیستم انجام می‌شود. در پوشه پروژه دستور زیر را اجرا کنید؛ رمز جدید در ترمینال به صورت مخفی دریافت می‌شود. شناسه و داده‌های حساب حفظ می‌شوند.'
+                  : 'The host computer owner can reset the password locally. Run the command below in the project folder; the terminal asks for the new password privately. Your account ID and data are preserved.'}
+              </p>
+              <code dir="ltr" className="block w-full break-words rounded-xl bg-black/30 p-4 text-xs text-blue-200 select-text">
+                npm run local:account -- set-password --email EMAIL
+              </code>
+              <p className="text-xs text-white/60 my-4">
+                {isRtl ? 'EMAIL را با ایمیل حساب جایگزین کنید. هیچ کد یا ایمیلی ارسال نمی‌شود.' : 'Replace EMAIL with the account email. No code or email is sent.'}
+              </p>
               <button type="button" onClick={() => { clearFeedback(); setCurrentFlow('email_entry'); }} className="text-sm text-white/70 hover:text-white cursor-pointer">
                 {isRtl ? 'بازگشت به ورود' : 'Back to sign in'}
               </button>

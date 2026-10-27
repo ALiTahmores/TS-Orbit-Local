@@ -173,6 +173,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto dir-rtl font-sans"
       dir={isRtl ? 'rtl' : 'ltr'}
+      style={{ fontFeatureSettings: '"ss01" 1' }}
     >
       {/* 1. Translucent Gradient Backdrop (Background remains bright, sharp & readable) */}
       <div 
@@ -225,15 +226,15 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={isRtl ? 'ایمیل دقیق یا @username همکار' : 'Exact email or @username'}
-                className="w-full h-12 ps-11 pe-20 rounded-2xl bg-slate-50 dark:bg-[#181c30] border border-slate-200 dark:border-[#262c45] text-slate-800 dark:text-white text-xs font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-start"
+                className="w-full h-12 pr-11 pl-20 rounded-2xl bg-slate-50 dark:bg-[#181c30] border border-slate-200 dark:border-[#262c45] text-slate-800 dark:text-white text-xs font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-right"
               />
-              <div className="absolute start-3.5 flex items-center pointer-events-none text-slate-400">
+              <div className="absolute right-3.5 flex items-center pointer-events-none text-slate-400">
                 <Search size={16} />
               </div>
               <button
                 type="submit"
                 disabled={isSearching || !searchQuery.trim()}
-                className="absolute end-2 h-8 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="absolute left-2 h-8 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 {isSearching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
                 <span>{isRtl ? 'جستجو' : 'Search'}</span>
@@ -323,7 +324,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                         key={roleItem.id}
                         type="button"
                         onClick={() => setSelectedRole(roleItem.id as WorkspaceRole)}
-                        className={`p-2.5 rounded-xl border text-start transition-all cursor-pointer flex items-start gap-2.5 ${
+                        className={`p-2.5 rounded-xl border text-right transition-all cursor-pointer flex items-start gap-2.5 ${
                           isSelected
                             ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
                             : 'bg-white dark:bg-[#131627] border-slate-200 dark:border-[#22273e] text-slate-700 dark:text-slate-300 hover:border-blue-400'

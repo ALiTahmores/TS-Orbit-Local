@@ -243,7 +243,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       {/* 2. Elevated Modal Container */}
       <div 
         onClick={(e) => e.stopPropagation()}
-        className={`relative z-10 w-full max-w-xl max-h-[92vh] flex flex-col bg-white dark:bg-[#0d121f] rounded-[28px] border border-slate-200/90 dark:border-slate-800 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18)] animate-in fade-in zoom-in-95 duration-150 overflow-hidden ${isRtl ? 'text-start' : 'text-left'}`}
+        className={`relative z-10 w-full max-w-xl max-h-[92vh] flex flex-col bg-white dark:bg-[#0d121f] rounded-[28px] border border-slate-200/90 dark:border-slate-800 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18)] animate-in fade-in zoom-in-95 duration-150 overflow-hidden ${isRtl ? 'text-right' : 'text-left'}`}
       >
         
         {/* Modal Header: In RTL layout, Right Edge has Blue Folder Icon + Title & Subtitle, Left Edge has Circular Close Button */}
@@ -253,7 +253,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20 shrink-0">
               {projectToEdit ? <Edit3 className="w-5 h-5"/> : <FolderPlus className="w-5 h-5"/>}
             </div>
-            <div className={isRtl ? 'text-start' : 'text-left'}>
+            <div className={isRtl ? 'text-right' : 'text-left'}>
               <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
                 {projectToEdit ? (isRtl ? 'ویرایش مشخصات پروژه' : 'Edit Project') : (isRtl ? 'ثبت پروژه جدید' : 'ثبت پروژه جدید')}
               </h3>
@@ -378,7 +378,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
               {/* Popover Dropdown Card */}
               {isLeadDropdownOpen && (
-                <div className="absolute top-12 end-0 sm:start-0 sm:end-auto z-50 w-full min-w-[240px] p-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl space-y-1 animate-in fade-in zoom-in-95">
+                <div className="absolute top-12 left-0 sm:right-0 sm:left-auto z-50 w-full min-w-[240px] p-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl space-y-1 animate-in fade-in zoom-in-95">
                   <div
                     onClick={() => {
                       setSelectedLead(defaultLeadName);

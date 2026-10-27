@@ -21,8 +21,7 @@
     "test": "node --test tests/stage1/*.test.mjs tests/stage2/*.test.mjs tests/stage3/*.test.mjs tests/stage4/*.test.mjs tests/stage5/*.test.mjs tests/stage6/*.test.mjs tests/cloud/*.test.mjs tests/review/*.test.mjs",
     "build:vercel": "node scripts/build-vercel.mjs",
     "test:cloud": "node --test tests/cloud/*.test.mjs tests/review/*.test.mjs",
-    "cloud:db": "node scripts/cloud-database.mjs",
-    "i18n:check": "node scripts/i18n-check.mjs"
+    "cloud:db": "node scripts/cloud-database.mjs"
   },
   "engines": {
     "node": ">=24.19.0 <25",

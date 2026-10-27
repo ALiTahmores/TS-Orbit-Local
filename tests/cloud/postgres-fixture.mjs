@@ -45,7 +45,6 @@ function execute(state, sql, values) {
   if (sql.includes('CREATE TABLE orbit_metadata')) { state.tableExists = true; return result([]); }
   if (sql.startsWith('INSERT INTO orbit_schema_migrations')) { state.versions.push(values[0]); return result([]); }
   if (sql.includes('LIMIT 0')) return result([]);
-  if (sql.startsWith('SELECT key,payload FROM orbit_metadata')) return result(['state_revision', 'jwt_secret'].filter(name => state.metadata.has(name)).map(name => ({ key: name, payload: state.metadata.get(name) })));
   if (sql.startsWith('SELECT payload FROM orbit_metadata')) return result(state.metadata.has(values[0]) ? [{ payload: state.metadata.get(values[0]) }] : []);
   if (sql.startsWith('INSERT INTO orbit_metadata')) {
     state.metadata.set(values[0], JSON.parse(values[1])); if (values.length === 4) state.metadata.set(values[2], JSON.parse(values[3])); return result([]);

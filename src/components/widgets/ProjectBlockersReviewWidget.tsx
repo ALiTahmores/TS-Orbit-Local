@@ -107,7 +107,7 @@ export const ProjectBlockersReviewWidget: React.FC<ProjectBlockersReviewWidgetPr
         </div>
       ) : (
         /* TASK LIST */
-        <div className="space-y-3 max-h-[300px] overflow-y-auto ps-1 scrollbar-thin">
+        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
           {stuckTasks.map((task) => {
             const member = getMemberDetails(task);
             const projTitle = getProjectTitle(task.projectId);
@@ -133,7 +133,7 @@ export const ProjectBlockersReviewWidget: React.FC<ProjectBlockersReviewWidgetPr
                     alt={member.name}
                     className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0 mt-0.5"
                   />
-                  <div className="min-w-0 flex-1 text-start space-y-1">
+                  <div className="min-w-0 flex-1 text-right space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
                         {task.title}

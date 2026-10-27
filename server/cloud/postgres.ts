@@ -161,13 +161,6 @@ export class PostgresStore {
   private dirty = false;
   private entityRows:any[]=[];
   private relationRows:any[]=[];
-  // Every unit still takes the shared lock and reads state_revision. The full
-  // snapshot is transferred again only when a commit (from any instance, or a
-  // restore) has bumped the revision since this instance last committed or read.
-  private revision: number | null = null;
-  private secret: unknown;
-  private cached: { revision: number; state: CloudState; records: Map<string, any>; properties: Map<string, any>; entityRows: any[]; relationRows: any[] } | null = null;
-  private rowJson = new WeakMap<object, string>();
 
   constructor(options: PostgresOptions) {
     if (!options?.pool || typeof options.pool.connect !== 'function' || typeof options.validateState !== 'function') throw new Error('A PostgreSQL pool and application validator are required.');
@@ -185,8 +178,7 @@ export class PostgresStore {
     if (!this.client) throw new Error('No active cloud transaction.');
     return this.client;
   }
-  // Reassign rather than clear: the cached snapshot may share these containers.
-  private clear(): void { this.client = null; this.previous = null; this.records = new Map(); this.properties = new Map(); this.entityRows=[];this.relationRows=[];this.dirty = false; this.revision = null; this.secret = undefined; }
+  private clear(): void { this.client = null; this.previous = null; this.records.clear(); this.properties.clear(); this.entityRows=[];this.relationRows=[];this.dirty = false; }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -223,14 +215,7 @@ export class PostgresStore {
     if (!this.initialized) throw new Error('Initialize cloud storage before starting a transaction.');
     if (this.client) throw new Error('A cloud transaction is already active.');
     const client = await this.pool.connect();
-    try {
-      await this.openLocked(client);
-      const metadata = (await client.query("SELECT key,payload FROM orbit_metadata WHERE key IN ('state_revision','jwt_secret')")).rows;
-      const revision = metadata.find(row => row.key === 'state_revision')?.payload;
-      this.client = client; this.previous = null; this.dirty = false;
-      this.revision = Number.isSafeInteger(revision) && revision >= 0 ? revision : null;
-      this.secret = metadata.find(row => row.key === 'jwt_secret')?.payload;
-    }
+    try { await this.openLocked(client); this.client = client; this.previous = null; this.dirty = false; }
     catch (error) {
       let broken: Error | undefined;
       try { await client.query('ROLLBACK'); } catch (rollbackError) { broken = rollbackError as Error; }
@@ -241,14 +226,6 @@ export class PostgresStore {
   async loadState(): Promise<CloudState> {
     const client = this.active();
     if (this.previous) throw new Error('Cloud state must be loaded exactly once per transaction.');
-    const cached = this.cached;
-    if (cached && this.revision !== null && cached.revision === this.revision) {
-      // The cached objects are never mutated in place; saveState replaces them.
-      this.previous = cached.state; this.records = cached.records; this.properties = cached.properties;
-      this.entityRows = cached.entityRows; this.relationRows = cached.relationRows;
-      return structuredClone(cached.state);
-    }
-    this.cached = null;
     const snapshot=(await client.query(`SELECT jsonb_build_object(
       'properties',(SELECT COALESCE(jsonb_agg(p ORDER BY p.key),'[]'::jsonb) FROM orbit_properties p),
       'records',(SELECT COALESCE(jsonb_agg(r ORDER BY r.collection,r.ordinal),'[]'::jsonb) FROM orbit_records r),
@@ -280,7 +257,8 @@ export class PostgresStore {
     if (!this.previous) throw new Error('Load a fresh cloud state before saving.');
     const operations:Array<[string,any[]]>=[];
     const queue=async(sql:string,values:any[])=>{operations.push([sql,values]);};
-    const state = normalize(input);
+    const state = normalize(input), inspected = await this.validateState(state, structuredClone(this.previous));
+    if (!inspected || !Array.isArray(inspected.relations)) throw new Error('The cloud validator must return resolved relations.');
     const properties = new Map(Object.entries(state).filter(([name]) => !collections.has(name)));
     for (const key of this.properties.keys()) if (!properties.has(key)) { await queue('DELETE FROM orbit_properties WHERE key=$1', [key]); this.dirty = true; }
     for (const [key, value] of properties) if (!this.properties.has(key) || canonical(this.properties.get(key)) !== canonical(value)) {
@@ -296,20 +274,10 @@ export class PostgresStore {
         if (id && !entities.has(entityKey(collection, id))) entities.set(entityKey(collection, id), { collection, id, ordinal });
         const row = { collection, ordinal, entity_id: id, user_id: stringId(payload?.userId), workspace_id: stringId(payload?.workspaceId), project_id: stringId(payload?.projectId), department_id: stringId(payload?.departmentId), payload };
         rows.set(key, row);
-        // Untouched rows keep their serialized key order, so the native string
-        // comparison settles almost every row; canonical() covers reordered keys.
-        const json = JSON.stringify(payload); this.rowJson.set(row, json);
-        const unchanged = old && ['entity_id', 'user_id', 'workspace_id', 'project_id', 'department_id'].every(field => old[field] === row[field]) &&
-          ((this.rowJson.get(old) ?? JSON.stringify(old.payload)) === json || canonical(old.payload) === canonical(payload));
-        if (unchanged) continue;
-        await queue('INSERT INTO orbit_records(collection,ordinal,entity_id,user_id,workspace_id,project_id,department_id,payload) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT(collection,ordinal) DO UPDATE SET entity_id=excluded.entity_id,user_id=excluded.user_id,workspace_id=excluded.workspace_id,project_id=excluded.project_id,department_id=excluded.department_id,payload=excluded.payload', [collection, ordinal, id, row.user_id, row.workspace_id, row.project_id, row.department_id, json]); this.dirty = true;
+        if (old && canonical(old.payload) === canonical(payload) && ['entity_id', 'user_id', 'workspace_id', 'project_id', 'department_id'].every(field => old[field] === row[field])) continue;
+        await queue('INSERT INTO orbit_records(collection,ordinal,entity_id,user_id,workspace_id,project_id,department_id,payload) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) ON CONFLICT(collection,ordinal) DO UPDATE SET entity_id=excluded.entity_id,user_id=excluded.user_id,workspace_id=excluded.workspace_id,project_id=excluded.project_id,department_id=excluded.department_id,payload=excluded.payload', [collection, ordinal, id, row.user_id, row.workspace_id, row.project_id, row.department_id, JSON.stringify(payload)]); this.dirty = true;
       }
     }
-    // Entity and relation registries derive from the records: with no record or
-    // property change there is nothing new to validate or write.
-    if (!operations.length) { this.records = rows; this.previous = state; return; }
-    const inspected = await this.validateState(state, structuredClone(this.previous));
-    if (!inspected || !Array.isArray(inspected.relations)) throw new Error('The cloud validator must return resolved relations.');
     const oldEntities = new Map(this.entityRows.map(row => [entityKey(row.collection, row.entity_id), row]));
     for (const [key, old] of oldEntities) if (!entities.has(key)) await queue('DELETE FROM orbit_entities WHERE collection=$1 AND entity_id=$2', [old.collection, old.entity_id]);
     for (const [key, entity] of entities) if (Number(oldEntities.get(key)?.ordinal) !== entity.ordinal) await queue('INSERT INTO orbit_entities(collection,entity_id,ordinal) VALUES ($1,$2,$3) ON CONFLICT(collection,entity_id) DO UPDATE SET ordinal=excluded.ordinal', [entity.collection, entity.id, entity.ordinal]);
@@ -361,8 +329,6 @@ export class PostgresStore {
     }
     const secret = randomBytes(48).toString('hex'); await this.setMetadata('jwt_secret', secret); return secret;
   }
-  /** The signing key as read under this unit's lock, saving a separate query. */
-  get transactionSecret(): unknown { this.active(); return this.secret; }
   async getRevision(): Promise<number> {
     const value = await this.getMetadata<unknown>('state_revision');
     if (!Number.isSafeInteger(value) || Number(value) < 0) throw new Error('Invalid cloud state revision.');
@@ -383,11 +349,7 @@ export class PostgresStore {
     try {
       if (this.dirty) await client.query("UPDATE orbit_metadata SET payload=to_jsonb((payload #>> '{}')::bigint + 1) WHERE key='state_revision'");
       await client.query('COMMIT');
-      if (this.revision !== null && this.previous) {
-        this.cached = { revision: this.dirty ? this.revision + 1 : this.revision, state: this.previous, records: this.records, properties: this.properties, entityRows: this.entityRows, relationRows: this.relationRows };
-      } else if (this.dirty) this.cached = null;
     } catch (error) {
-      this.cached = null;
       try { await client.query('ROLLBACK'); } catch (rollbackError) { broken = rollbackError as Error; }
       throw error;
     } finally { this.clear(); client.release(broken); }

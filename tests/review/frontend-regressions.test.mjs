@@ -9,9 +9,7 @@ const read = name => fs.readFileSync(new URL('../../src/lib/' + name, import.met
 const formUrl = url(compile(read('formValues.ts')));
 const values = await import(formUrl);
 const domainUrl = url(compile(read('domain.ts')));
-const localeUrl = url(compile(read('locale.ts')));
-const datesUrl = url(compile(read('dates.ts')).replace("'./domain'", JSON.stringify(domainUrl)).replace("'./locale'", JSON.stringify(localeUrl)));
-const analytics = await import(url(compile(read('taskAnalytics.ts')).replace("'./domain'", JSON.stringify(domainUrl)).replace("'./formValues'", JSON.stringify(formUrl)).replace("'./dates'", JSON.stringify(datesUrl)).replace("'./locale'", JSON.stringify(localeUrl))));
+const analytics = await import(url(compile(read('taskAnalytics.ts')).replace("'./domain'", JSON.stringify(domainUrl)).replace("'./formValues'", JSON.stringify(formUrl))));
 
 test('an unrelated editor save leaves a timed or legacy deadline absent from the patch', () => {
   for (const stored of ['2026-10-24T01:00:00+03:30', '1405/08/02', 'تاریخ قدیمی نامشخص']) {

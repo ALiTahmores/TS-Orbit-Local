@@ -16,10 +16,10 @@ const deptFilterOptions: CustomSelectOption[] = [
 
 const priorityFilterOptions: CustomSelectOption[] = [
   { value: 'all', label: 'همه اولویت‌ها' },
-  { value: 'critical', label: 'فوری' },
-  { value: 'high', label: 'بالا' },
+  { value: 'critical', label: 'بحرانی' },
+  { value: 'high', label: 'زیاد' },
   { value: 'medium', label: 'متوسط' },
-  { value: 'low', label: 'پایین' },
+  { value: 'low', label: 'کم' },
 ];
 
 const deptFormOptions: CustomSelectOption[] = [
@@ -32,18 +32,18 @@ const deptFormOptions: CustomSelectOption[] = [
 ];
 
 const priorityFormOptions: CustomSelectOption[] = [
-  { value: 'low', label: 'پایین' },
+  { value: 'low', label: 'کم' },
   { value: 'medium', label: 'متوسط' },
-  { value: 'high', label: 'بالا' },
-  { value: 'critical', label: 'فوری' },
+  { value: 'high', label: 'زیاد' },
+  { value: 'critical', label: 'بحرانی' },
 ];
 
 const statusFormOptions: CustomSelectOption[] = [
   { value: 'pending', label: 'در انتظار' },
-  { value: 'inprogress', label: 'در حال انجام' },
-  { value: 'review', label: 'در حال بررسی' },
-  { value: 'completed', label: 'تکمیل‌شده' },
-  { value: 'blocked', label: 'مسدود' },
+  { value: 'inprogress', label: 'در جریان' },
+  { value: 'review', label: 'در بررسی' },
+  { value: 'completed', label: 'تکمیل شده' },
+  { value: 'blocked', label: 'مسدود شده' },
   { value: 'cancelled', label: 'لغوشده' },
 ];
 import { motion, AnimatePresence } from 'motion/react';
@@ -126,28 +126,28 @@ export const TasksGlobalView: React.FC = () => {
     },
     { 
       id: 'inprogress', 
-      title: 'در حال انجام', 
+      title: 'در جریان', 
       subtitle: 'IN PROGRESS', 
       colorClass: 'border-blue-400/40 bg-blue-500/5', 
       badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400' 
     },
     { 
       id: 'review', 
-      title: 'در حال بررسی', 
+      title: 'در بررسی', 
       subtitle: 'UNDER REVIEW', 
       colorClass: 'border-sky-400/40 bg-sky-500/5', 
       badgeClass: 'bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-400' 
     },
     { 
       id: 'completed', 
-      title: 'تکمیل‌شده', 
+      title: 'تکمیل شده', 
       subtitle: 'COMPLETED', 
       colorClass: 'border-emerald-400/40 bg-emerald-500/5', 
       badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' 
     },
     { 
       id: 'blocked', 
-      title: 'مسدود', 
+      title: 'مسدود شده', 
       subtitle: 'BLOCKED', 
       colorClass: 'border-rose-400/40 bg-rose-500/5', 
       badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400' 
@@ -174,10 +174,10 @@ export const TasksGlobalView: React.FC = () => {
 
   const getPriorityLabel = (p: TaskPriority) => {
     switch(p) {
-      case 'critical': return 'فوری';
-      case 'high': return 'بالا';
+      case 'critical': return 'بحرانی';
+      case 'high': return 'زیاد';
       case 'medium': return 'متوسط';
-      case 'low': return 'پایین';
+      case 'low': return 'کم';
     }
   };
 
@@ -328,10 +328,10 @@ export const TasksGlobalView: React.FC = () => {
   };
 
   return (
-    <div id="tasks_kanban_module" className="w-full space-y-6 text-start font-sans">
+    <div id="tasks_kanban_module" className="w-full space-y-6 text-right font-sans">
       
       {/* SINGLE FLOATING TOP-TAB NAVIGATION BAR WITH ACTION BUTTON */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-1">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-1" dir="rtl">
         <div className="flex items-center gap-2 overflow-x-auto select-none">
           <button
             type="button"
@@ -400,13 +400,13 @@ export const TasksGlobalView: React.FC = () => {
         
         {/* Search input with modern styling */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute start-3.5 top-3 text-slate-400 dark:text-zinc-500" size={15} />
+          <Search className="absolute right-3.5 top-3 text-slate-400 dark:text-zinc-500" size={15} />
           <input 
             type="text" 
             placeholder="جستجو در عنوان، توضیحات یا مسئول وظیفه..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-[#0d0d0f] border border-slate-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-zinc-100 ps-10 pe-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-sans text-start"
+            className="w-full bg-slate-50 dark:bg-[#0d0d0f] border border-slate-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-zinc-100 pr-10 pl-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-sans text-right"
           />
         </div>
 
@@ -482,7 +482,7 @@ export const TasksGlobalView: React.FC = () => {
                 </div>
 
                 {/* Column Scrollable Content Area */}
-                <div className="flex-1 overflow-y-auto space-y-3 min-h-[460px] max-h-[calc(100vh-320px)] ps-0.5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                <div className="flex-1 overflow-y-auto space-y-3 min-h-[460px] max-h-[calc(100vh-320px)] pr-0.5 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
                   <AnimatePresence initial={false}>
                     {colTasks.length === 0 ? (
                       col.id === 'pending' ? (
@@ -511,7 +511,7 @@ export const TasksGlobalView: React.FC = () => {
                       ) : (
                         // Clean empty state for subsequent columns (NO creation placeholder)
                         <div className="w-full py-16 flex flex-col items-center justify-center text-center opacity-40">
-                          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">وظیفه‌ای در این ستون نیست</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">خالی (در انتظار انتقال تسک)</span>
                         </div>
                       )
                     ) : (
@@ -526,7 +526,7 @@ export const TasksGlobalView: React.FC = () => {
                             draggable
                             onDragStart={(e) => handleDragStart(e, task.id)}
                             onClick={() => openEditModal(task)}
-                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 p-4 rounded-xl shadow-xs hover:shadow-md cursor-grab active:cursor-grabbing transition-all duration-200 space-y-3 group text-start"
+                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 p-4 rounded-xl shadow-xs hover:shadow-md cursor-grab active:cursor-grabbing transition-all duration-200 space-y-3 group text-right"
                           >
                             {/* Card Top Badges Row */}
                             <div className="flex justify-between items-center gap-2">
@@ -661,7 +661,7 @@ export const TasksGlobalView: React.FC = () => {
       {typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
           {showModal && (
-          <div key="task-edit-modal" className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+          <div key="task-edit-modal" className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" dir="rtl">
             <div 
               onClick={() => setShowModal(false)}
               className="fixed inset-0 z-0 bg-black/[0.05] dark:bg-black/[0.3] backdrop-blur-[0.5px] transition-opacity duration-200 animate-in fade-in cursor-pointer"
@@ -706,7 +706,7 @@ export const TasksGlobalView: React.FC = () => {
                     placeholder="مثال: طراحی صفحه نخست پورتال"
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 text-xs px-3 py-3 rounded-xl text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 transition-all font-sans text-start"
+                    className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 text-xs px-3 py-3 rounded-xl text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 transition-all font-sans text-right"
                   />
                 </div>
 
@@ -715,10 +715,10 @@ export const TasksGlobalView: React.FC = () => {
                   <label className="text-[11px] font-bold text-slate-600 dark:text-zinc-300 block mb-1">توضیحات و جزئیات</label>
                   <textarea 
                     rows={3}
-                    placeholder="جزئیات این وظیفه یا فایل‌های راهنما را وارد کنید..."
+                    placeholder="جزئیات این تسک یا فایل‌های راهنما را وارد کنید..."
                     value={formDesc}
                     onChange={(e) => setFormDesc(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 text-xs px-3 py-2.5 rounded-xl text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 transition-all font-sans text-start"
+                    className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 text-xs px-3 py-2.5 rounded-xl text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-500 transition-all font-sans text-right"
                   />
                 </div>
 
@@ -814,8 +814,8 @@ export const TasksGlobalView: React.FC = () => {
                       type="text"
                       value={formTagsString}
                       onChange={(e) => setFormTagsString(e.target.value)}
-                      placeholder="مثال: فرانت, بازخورد, هدر"
-                      className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 text-xs px-3 py-3 rounded-xl text-slate-800 dark:text-zinc-100 focus:outline-none focus:border-blue-500 text-start font-sans"
+                      placeholder="مثال: فرانت, فیدبک, هدر"
+                      className="w-full bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 text-xs px-3 py-3 rounded-xl text-slate-800 dark:text-zinc-100 focus:outline-none focus:border-blue-500 text-right font-sans"
                     />
                   </div>
                 </div>
@@ -833,7 +833,7 @@ export const TasksGlobalView: React.FC = () => {
                     type="submit"
                     className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
                   >
-                    {modalMode === 'create' ? 'ثبت و ذخیره وظیفه' : 'بروزرسانی وظیفه'}
+                    {modalMode === 'create' ? 'ثبت و ذخیره تسک' : 'بروزرسانی تسک'}
                   </button>
                 </div>
 

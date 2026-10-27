@@ -105,7 +105,8 @@ export const StatusChangeReasonModal: React.FC<StatusChangeReasonModalProps> = (
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto dir-rtl text-start font-sans"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto dir-rtl text-right font-sans" 
+      dir="rtl"
     >
       {/* 1. Translucent Gradient Backdrop (Background remains bright, sharp & readable) */}
       <div 

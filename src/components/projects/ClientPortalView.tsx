@@ -68,7 +68,7 @@ const PortalControls:React.FC<{project:any}>=({project})=>{
   const statusLabels:Record<string,string>={pending:'در انتظار بررسی',in_progress:'در حال بررسی',resolved:'برطرف شده',approved:'تأیید شده',rejected:'رد شده'};
   const state=revoked?{label:'لینک لغو شده',tone:'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300'}:enabled?{label:'فعال',tone:'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'}:{label:'غیرفعال',tone:'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'};
 
-  return <section className="space-y-4">
+  return <section className="space-y-4" dir="rtl">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2"><ShieldCheck size={18} className="text-blue-600"/>پورتال کارفرما — {project.title}</h2>
@@ -139,15 +139,15 @@ const PortalControls:React.FC<{project:any}>=({project})=>{
         </div>
         <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">{item.message}</p>
         {(item.attachments||[]).length>0&&<div className="flex flex-wrap gap-2">{(item.attachments||[]).map((attachment:any,index:number)=>{const assetId=typeof attachment==='string'?attachment:attachment.id;return <button type="button" key={assetId} disabled={busy} onClick={()=>perform(async current=>{const response=await apiFetch('/api/files/'+encodeURIComponent(assetId));const asset=await response.json();if(current())await downloadAsset(asset);})} className={secondary}><Paperclip size={13}/>{typeof attachment==='object'&&attachment.name?attachment.name:`پیوست ${(index+1).toLocaleString('fa-IR')}`}</button>;})}</div>}
-        {(item.replies||[]).length>0&&<ul className="space-y-1.5 border-s-2 border-blue-200 dark:border-blue-900 ps-3">{(item.replies||[]).map((reply:any)=><li key={reply.id} className="text-xs text-slate-700 dark:text-slate-200"><span className="font-bold">{reply.senderName}</span> <span className="text-slate-400">· {formatJalaliDateTime(reply.createdAt)}</span><p className="mt-0.5 whitespace-pre-wrap">{reply.message}</p></li>)}</ul>}
+        {(item.replies||[]).length>0&&<ul className="space-y-1.5 border-r-2 border-blue-200 dark:border-blue-900 pr-3">{(item.replies||[]).map((reply:any)=><li key={reply.id} className="text-xs text-slate-700 dark:text-slate-200"><span className="font-bold">{reply.senderName}</span> <span className="text-slate-400">· {formatJalaliDateTime(reply.createdAt)}</span><p className="mt-0.5 whitespace-pre-wrap">{reply.message}</p></li>)}</ul>}
         <div className="flex flex-wrap gap-2">
           <input aria-label={`پاسخ به ${item.senderName||'بازخورد'}`} placeholder="پاسخ به کارفرما…" disabled={busy} value={replies[item.id]||''} onChange={event=>setReplies(previous=>({...previous,[item.id]:event.target.value}))} className={`${field} flex-1 min-w-[200px]`}/>
           <button type="button" disabled={busy||!replies[item.id]?.trim()} onClick={()=>updateFeedback(item,item.status)} className={primary}><Send size={14}/>ارسال پاسخ</button>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-slate-400 me-1">تغییر وضعیت:</span>
+          <span className="text-[11px] text-slate-400 ml-1">تغییر وضعیت:</span>
           {Object.entries(statusLabels).map(([status,label])=><button type="button" key={status} disabled={busy||status===item.status} aria-pressed={status===item.status} onClick={()=>updateFeedback(item,status)} className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer disabled:cursor-default ${status===item.status?'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300':'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>{label}</button>)}
-          <button type="button" disabled={busy} onClick={()=>{if(window.confirm('این بازخورد حذف شود؟'))void perform(async current=>{await apiFetch('/api/projects/'+encodeURIComponent(id)+'/feedbacks/'+encodeURIComponent(item.id),{method:'DELETE'});if(current())await load();});}} className={`${danger} ms-auto h-7`}><Trash2 size={13}/>حذف</button>
+          <button type="button" disabled={busy} onClick={()=>{if(window.confirm('این بازخورد حذف شود؟'))void perform(async current=>{await apiFetch('/api/projects/'+encodeURIComponent(id)+'/feedbacks/'+encodeURIComponent(item.id),{method:'DELETE'});if(current())await load();});}} className={`${danger} mr-auto h-7`}><Trash2 size={13}/>حذف</button>
         </div>
         {(item.history||[]).length>0&&<details className="text-[11px] text-slate-500"><summary className="cursor-pointer select-none">تاریخچه ({(item.history||[]).length.toLocaleString('fa-IR')})</summary><ul className="mt-1.5 space-y-1">{(item.history||[]).map((entry:any,index:number)=><li key={entry.id||index}>{formatJalaliDateTime(entry.createdAt)} — {feedbackEventText(entry)}{entry.actorName?' — '+entry.actorName:''}</li>)}</ul></details>}
       </article>)}

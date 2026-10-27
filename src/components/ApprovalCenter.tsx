@@ -340,9 +340,9 @@ export const ApprovalCenter: React.FC = () => {
     <div className="w-full space-y-6 text-[#1E293B]" id="approval-center-view">
       
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
-          <h1 className="text-lg font-black text-slate-800 flex items-center gap-2 dark:text-slate-100">
+          <h1 className="text-lg font-black text-slate-800 flex items-center gap-2">
             <UserCheck className="text-blue-600" size={24} />
             پنل ممیزی امنیتی و تایید هویت کاربران جدید
           </h1>
@@ -352,7 +352,7 @@ export const ApprovalCenter: React.FC = () => {
           onClick={fetchData} 
           disabled={isLoading}
           aria-busy={isLoading}
-          className="relative overflow-hidden flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 min-w-[130px] dark:bg-slate-800 dark:text-slate-300"
+          className="relative overflow-hidden flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:opacity-50 min-w-[130px]"
         >
           <span className={cn('inline-flex items-center justify-center gap-1.5', isLoading ? 'opacity-0 invisible pointer-events-none' : 'opacity-100')}>
             <RefreshCw size={14} />
@@ -377,37 +377,37 @@ export const ApprovalCenter: React.FC = () => {
       {/* Key Stats Widget Block */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex items-center gap-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex items-center gap-4 shadow-sm">
           <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
             <Clock size={20} />
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-400 block">درخواست‌های در انتظار تایید</span>
-            <span className="text-lg font-black text-slate-800 dark:text-slate-100">{stats.pendingCount || 0} کاربر</span>
+            <span className="text-lg font-black text-slate-800">{stats.pendingCount || 0} کاربر</span>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex items-center gap-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex items-center gap-4 shadow-sm">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
             <UserCheck size={20} />
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-400 block">کل کاربران تایید شده</span>
-            <span className="text-lg font-black text-slate-800 dark:text-slate-100">{stats.approvedCount || 0} نفر</span>
+            <span className="text-lg font-black text-slate-800">{stats.approvedCount || 0} نفر</span>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex items-center gap-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex items-center gap-4 shadow-sm">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
             <Activity size={20} />
           </div>
           <div>
             <span className="text-[10px] font-bold text-slate-400 block">کاربران هم‌اکنون آنلاین</span>
-            <span className="text-lg font-black text-slate-800 dark:text-slate-100">{stats.onlineUsersCount || 0} نشست فعال</span>
+            <span className="text-lg font-black text-slate-800">{stats.onlineUsersCount || 0} نشست فعال</span>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex items-center gap-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex items-center gap-4 shadow-sm">
           <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
             <Lock size={20} />
           </div>
@@ -420,7 +420,7 @@ export const ApprovalCenter: React.FC = () => {
       </div>
 
       {/* Dynamic Sub Tab Selector */}
-      <div className="flex border-b border-slate-200 gap-1 overflow-x-auto dark:border-slate-800">
+      <div className="flex border-b border-slate-200 gap-1 overflow-x-auto">
         <button
           onClick={() => setActiveSubTab('approval_queue')}
           className={`px-4 py-3 text-xs font-black flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
@@ -468,28 +468,28 @@ export const ApprovalCenter: React.FC = () => {
         <div className="space-y-4">
           
           {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 dark:bg-slate-900 dark:border-slate-800">
+          <div className="flex flex-col sm:flex-row justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute start-3 top-3 text-slate-400" size={14} />
+              <Search className="absolute right-3 top-3 text-slate-400" size={14} />
               <input 
                 type="text"
                 placeholder="جستجوی نام، ایمیل، یا تلفن همراه..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 text-xs border border-slate-200 ps-9 pe-3 py-2.5 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all dark:bg-slate-800/50 dark:border-slate-800"
+                className="w-full bg-slate-50 text-xs border border-slate-200 pr-9 pl-3 py-2.5 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
               />
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold text-slate-400">وضعیت درخواست:</span>
-              <div className="flex gap-1 bg-slate-100 p-1 rounded-xl dark:bg-slate-800">
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
                 {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'BLOCKED'] as const).map(f => (
                   <button
                     key={f}
                     onClick={() => setStatusFilter(f)}
                     className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
                       statusFilter === f 
-                        ? 'bg-white text-slate-800 shadow-sm dark:bg-slate-900 dark:text-slate-100' 
+                        ? 'bg-white text-slate-800 shadow-sm' 
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
@@ -501,11 +501,11 @@ export const ApprovalCenter: React.FC = () => {
           </div>
 
           {/* Table list */}
-          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm dark:bg-slate-900 dark:border-slate-800">
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-start text-xs">
+              <table className="w-full border-collapse text-right text-xs">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-400 border-b border-slate-200 font-bold dark:bg-slate-800/50 dark:border-slate-800">
+                  <tr className="bg-slate-50 text-slate-400 border-b border-slate-200 font-bold">
                     <th className="p-4">کاربر ثبت‌نام کننده</th>
                     <th className="p-4">مشخصات تماس</th>
                     <th className="p-4">زمان ثبت درخواست</th>
@@ -527,17 +527,17 @@ export const ApprovalCenter: React.FC = () => {
                       <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 bg-slate-100 text-slate-600 font-bold rounded-xl flex items-center justify-center shadow-inner text-sm dark:bg-slate-800">
+                            <div className="w-9 h-9 bg-slate-100 text-slate-600 font-bold rounded-xl flex items-center justify-center shadow-inner text-sm">
                               {req.details.fullName.substring(0, 2)}
                             </div>
                             <div>
-                              <span className="font-black text-slate-800 block dark:text-slate-100">{req.details.fullName}</span>
+                              <span className="font-black text-slate-800 block">{req.details.fullName}</span>
                               {req.details.username && <span className="text-[10px] text-slate-400" dir="ltr">@{req.details.username}</span>}
                             </div>
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className="block text-slate-700 font-mono dark:text-slate-300">{req.details.email}</span>
+                          <span className="block text-slate-700 font-mono">{req.details.email}</span>
                           <span className="block text-slate-500 font-mono mt-0.5">{req.details.phone}</span>
                         </td>
                         <td className="p-4">
@@ -548,7 +548,7 @@ export const ApprovalCenter: React.FC = () => {
                         </td>
                         <td className="p-4 font-mono text-[10px] text-slate-500">
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-slate-700 font-bold flex items-center gap-1 dark:text-slate-300">
+                            <span className="text-slate-700 font-bold flex items-center gap-1">
                               <Globe size={11} className="text-slate-400" />
                               {req.details.ipAddress} • {req.details.country}
                             </span>
@@ -560,9 +560,9 @@ export const ApprovalCenter: React.FC = () => {
                             req.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
                             (req.status === 'APPROVED' || req.status === 'ACTIVE') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
                             req.status === 'SUSPENDED' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                            req.status === 'INACTIVE' ? 'bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' :
+                            req.status === 'INACTIVE' ? 'bg-slate-100 text-slate-700 border border-slate-300' :
                             req.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                            'bg-slate-100 text-slate-600 border border-slate-300 dark:bg-slate-800 dark:border-slate-700'
+                            'bg-slate-100 text-slate-600 border border-slate-300'
                           }`}>
                             {req.status === 'PENDING' ? 'در انتظار تایید' : (req.status === 'APPROVED' || req.status === 'ACTIVE') ? 'فعال' : req.status === 'SUSPENDED' ? 'معلق / مسدود' : req.status === 'INACTIVE' ? 'غیرفعال' : req.status === 'REJECTED' ? 'رد شده' : 'مسدود دائم'}
                           </span>
@@ -586,7 +586,7 @@ export const ApprovalCenter: React.FC = () => {
                               </button>
                               <button
                                 onClick={() => handleBlockRequest(req)}
-                                className="p-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 rounded-lg h-9 w-9 flex items-center justify-center transition-all cursor-pointer shrink-0 dark:bg-slate-800"
+                                className="p-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 rounded-lg h-9 w-9 flex items-center justify-center transition-all cursor-pointer shrink-0"
                                 title="مسدودسازی دائم (لیست سیاه)"
                               >
                                 <Ban size={15} />
@@ -627,11 +627,11 @@ export const ApprovalCenter: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm dark:bg-slate-900 dark:border-slate-800">
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-start text-xs">
+              <table className="w-full border-collapse text-right text-xs">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-400 border-b border-slate-200 font-bold dark:bg-slate-800/50 dark:border-slate-800">
+                  <tr className="bg-slate-50 text-slate-400 border-b border-slate-200 font-bold">
                     <th className="p-4">کاربر متصل</th>
                     <th className="p-4">آدرس IP</th>
                     <th className="p-4">سیستم عامل / دستگاه</th>
@@ -657,12 +657,12 @@ export const ApprovalCenter: React.FC = () => {
                               {sess.name.substring(0, 1)}
                             </div>
                             <div>
-                              <span className="font-black text-slate-800 block dark:text-slate-100">{sess.name}</span>
+                              <span className="font-black text-slate-800 block">{sess.name}</span>
                               <span className="text-[10px] text-slate-400 font-mono">{sess.email}</span>
                             </div>
                           </div>
                         </td>
-                        <td className="p-4 font-mono font-bold text-slate-700 dark:text-slate-300">{sess.ipAddress}</td>
+                        <td className="p-4 font-mono font-bold text-slate-700">{sess.ipAddress}</td>
                         <td className="p-4 font-mono text-slate-600">
                           <span className="flex items-center gap-1.5 font-sans font-semibold">
                             {sess.device === 'Mobile' ? <Smartphone size={13} /> : <Monitor size={13} />}
@@ -694,24 +694,24 @@ export const ApprovalCenter: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Box A: Login History */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 dark:bg-slate-900 dark:border-slate-800">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <div>
-              <h3 className="font-black text-slate-800 text-sm flex items-center gap-2 dark:text-slate-100">
+              <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
                 <Activity className="text-blue-600" size={16} />
                 تاریخچه ورود و احراز هویت پرسنل
               </h3>
               <p className="text-[10px] text-slate-400 mt-1">کلیه ورودهای موفق، تلاش‌های ناموفق و مسدودسازی دسترسی در این بخش لاگ می‌شوند.</p>
             </div>
 
-            <div className="overflow-y-auto max-h-[500px] border border-slate-100 rounded-2xl dark:border-slate-800">
+            <div className="overflow-y-auto max-h-[500px] border border-slate-100 rounded-2xl">
               <div className="divide-y divide-slate-100 text-xs font-semibold">
                 {loginHistory.length === 0 ? (
                   <div className="p-12 text-center text-slate-400">تاریخچه‌ای یافت نشد.</div>
                 ) : (
                   loginHistory.map((lh) => (
-                    <div key={lh.id} className="p-4 flex flex-col gap-2 hover:bg-slate-50 transition-colors dark:hover:bg-slate-800">
+                    <div key={lh.id} className="p-4 flex flex-col gap-2 hover:bg-slate-50 transition-colors">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-slate-700 dark:text-slate-300">{lh.email}</span>
+                        <span className="font-bold text-slate-700">{lh.email}</span>
                         <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
                           lh.loginResult === 'Successful' ? 'bg-emerald-50 text-emerald-700' :
                           lh.loginResult === 'Blocked' ? 'bg-amber-50 text-amber-700' :
@@ -735,27 +735,27 @@ export const ApprovalCenter: React.FC = () => {
           </div>
 
           {/* Box B: Audit Logs */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 dark:bg-slate-900 dark:border-slate-800">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
             <div>
-              <h3 className="font-black text-slate-800 text-sm flex items-center gap-2 dark:text-slate-100">
+              <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
                 <FileText className="text-blue-600" size={16} />
                 دفتر کل ممیزی و تغییرات سیستمی (Audit Logs)
               </h3>
               <p className="text-[10px] text-slate-400 mt-1">ردپای دیجیتالی کلیه تغییرات حساس مدیریتی و اقدامات سیستمی پرسنل.</p>
             </div>
 
-            <div className="overflow-y-auto max-h-[500px] border border-slate-100 rounded-2xl dark:border-slate-800">
+            <div className="overflow-y-auto max-h-[500px] border border-slate-100 rounded-2xl">
               <div className="divide-y divide-slate-100 text-xs font-semibold">
                 {auditLogs.length === 0 ? (
                   <div className="p-12 text-center text-slate-400">ردپایی ثبت نشده است.</div>
                 ) : (
                   auditLogs.map((log) => (
-                    <div key={log.id} className="p-4 hover:bg-slate-50 transition-colors space-y-1.5 dark:hover:bg-slate-800">
+                    <div key={log.id} className="p-4 hover:bg-slate-50 transition-colors space-y-1.5">
                       <div className="flex justify-between items-center">
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-mono font-bold dark:bg-slate-800 dark:text-slate-300">{log.action}</span>
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-mono font-bold">{log.action}</span>
                         <span className="text-[10px] text-slate-400">{formatJalaliDateTime(log.timestamp)}</span>
                       </div>
-                      <p className="text-slate-700 text-xs leading-relaxed font-black dark:text-slate-300">{log.details}</p>
+                      <p className="text-slate-700 text-xs leading-relaxed font-black">{log.details}</p>
                       <div className="text-[10px] text-slate-400 font-mono">کاربر عامل: {log.userId}</div>
                     </div>
                   ))
@@ -804,18 +804,18 @@ export const ApprovalCenter: React.FC = () => {
                 <textarea
                   value={approveNotes}
                   onChange={(e) => setApproveNotes(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 leading-relaxed font-medium dark:bg-slate-800/50 dark:border-slate-800 dark:text-slate-100"
+                  className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 leading-relaxed font-medium"
                   placeholder="نکات تکمیلی برای تایید صلاحیت کلاینت..."
                   rows={2}
                 />
               </div>
 
               {/* Buttons */}
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2 shrink-0 dark:border-slate-800">
+              <div className="pt-4 border-t border-slate-100 flex justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => { setShowApproveModal(false); setSelectedRequest(null); }}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all cursor-pointer dark:bg-slate-800 dark:text-slate-300"
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all cursor-pointer"
                 >
                   انصراف
                 </button>
@@ -930,7 +930,7 @@ export const ApprovalCenter: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-4 text-start">
+            <div className="space-y-4 text-right">
               {/* Role selector */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">

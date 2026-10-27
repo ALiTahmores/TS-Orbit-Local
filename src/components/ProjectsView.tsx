@@ -270,7 +270,7 @@ export const ProjectsView: React.FC = () => {
     await createTask({
       projectId,
       title: newTaskTitle.trim(),
-      description: 'وظیفه سریع ایجاد شده از جدول پروژه‌ها',
+      description: 'تسک سریع ایجاد شده از جدول پروژه‌ها',
       department: 'ui_ux',
       assignedMemberIds: currentUser?.id ? [currentUser.id] : [],
       priority: 'medium',
@@ -377,7 +377,7 @@ export const ProjectsView: React.FC = () => {
       {
         key: 'this_month',
         title: 'پروژه‌های این ماه',
-        subtitle: 'پروژه‌های فعال با سررسید جاری',
+        subtitle: 'پروژه‌های فعال با ددلاین جاری',
         colorBadge: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
         projects: thisMonthList
       },
@@ -398,10 +398,10 @@ export const ProjectsView: React.FC = () => {
       case 'active_projects': return t('طرح‌های فعال');
       case 'files': return t('فایل‌ها و مدارک');
       case 'portal': return t('پورتال کارفرما');
-      case 'tasks': return t('وظایف و زمان‌بندی');
+      case 'tasks': return t('تسک‌ها و زمان‌بندی');
       case 'content-seo': return t('جریان محتوا و سئو');
       case 'team': return t('اعضای کارگاه و متخصصین');
-      case 'feedback': return t('بازخورد کارفرمایان');
+      case 'feedback': return t('فیدبک کارفرمایان');
       default: return t('پیش‌نمایش کلی');
     }
   };
@@ -425,7 +425,7 @@ export const ProjectsView: React.FC = () => {
     const isOpen = statusPopoverProjectId === project.id;
 
     return (
-      <div className="relative inline-block text-start">
+      <div className="relative inline-block text-right" dir="rtl">
         <button
           type="button"
           onClick={(e) => {
@@ -449,7 +449,7 @@ export const ProjectsView: React.FC = () => {
         </button>
 
         {isOpen && statusPopoverCoords && createPortal(
-          <div className="fixed inset-0 z-[100] font-sans">
+          <div className="fixed inset-0 z-[100] font-sans" dir="rtl">
             <div 
               className="fixed inset-0 bg-transparent" 
               onClick={(e) => {
@@ -473,7 +473,7 @@ export const ProjectsView: React.FC = () => {
                   setStatusPopoverProjectId(null);
                   setStatusPopoverCoords(null);
                 }}
-                className="w-full text-start px-2.5 py-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold flex items-center justify-between cursor-pointer"
+                className="w-full text-right px-2.5 py-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold flex items-center justify-between cursor-pointer"
               >
                 <span>تکمیل شده</span>
                 {status === 'completed' && <Check size={12} />}
@@ -484,7 +484,7 @@ export const ProjectsView: React.FC = () => {
                   setStatusPopoverProjectId(null);
                   setStatusPopoverCoords(null);
                 }}
-                className="w-full text-start px-2.5 py-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 font-bold flex items-center justify-between cursor-pointer"
+                className="w-full text-right px-2.5 py-1.5 rounded-lg text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 font-bold flex items-center justify-between cursor-pointer"
               >
                 <span>در حال انجام</span>
                 {status === 'inprogress' && <Check size={12} />}
@@ -495,7 +495,7 @@ export const ProjectsView: React.FC = () => {
                   setStatusPopoverProjectId(null);
                   setStatusPopoverCoords(null);
                 }}
-                className="w-full text-start px-2.5 py-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold flex items-center justify-between cursor-pointer"
+                className="w-full text-right px-2.5 py-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 font-bold flex items-center justify-between cursor-pointer"
               >
                 <span>مسدود / گیرکرده</span>
                 {status === 'blocked' && <Check size={12} />}
@@ -506,7 +506,7 @@ export const ProjectsView: React.FC = () => {
                   setStatusPopoverProjectId(null);
                   setStatusPopoverCoords(null);
                 }}
-                className="w-full text-start px-2.5 py-1.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-bold flex items-center justify-between cursor-pointer"
+                className="w-full text-right px-2.5 py-1.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-bold flex items-center justify-between cursor-pointer"
               >
                 <span>در حال بررسی</span>
                 {status === 'review' && <Check size={12} />}
@@ -563,7 +563,7 @@ export const ProjectsView: React.FC = () => {
   }
 
   return (
-    <div className="w-full font-sans text-start space-y-4">
+    <div className="w-full font-sans text-right space-y-4" dir="rtl">
 
       {/* FLOATING OUTER SUB-HEADER TOP NAVIGATION TABS (MATCHING REFERENCE STYLING) */}
       <div className="flex items-center gap-2 mb-4 justify-start overflow-x-auto pb-1 select-none">
@@ -590,7 +590,7 @@ export const ProjectsView: React.FC = () => {
           }`}
         >
           <CheckSquare size={16} />
-          <span>{t('وظایف و زمان‌بندی')}</span>
+          <span>{t('تسک‌ها و زمان‌بندی')}</span>
         </button>
 
         <button
@@ -616,7 +616,7 @@ export const ProjectsView: React.FC = () => {
           }`}
         >
           <UserCheck size={16} />
-          <span>{t('بازخورد کارفرمایان')}</span>
+          <span>{t('فیدبک کارفرمایان')}</span>
         </button>
       </div>
 
@@ -633,11 +633,11 @@ export const ProjectsView: React.FC = () => {
             <div className="flex items-center gap-3 min-w-0 shrink">
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 truncate">
                 <span>{t('پروژه‌ها')}</span>
-                <ChevronLeft size={12} className="text-slate-400 shrink-0" />
+                <ChevronLeft size={12} className={`text-slate-400 shrink-0 ${isRtl ? 'rotate-0' : 'rotate-180'}`} />
                 <span className="text-slate-700 dark:text-slate-200 font-extrabold truncate">
                   {selectedProject && selectedProject.id !== 'no_project' ? selectedProject.title : t('همه پروژه‌ها')}
                 </span>
-                <ChevronLeft size={12} className="text-slate-400 shrink-0" />
+                <ChevronLeft size={12} className={`text-slate-400 shrink-0 ${isRtl ? 'rotate-0' : 'rotate-180'}`} />
                 <span className="text-blue-600 dark:text-blue-400 font-black shrink-0">{getTabLabel(activeTab)}</span>
               </div>
             </div>
@@ -657,7 +657,7 @@ export const ProjectsView: React.FC = () => {
               initialStatusFilter="all"
               onOpenCreateModal={openNewProjectModal}
             />
-            {selectedProject?.id&&selectedProject.id!=='no_project'&&<ProjectFilesTab title={`فایل‌های پروژهٔ «${selectedProject.title}»`}/>}
+            {selectedProject?.id&&selectedProject.id!=='no_project'&&<section aria-label="فایل‌های نمای کلی پروژه" className="space-y-3"><h2 className="font-bold text-sm">فایل‌های پروژه — {selectedProject.title}</h2><ProjectFilesTab/></section>}
             </>
           )}
 

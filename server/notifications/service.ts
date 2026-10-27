@@ -185,9 +185,6 @@ export class NotificationService {
     const result: any = { id: row.id, workspaceId: row.workspaceId, action: row.action, timestamp: row.timestamp || row.createdAt || '', ...(actorId ? { userId: actorId, actorId } : {}), user: actor?.name || 'سیستم' };
     for (const key of ['targetId', 'targetCollection', 'details', ...Object.keys(parentCollections)]) if (row[key] !== undefined) result[key] = row[key];
     if (row.targetId) result.target = row.targetId;
-    const live = row.targetCollection ? (this.state[row.targetCollection] || []).find((item: any) => item.id === row.targetId) : undefined;
-    const name = live ? live.title ?? live.name : row.targetName;
-    if (typeof name === 'string' && name) result.targetName = name.slice(0, 200);
     return result;
   }
   activity(): any[] {

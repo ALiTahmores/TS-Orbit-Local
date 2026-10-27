@@ -255,7 +255,7 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-3 max-h-40 overflow-y-auto ps-1 scrollbar-thin">
+          <div className="space-y-3 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
             {projects.slice(0, 3).map(p => {
               const isCurrent = p.id === selectedProject.id;
               const progressPct = p.progress || 0;
@@ -302,7 +302,7 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-2.5 max-h-40 overflow-y-auto ps-1 scrollbar-thin">
+          <div className="space-y-2.5 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
             {safeTasks.filter(t => t && t.projectId === selectedProject.id && t.status !== 'completed').slice(0, 3).map(task => (
               <TaskCard 
                 key={task.id}
@@ -325,7 +325,7 @@ export const DashboardView: React.FC = () => {
           <div className="border-t border-border-primary/50 dark:border-white/5 pt-2 flex justify-between items-center text-[10px] font-bold text-text-secondary dark:text-slate-400">
             <span>{isRtl ? 'برای بستن کار، دکمه تیک را بزنید' : 'Toggle checkbox to complete tasks'}</span>
             <button onClick={() => setActiveTab('tasks')} className="text-brand-accent hover:underline flex items-center gap-0.5">
-              <span>{isRtl ? 'برو به برد وظایف' : 'Task Board'}</span>
+              <span>{isRtl ? 'برو به برد تسک‌ها' : 'Task Board'}</span>
               <ArrowUpRight size={11} />
             </button>
           </div>
@@ -433,7 +433,7 @@ export const DashboardView: React.FC = () => {
 
   if (!hasProjects) {
     return (
-      <div className="space-y-6 text-start w-full" style={{ direction: isRtl ? 'rtl' : 'ltr' }}>
+      <div className="space-y-6 text-right w-full" style={{ direction: isRtl ? 'rtl' : 'ltr' }}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-border-primary/50">
           <div>
             <h2 className="text-xl font-black text-text-primary dark:text-white flex items-center gap-2">
@@ -461,14 +461,14 @@ export const DashboardView: React.FC = () => {
             {isRtl ? 'هنوز پروژه‌ای در این فضای کاری تعریف نشده است' : 'No projects registered in this workspace yet'}
           </h3>
           <p className="text-xs text-text-secondary dark:text-slate-450 max-w-sm leading-relaxed mt-2">
-            {isRtl ? 'جهت برنامه‌ریزی هدفمند، زمان‌بندی وظایف بین اعضای تیم و دریافت گزارش‌های تحلیلی، اولین پروژه سازمانی خود را ثبت کنید.' : 'Create your first enterprise project to schedule tasks, assign teams, and monitor organizational performance.'}
+            {isRtl ? 'جهت برنامه‌ریزی هدفمند، زمان‌بندی تسک‌ها بین اعضای تیم و دریافت گزارش‌های تحلیلی، اولین پروژه سازمانی خود را ثبت کنید.' : 'Create your first enterprise project to schedule tasks, assign teams, and monitor organizational performance.'}
           </p>
           <button
             onClick={openNewProjectModal}
             className="mt-5 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl border border-blue-400/20 shadow-xs hover:shadow-md hover:shadow-blue-500/15 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 text-sm cursor-pointer"
           >
             <Plus size={16} />
-            <span>{isRtl ? 'ثبت پروژه جدید' : 'New Project'}</span>
+            <span>{isRtl ? '+ ثبت پروژه جدید' : '+ New Project'}</span>
           </button>
         </div>
       </div>
@@ -476,7 +476,7 @@ export const DashboardView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 text-start w-full" style={{ direction: isRtl ? 'rtl' : 'ltr' }}>
+    <div className="space-y-6 text-right w-full" style={{ direction: isRtl ? 'rtl' : 'ltr' }}>
       
       {/* 1. TOP HEADER BRANDING & ACTION BLOCK */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-5 border-b border-border-primary/50 dark:border-white/5 shrink-0">
@@ -490,7 +490,7 @@ export const DashboardView: React.FC = () => {
               {selectedProject.title}
             </span>
           </div>
-          <p className="text-xs text-text-secondary dark:text-slate-400 mt-1.5 leading-relaxed text-start">
+          <p className="text-xs text-text-secondary dark:text-slate-400 mt-1.5 leading-relaxed text-right">
             {isRtl ? 'پایش زنده پیشرفت طرح‌ها، تخصیص استراتژیک وظایف و ارزیابی بهره‌وری دپارتمان‌های سازمانی' : 'Real-time monitoring of initiatives, strategic task allocation, and departmental productivity assessment'}
           </p>
         </div>
@@ -521,14 +521,14 @@ export const DashboardView: React.FC = () => {
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl border border-blue-400/20 shadow-xs hover:shadow-md hover:shadow-blue-500/15 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 text-sm cursor-pointer shrink-0"
           >
             <Plus size={16} />
-            <span>{isRtl ? 'ثبت پروژه جدید' : 'New Project'}</span>
+            <span>{isRtl ? '+ ثبت پروژه جدید' : '+ New Project'}</span>
           </button>
         </div>
       </div>
 
       {/* SYSTEM OWNER PENDING REGISTRATIONS ALERT BANNER */}
       {currentUser?.systemRole === 'ADMIN' && pendingApprovalsCount > 0 && (
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-5 rounded-[24px] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg border border-amber-500/30 animate-pulse text-start">
+        <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-5 rounded-[24px] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg border border-amber-500/30 animate-pulse text-right">
           <div className="flex items-start gap-3">
             <div className="p-3 bg-white/10 rounded-2xl">
               <Users size={20} className="text-amber-100" />
@@ -543,7 +543,7 @@ export const DashboardView: React.FC = () => {
               setActiveTab('approvals');
               setActiveSubTab('approval_queue');
             }}
-            className="px-5 py-2.5 bg-white text-amber-900 font-black text-xs rounded-xl hover:bg-amber-50 transition-all cursor-pointer shadow-md shrink-0 dark:bg-slate-900"
+            className="px-5 py-2.5 bg-white text-amber-900 font-black text-xs rounded-xl hover:bg-amber-50 transition-all cursor-pointer shadow-md shrink-0"
           >
             ورود به مرکز تایید صلاحیت پرسنل
           </button>

@@ -32,7 +32,6 @@ import {
 } from 'lucide-react';
 import StrandsLoader from './loading/StrandsLoader';
 import { cn } from '../lib/utils';
-import { formatJalaliDateTime } from '../lib/dates';
 
 interface DepartmentReportsViewProps {
   deptId?: string;
@@ -154,7 +153,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
 
     const html = `
       <!DOCTYPE html>
-      <html lang="fa">
+      <html dir="rtl" lang="fa">
       <head>
         <meta charset="utf-8">
         <title>${rep.title}</title>
@@ -218,7 +217,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
             <div>
               <div class="agency-title">سیستم هوشمند گزارش‌دهی سازمانی و مدیریتی</div>
               <h1 class="title">${rep.title}</h1>
-              <div class="subtitle">تاریخ صدور: ${formatJalaliDateTime((rep as any).createdAt || rep.generatedAt) || rep.generatedAt} | مسئول ثبت: ${rep.createdBy}</div>
+              <div class="subtitle">تاریخ صدور: ${rep.generatedAt} | مسئول ثبت: ${rep.createdBy}</div>
             </div>
             <div class="badge-top">
               ${rep.scope === 'agency' || rep.departmentId === 'AGENCY' ? 'گزارش استراتژیک ۳۶۰ درجه کل سازمان (ویژه مدیران ارشد)' : 'گزارش عملکرد دپارتمان'}
@@ -369,7 +368,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
   };
 
   return (
-    <div className="w-full space-y-6 text-start animate-fade-in">
+    <div className="w-full space-y-6 text-right animate-fade-in" style={{ direction: 'rtl' }}>
       {reportError && <p role="alert" className="p-3 text-red-600">{reportError}</p>}
       {/* LEVEL 2 — PROMOTED HERO HEADER BANNER (مرکز گزارش‌دهی و پایش هوشمند سازمانی) */}
       <div className="relative overflow-hidden bg-gradient-to-b from-white via-white to-blue-50/60 dark:from-[#0d121f] dark:via-[#0d121f] dark:to-blue-950/40 rounded-3xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -562,7 +561,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
                 } border-b border-slate-100 dark:border-slate-800/80 relative overflow-hidden`}>
                   
                   {/* Watermark Document Icon */}
-                  <FileText size={80} className="absolute -end-3 -bottom-3 text-slate-200/40 dark:text-slate-800/40 pointer-events-none transform -rotate-12" />
+                  <FileText size={80} className="absolute -left-3 -bottom-3 text-slate-200/40 dark:text-slate-800/40 pointer-events-none transform -rotate-12" />
 
                   {/* Miniature Document Header Visual */}
                   <div className="bg-white/80 dark:bg-slate-950/80 backdrop-blur-xs border border-slate-200/80 dark:border-slate-800 rounded-xl p-3 shadow-xs relative z-10 space-y-2.5">
@@ -570,7 +569,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
                       <div className="flex items-center gap-1.5">
                         <FileSpreadsheet size={14} className={isAgencyScope ? 'text-emerald-500' : 'text-blue-500'} />
                         <span className="text-[9px] font-black tracking-wider text-slate-500 dark:text-slate-400 uppercase">
-                          {isAgencyScope ? 'گزارش مدیریتی فضای کاری' : `گزارش دپارتمان ${deptName || ''}`}
+                          {isAgencyScope ? 'AGENCY EXECUTIVE REPORT' : `DEPT REPORT: ${deptName || 'CORE'}`}
                         </span>
                       </div>
                       <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded-full ${
@@ -629,7 +628,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
                       </span>
                       <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                         <Clock size={11} />
-                        {formatJalaliDateTime((rep as any).createdAt || rep.generatedAt) || rep.generatedAt}
+                        {rep.generatedAt}
                       </span>
                     </div>
 
@@ -658,7 +657,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
                       {rep.title}
                     </span>
                     <span className="text-[11px] text-slate-300 font-medium block">
-                      تاریخ صدور: {formatJalaliDateTime((rep as any).createdAt || rep.generatedAt) || rep.generatedAt}
+                      تاریخ صدور: {rep.generatedAt}
                     </span>
                   </div>
 
@@ -666,10 +665,10 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
                     {/* Action 1: Popup View */}
                     <button
                       onClick={() => setSelectedModalReport(rep)}
-                      className="px-3.5 py-2 bg-white text-slate-900 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer transform hover:scale-105 dark:bg-slate-900 dark:text-slate-100"
+                      className="px-3.5 py-2 bg-white text-slate-900 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer transform hover:scale-105"
                     >
                       <Eye size={15} />
-                      <span>مشاهدهٔ گزارش</span>
+                      <span>مشاهده پاپ‌آپ</span>
                     </button>
 
                     {/* Action 2: Download PDF */}
@@ -699,14 +698,14 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
 
       {/* MULTI-STEP PROGRESS MODAL (MODERN UX PROCESSOR) */}
       {isPipelineRunning && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" style={{ direction: 'rtl' }}>
           <div 
             className="fixed inset-0 z-0 bg-gradient-to-t from-black/[0.18] via-black/[0.06] to-transparent dark:from-black/[0.5] dark:via-black/[0.25] dark:to-transparent backdrop-blur-[1.5px] transition-opacity duration-300 animate-in fade-in"
           />
           <div className="relative z-10 bg-white/95 dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18),0_10px_30px_-10px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.6)] rounded-[28px] p-6 sm:p-8 max-w-lg w-full text-center overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out">
             {/* Ambient background glow rings */}
-            <div className="absolute top-0 start-0 w-44 h-44 bg-blue-500/20 blur-3xl rounded-full pointer-events-none animate-pulse" />
-            <div className="absolute bottom-0 end-0 w-44 h-44 bg-emerald-500/20 blur-3xl rounded-full pointer-events-none animate-pulse" />
+            <div className="absolute top-0 right-0 w-44 h-44 bg-blue-500/20 blur-3xl rounded-full pointer-events-none animate-pulse" />
+            <div className="absolute bottom-0 left-0 w-44 h-44 bg-emerald-500/20 blur-3xl rounded-full pointer-events-none animate-pulse" />
 
             <div className="relative z-10 space-y-6">
               <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500/20 via-blue-600/20 to-emerald-500/20 text-brand-accent flex items-center justify-center mx-auto border border-brand-accent/30 shadow-inner">
@@ -769,13 +768,13 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
 
       {/* SINGLE ITEM DELETE CONFIRMATION MODAL */}
       {reportToDelete && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" style={{ direction: 'rtl' }}>
           <div 
             onClick={() => setReportToDelete(null)}
             className="fixed inset-0 z-0 bg-gradient-to-t from-black/[0.18] via-black/[0.06] to-transparent dark:from-black/[0.5] dark:via-black/[0.25] dark:to-transparent backdrop-blur-[1.5px] transition-opacity duration-300 animate-in fade-in cursor-pointer"
           />
           <div className="relative z-10 bg-surface-primary dark:bg-[#181826] border border-rose-500/30 rounded-[28px] p-6 sm:p-7 max-w-md w-full shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18),0_10px_30px_-10px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.6)] space-y-5 text-center overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out">
-            <div className="absolute top-0 start-0 w-32 h-32 bg-rose-500/10 blur-2xl rounded-full pointer-events-none" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 blur-2xl rounded-full pointer-events-none" />
             <div className="w-14 h-14 rounded-2xl bg-rose-500/15 text-rose-500 flex items-center justify-center mx-auto border border-rose-500/30 shadow-inner">
               <Trash2 size={28} />
             </div>
@@ -822,12 +821,12 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
 
       {/* BULK PURGE / ARCHIVE CLEANUP MODAL */}
       {showPurgeModal && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto" style={{ direction: 'rtl' }}>
           <div 
             onClick={() => setShowPurgeModal(false)}
             className="fixed inset-0 z-0 bg-gradient-to-t from-black/[0.18] via-black/[0.06] to-transparent dark:from-black/[0.5] dark:via-black/[0.25] dark:to-transparent backdrop-blur-[1.5px] transition-opacity duration-300 animate-in fade-in cursor-pointer"
           />
-          <div className="relative z-10 bg-surface-primary dark:bg-[#181826] border border-border-primary/80 dark:border-white/10 rounded-[28px] p-6 sm:p-7 max-w-md w-full shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18),0_10px_30px_-10px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.6)] space-y-5 text-start overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out">
+          <div className="relative z-10 bg-surface-primary dark:bg-[#181826] border border-border-primary/80 dark:border-white/10 rounded-[28px] p-6 sm:p-7 max-w-md w-full shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18),0_10px_30px_-10px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.6)] space-y-5 text-right overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out">
             <div className="flex items-center justify-between pb-3 border-b border-border-primary/50 dark:border-white/10">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-rose-500/15 text-rose-500">
@@ -838,7 +837,7 @@ export const DepartmentReportsView: React.FC<DepartmentReportsViewProps> = ({ de
                     پاکسازی و مدیریت آرشیو گزارش‌ها
                   </h3>
                   <p className="text-[11px] text-text-secondary dark:text-slate-400">
-                    حذف دسته‌جمعی گزارش‌های قدیمی
+                    حذف دسته‌جمعی گزارش‌های قدیمی جهت بهینه‌سازی دیتابیس
                   </p>
                 </div>
               </div>

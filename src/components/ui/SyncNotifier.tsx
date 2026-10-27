@@ -91,7 +91,7 @@ export const SyncNotifier: React.FC = () => {
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ type: 'spring', damping: 24, stiffness: 340 }}
             className={`fixed top-5 z-[99999] max-w-lg w-full px-4 pointer-events-none select-none ${
-              isRtl ? 'end-4 sm:end-6' : 'start-4 sm:start-6'
+              isRtl ? 'left-4 sm:left-6' : 'right-4 sm:right-6'
             }`}
             style={{ direction: isRtl ? 'rtl' : 'ltr' }}
           >
@@ -152,7 +152,7 @@ export const SyncNotifier: React.FC = () => {
                     }`}
                   >
                     <span>{activeToast.actionText}</span>
-                    <ArrowLeft className="w-3.5 h-3.5" />
+                    {isRtl ? <ArrowLeft className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
                   </button>
                 )}
 
@@ -180,13 +180,13 @@ export const SyncNotifier: React.FC = () => {
             exit={{ opacity: 0, y: 30, scale: 0.9 }}
             transition={{ type: 'spring', damping: 25, stiffness: 350 }}
             className={`fixed bottom-6 z-[99990] max-w-sm w-auto pointer-events-none select-none ${
-              isRtl ? 'end-4 sm:end-6' : 'start-4 sm:start-6'
+              isRtl ? 'left-4 sm:left-6' : 'right-4 sm:right-6'
             }`}
             style={{ direction: isRtl ? 'rtl' : 'ltr' }}
           >
             <div className="pointer-events-auto flex items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-slate-900/95 dark:bg-[#121526]/95 text-white backdrop-blur-2xl border border-slate-700/80 dark:border-blue-500/30 shadow-[0_16px_48px_rgba(0,0,0,0.45)]">
               {/* Message */}
-              <div className="text-xs font-bold text-slate-200 dark:text-slate-100 whitespace-nowrap pe-1">
+              <div className="text-xs font-bold text-slate-200 dark:text-slate-100 whitespace-nowrap pl-1">
                 {isRtl ? 'داده‌های جدید در دسترس است' : 'New data available'}
               </div>
 

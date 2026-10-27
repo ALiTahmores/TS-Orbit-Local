@@ -1,7 +1,7 @@
 import {
   Activity, AlertTriangle, Award, BarChart, BarChart3, Bell, BookOpen, Box, Building2, Calendar, Check, CheckCircle,
   CheckSquare, Chrome, CircleDollarSign, Code, Compass, Cpu, Database, Delete, Download, Edit, Edit3, Eye, Figma, File,
-  FileText, Files, Film, Folder, FolderGit, FolderGit2, FolderKanban, FolderOpen, GitBranch, GitMerge, Globe, Grid, History,
+  FileText, Files, Film, Folder, FolderGit, FolderGit2, FolderKanban, FolderOpen, GitBranch, GitMerge, Grid, History,
   Home, Kanban, Key, Layers, Layout, LayoutDashboard, LayoutGrid, LineChart, Lock, Megaphone, Menu, MessageSquare,
   Network, Palette, PenTool, Phone, PieChart, Plus, PlusCircle, Rocket, Save, Search, Send, Server, Settings, Settings2,
   Share2, Shield, ShieldCheck, ShoppingBag, Sliders, Smartphone, Sparkles, Sun, Tablet, Tags, Target, Terminal, Trash2,
@@ -16,7 +16,7 @@ import {
 const iconsByName: Record<string, LucideIcon> = {
   Activity, AlertTriangle, Award, BarChart, BarChart3, Bell, BookOpen, Box, Building2, Calendar, Check, CheckCircle,
   CheckSquare, Chrome, CircleDollarSign, Code, Compass, Cpu, Database, Delete, Download, Edit, Edit3, Eye, Figma, File,
-  FileText, Files, Film, Folder, FolderGit, FolderGit2, FolderKanban, FolderOpen, GitBranch, GitMerge, Globe, Grid, History,
+  FileText, Files, Film, Folder, FolderGit, FolderGit2, FolderKanban, FolderOpen, GitBranch, GitMerge, Grid, History,
   Home, Kanban, Key, Layers, Layout, LayoutDashboard, LayoutGrid, LineChart, Lock, Megaphone, Menu, MessageSquare,
   Network, Palette, PenTool, Phone, PieChart, Plus, PlusCircle, Rocket, Save, Search, Send, Server, Settings, Settings2,
   Share2, Shield, ShieldCheck, ShoppingBag, Sliders, Smartphone, Sparkles, Sun, Tablet, Tags, Target, Terminal, Trash2,

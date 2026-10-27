@@ -325,13 +325,13 @@ export const SystemSettingsView: React.FC = () => {
       
       {/* Toast Alert Systems */}
       {successMsg && (
-        <div className="fixed bottom-6 end-6 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 z-50 text-xs font-bold font-sans">
+        <div className="fixed bottom-6 left-6 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce z-50 text-xs font-bold font-sans">
           <CheckCircle2 size={16} />
           <span>{successMsg}</span>
         </div>
       )}
       {errorMsg && (
-        <div className="fixed bottom-6 end-6 bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 z-50 text-xs font-bold font-sans">
+        <div className="fixed bottom-6 left-6 bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce z-50 text-xs font-bold font-sans">
           <AlertTriangle size={16} />
           <span>{errorMsg}</span>
         </div>
@@ -355,9 +355,44 @@ export const SystemSettingsView: React.FC = () => {
         </div>
       </div>
 
-      {/* The category is chosen from the section tabs above and the sidebar. */}
-      <div>
-        <div className="space-y-6">
+      {/* Side Navigation & Settings Body Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        {/* Right Nav Rail (Category Menu) */}
+        <div className="lg:col-span-1 space-y-2">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-2xs space-y-1">
+            {visibleCategories.map(cat => {
+              const IconComp = cat.icon;
+              const isActive = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-right cursor-pointer ${
+                    isActive 
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <IconComp size={15} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <span className="truncate">{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-2xl text-[10px] leading-relaxed text-blue-800 dark:text-blue-300">
+            <Lock size={14} className="text-blue-600 mb-1" />
+            <span>
+              {locale === 'fa' 
+                ? 'سطوح دسترسی پورتال برای امنیت بیشتر به‌صورت پویا با مدیریت مالک سیستم تنظیم شده و کلیه فعالیت‌ها مانیتور می‌شوند.'
+                : 'Portal permissions are dynamically enforced according to organizational policy and all settings actions are securely logged.'}
+            </span>
+          </div>
+        </div>
+
+        {/* Left Active Pane */}
+        <div className="lg:col-span-3 space-y-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xs min-h-[400px]">
             
             {/* CATEGORY: APPEARANCE */}
@@ -378,7 +413,7 @@ export const SystemSettingsView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setTheme('light')}
-                      className={`flex items-center gap-3 p-4 rounded-xl border text-start cursor-pointer transition-all ${
+                      className={`flex items-center gap-3 p-4 rounded-xl border text-right cursor-pointer transition-all ${
                         theme === 'light'
                           ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10 ring-2 ring-blue-500/20'
                           : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -397,7 +432,7 @@ export const SystemSettingsView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setTheme('dark')}
-                      className={`flex items-center gap-3 p-4 rounded-xl border text-start cursor-pointer transition-all ${
+                      className={`flex items-center gap-3 p-4 rounded-xl border text-right cursor-pointer transition-all ${
                         theme === 'dark'
                           ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10 ring-2 ring-blue-500/20'
                           : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -416,7 +451,7 @@ export const SystemSettingsView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setTheme('system')}
-                      className={`flex items-center gap-3 p-4 rounded-xl border text-start cursor-pointer transition-all ${
+                      className={`flex items-center gap-3 p-4 rounded-xl border text-right cursor-pointer transition-all ${
                         theme === 'system'
                           ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10 ring-2 ring-blue-500/20'
                           : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -463,7 +498,7 @@ export const SystemSettingsView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setLocale('fa')}
-                      className={`flex items-center justify-between p-4 rounded-xl border text-start cursor-pointer transition-all ${
+                      className={`flex items-center justify-between p-4 rounded-xl border text-right cursor-pointer transition-all ${
                         locale === 'fa'
                           ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10 ring-2 ring-blue-500/20'
                           : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -483,7 +518,7 @@ export const SystemSettingsView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setLocale('en')}
-                      className={`flex items-center justify-between p-4 rounded-xl border text-start cursor-pointer transition-all ${
+                      className={`flex items-center justify-between p-4 rounded-xl border text-right cursor-pointer transition-all ${
                         locale === 'en'
                           ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/10 ring-2 ring-blue-500/20'
                           : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -534,13 +569,13 @@ export const SystemSettingsView: React.FC = () => {
                   {[
                     { state: notifEmail, setter: setNotifEmail, label: t('notif_email'), desc: 'ارسال ایمیل‌های تجمیعی هفتگی و روزانه از روند کارگاه وردپرس' },
                     { state: notifInApp, setter: setNotifInApp, label: t('notif_in_app'), desc: 'نمایش پاپ‌آپ‌های زنده درون‌برنامه‌ای در هدر پورتال' },
-                    { state: notifAssignment, setter: setNotifAssignment, label: t('notif_assignment'), desc: 'اطلاع‌رسانی سریع به محض واگذاری وظیفه جدید' },
+                    { state: notifAssignment, setter: setNotifAssignment, label: t('notif_assignment'), desc: 'اطلاع‌رسانی سریع به محض واگذاری تسک جدید' },
                     { state: notifUpdates, setter: setNotifUpdates, label: t('notif_updates'), desc: 'اعلان به روز رسانی وضعیت‌های سئو، گزارش یا باگ‌یابی' },
                     { state: notifMentions, setter: setNotifMentions, label: t('notif_mentions'), desc: 'اعلان لحظه‌ای زمانی که همکاران شما را منشن می‌کنند' },
                     { state: notifDeadlines, setter: setNotifDeadlines, label: t('notif_deadlines'), desc: 'یادآوری ۴۸ ساعت پیش از ضرب‌الاجل انقضای کارهای سئو' },
                   ].map((notif, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-slate-800/20 border border-slate-100 dark:border-slate-800 rounded-xl">
-                      <div className="space-y-0.5 text-start">
+                      <div className="space-y-0.5 text-right">
                         <span className="text-xs font-black text-slate-800 dark:text-slate-150 block">{notif.label}</span>
                         <span className="text-[10px] text-slate-400 dark:text-slate-400">{notif.desc}</span>
                       </div>
@@ -584,7 +619,7 @@ export const SystemSettingsView: React.FC = () => {
                   <div className="relative w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-xl border-4 border-white dark:border-zinc-950 shadow-md overflow-hidden shrink-0">
                     <LocalImage src={profileAvatar} alt={profileName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
-                  <div className="space-y-2 flex-1 w-full text-start sm:text-start">
+                  <div className="space-y-2 flex-1 w-full text-right sm:text-right">
                     <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">تصویر پروفایل</span>
                     <div className="flex flex-wrap items-center gap-2.5 mt-1" role="radiogroup" aria-label="انتخاب تصویر پروفایل">
                       <button

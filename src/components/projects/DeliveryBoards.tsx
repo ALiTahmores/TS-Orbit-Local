@@ -82,7 +82,7 @@ export const DeliveryBoards:React.FC = () => {
   const visible=rows.filter(row=>!projectId || row.projectId===projectId);
   const done=visible.filter(row=>DONE.has(row.status)).length;
 
-  return <section className="space-y-4">
+  return <section className="space-y-4" dir="rtl">
     <nav className="flex flex-wrap gap-2" aria-label="بخش‌های تحویل">{Object.entries(boards).map(([key,item])=><button type="button" key={key} aria-pressed={board===key} onClick={()=>setBoard(key as Board)} className={`h-9 px-4 rounded-xl text-xs font-bold transition-colors cursor-pointer ${board===key?'bg-blue-600 text-white':'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>{item.label}</button>)}</nav>
     {error && <p role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold">{error}</p>}
 

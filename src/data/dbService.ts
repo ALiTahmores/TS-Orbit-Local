@@ -309,7 +309,7 @@ export class DbService {
       // replacing its content with this transaction's cross-instance fresh view.
       this.restoreState(state as DatabaseSchema);
       this.transactionSnapshot = structuredClone(this.getState());
-      const secret = remote.transactionSecret;
+      const secret = await remote.getMetadata<unknown>('jwt_secret');
       if (typeof secret !== 'string' || !/^[0-9a-f]{96}$/.test(secret)) throw new Error('Invalid canonical cloud signing key.');
       setCloudJwtSecret(secret);
     } catch (error) { await this.rollbackCloudTransaction(); throw error; }

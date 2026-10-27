@@ -10,7 +10,7 @@ const MODULE_ICONS_LIST = [
   { value: 'Database', label: 'پایگاه داده' },
   { value: 'Folder', label: 'پوشه' },
   { value: 'FileText', label: 'اسناد' },
-  { value: 'CheckSquare', label: 'وظایف' },
+  { value: 'CheckSquare', label: 'تسک‌ها' },
   { value: 'Sliders', label: 'تنظیمات' },
   { value: 'Grid', label: 'جدول' },
 ];
@@ -225,11 +225,11 @@ export const OrgBuilder: React.FC = () => {
   };
 
   return (
-    <div className="w-full space-y-6 text-start">
+    <div className="w-full space-y-6 text-right" style={{ direction: 'rtl' }}>
       {formError && <p role="alert" className="p-3 text-red-600">{formError}</p>}
       {/* Header Banner */}
       <div className="bg-surface-primary border border-border-primary rounded-2xl p-6 relative overflow-hidden shadow-sm">
-        <div className="absolute top-0 end-0 w-32 h-32 bg-[#155DFC]/5 blur-3xl rounded-full" />
+        <div className="absolute top-0 left-0 w-32 h-32 bg-[#155DFC]/5 blur-3xl rounded-full" />
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
           <div>
             <h1 className="text-xl font-black text-text-primary flex items-center gap-2">
@@ -386,7 +386,7 @@ export const OrgBuilder: React.FC = () => {
                   </div>
                 ) : (
                   <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-                    <table className="w-full text-xs text-start min-w-[700px]">
+                    <table className="w-full text-xs text-right min-w-[700px]">
                       <thead>
                         <tr className="border-b border-border-primary/50 text-text-secondary font-bold">
                           <th className="pb-2">عنوان نمونه</th>
@@ -827,7 +827,7 @@ export const OrgBuilder: React.FC = () => {
 
                 <div className="space-y-1">
                   <label className="text-[10px] text-text-secondary font-bold">اعضای تیم را اضافه کنید</label>
-                  <div className="max-h-24 overflow-y-auto border border-border-primary/60 rounded-lg p-2 space-y-1 text-start">
+                  <div className="max-h-24 overflow-y-auto border border-border-primary/60 rounded-lg p-2 space-y-1 text-right">
                     {teamMembers.map((member: any) => {
                       const isSelected = teamMembersList.includes(member.id);
                       return (
@@ -835,7 +835,7 @@ export const OrgBuilder: React.FC = () => {
                           key={member.id}
                           type="button"
                           onClick={() => toggleMemberSelection(member.id)}
-                          className={`w-full text-start px-2 py-1 rounded text-[11px] transition-all flex items-center justify-between ${
+                          className={`w-full text-right px-2 py-1 rounded text-[11px] transition-all flex items-center justify-between ${
                             isSelected ? 'bg-[#155DFC]/20 text-[#155DFC] font-bold' : 'hover:bg-hover-overlay'
                           }`}
                         >

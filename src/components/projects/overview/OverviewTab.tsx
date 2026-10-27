@@ -12,7 +12,7 @@ const deptOptions: CustomSelectOption[] = [
 ];
 
 const priorityOptions: CustomSelectOption[] = [
-  { value: 'low', label: 'کم' },
+  { value: 'low', label: 'پایین' },
   { value: 'medium', label: 'متوسط' },
   { value: 'high', label: 'بالا' },
   { value: 'critical', label: 'فوری / بحرانی' },
@@ -50,7 +50,7 @@ const formatCurrency = (val?: string): string => {
 
 const calculateDeadlineInfo = (deadlineStr?: string): { text: string; isNear: boolean } => {
   if (!deadlineStr || !deadlineStr.trim()) {
-    return { text: 'بدون ددلاین', isNear: false };
+    return { text: 'بدون سررسید', isNear: false };
   }
 
   // Convert Persian digits to English digits for date calculation
@@ -63,16 +63,16 @@ const calculateDeadlineInfo = (deadlineStr?: string): { text: string; isNear: bo
       const diffMs = deadlineDate.getTime() - Date.now();
       const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
       if (daysLeft > 0) {
-        return { text: `${toPersianDigits(daysLeft)} روز باقیمانده تا ددلاین`, isNear: daysLeft <= 7 };
+        return { text: `${toPersianDigits(daysLeft)} روز باقیمانده تا سررسید`, isNear: daysLeft <= 7 };
       } else if (daysLeft === 0) {
-        return { text: 'امروز ددلاین است', isNear: true };
+        return { text: 'امروز سررسید است', isNear: true };
       } else {
-        return { text: `${toPersianDigits(Math.abs(daysLeft))} روز گذشته از ددلاین`, isNear: true };
+        return { text: `${toPersianDigits(Math.abs(daysLeft))} روز گذشته از سررسید`, isNear: true };
       }
     }
   }
 
-  return { text: `ددلاین: ${toPersianDigits(deadlineStr)}`, isNear: false };
+  return { text: `سررسید: ${toPersianDigits(deadlineStr)}`, isNear: false };
 };
 
 export const OverviewTab: React.FC = () => {
@@ -190,8 +190,8 @@ export const OverviewTab: React.FC = () => {
       return projectTasks.slice(0, 5).map(t => ({
         id: t.id,
         text: t.status === 'completed'
-          ? `${t.assignedTo || 'عضو تیم'} تسک «${t.title}» را تکمیل کرد`
-          : `تسک «${t.title}» به ${t.assignedTo || 'عضو تیم'} ارجاع داده شد`,
+          ? `${t.assignedTo || 'عضو تیم'} وظیفه «${t.title}» را تکمیل کرد`
+          : `وظیفه «${t.title}» به ${t.assignedTo || 'عضو تیم'} ارجاع داده شد`,
         time: t.status === 'completed' ? 'تکمیل‌شده' : 'در حال انجام',
         status: t.status
       }));
@@ -210,7 +210,7 @@ export const OverviewTab: React.FC = () => {
     await createTask({
       projectId: currentProj.id,
       title: taskTitle.trim(),
-      description: 'تسک جدید ثبت شده از پیش‌نمایش کلی پروژه',
+      description: 'وظیفه جدید ثبت شده از پیش‌نمایش کلی پروژه',
       department: taskDept as any,
       assignedMemberIds:taskAssignedTo ? [taskAssignedTo] : [],
       priority: taskPriority,
@@ -224,7 +224,7 @@ export const OverviewTab: React.FC = () => {
 
   if (!projects || projects.length === 0 || !currentProj || currentProj.id === 'no_project') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[420px] p-8 sm:p-12 bg-white dark:bg-[#111322] border border-gray-200/70 dark:border-[#1E2235] rounded-2xl text-center space-y-6 shadow-2xl my-4 dir-rtl" dir="rtl">
+      <div className="flex flex-col items-center justify-center min-h-[420px] p-8 sm:p-12 bg-white dark:bg-[#111322] border border-gray-200/70 dark:border-[#1E2235] rounded-2xl text-center space-y-6 shadow-2xl my-4 dir-rtl">
         <div className="w-20 h-20 rounded-2xl bg-blue-600/10 border border-blue-500/20 text-blue-500 flex items-center justify-center shadow-inner">
           <Briefcase size={36} className="stroke-[1.75]" />
         </div>
@@ -253,7 +253,7 @@ export const OverviewTab: React.FC = () => {
   }
 
   return (
-    <div className="w-full min-w-0 overflow-x-hidden space-y-5 p-1 text-right font-sans" style={{ fontFeatureSettings: '"ss01" 1', direction: 'rtl' }}>
+    <div className="w-full min-w-0 overflow-x-hidden space-y-5 p-1 text-start font-sans">
 
       {/* ====================================================================== */}
       {/* 1. HERO PROJECT BANNER & IDENTITY                                      */}
@@ -299,7 +299,7 @@ export const OverviewTab: React.FC = () => {
             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm shadow-blue-500/20 transition-all cursor-pointer whitespace-nowrap"
           >
             <Plus size={16} className="stroke-[2.5]" />
-            <span>+ ثبت تسک جدید برای این پروژه</span>
+            <span>+ ثبت وظیفه جدید برای این پروژه</span>
           </button>
         </div>
       </div>
@@ -311,7 +311,7 @@ export const OverviewTab: React.FC = () => {
           className="px-3.5 py-1.5 bg-white dark:bg-slate-900 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-300 border border-slate-200/80 dark:border-slate-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs"
         >
           <CheckSquare size={14} className="text-blue-600 dark:text-blue-400" />
-          <span>تسک‌ها و زمان‌بندی پروژه</span>
+          <span>وظایف و زمان‌بندی پروژه</span>
           <ChevronLeft size={12} className="text-slate-400" />
         </button>
 
@@ -360,8 +360,8 @@ export const OverviewTab: React.FC = () => {
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
               {totalTasksCount > 0 
-                ? `${toPersianDigits(completedTasksCount)} تسک تکمیل‌شده از مجموع ${toPersianDigits(totalTasksCount)} تسک`
-                : 'بدون تسک ثبت‌شده'}
+                ? `${toPersianDigits(completedTasksCount)} وظیفه تکمیل‌شده از مجموع ${toPersianDigits(totalTasksCount)} وظیفه`
+                : 'بدون وظیفه ثبت‌شده'}
             </p>
           </div>
         </div>
@@ -371,7 +371,7 @@ export const OverviewTab: React.FC = () => {
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs md:text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2 truncate">
               <CheckSquare size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
-              <span className="truncate">خلاصه وضعیت تسک‌ها</span>
+              <span className="truncate">خلاصه وضعیت وظایف</span>
             </span>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold shrink-0">
               کل: {toPersianDigits(totalTasksCount)}
@@ -483,14 +483,14 @@ export const OverviewTab: React.FC = () => {
           {totalTasksCount === 0 ? (
             <div className="py-10 px-4 text-center space-y-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
               <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                هیچ فاز یا پیشرفتی ثبت نشده است. جهت شروع، اولین تسک پروژه را ایجاد کنید.
+                هیچ فاز یا پیشرفتی ثبت نشده است. جهت شروع، اولین وظیفه پروژه را ایجاد کنید.
               </p>
               <button
                 onClick={() => setIsTaskModalOpen(true)}
                 className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5"
               >
                 <Plus size={14} />
-                <span>ایجاد اولین تسک</span>
+                <span>ایجاد اولین وظیفه</span>
               </button>
             </div>
           ) : (
@@ -589,10 +589,10 @@ export const OverviewTab: React.FC = () => {
               هنوز هیچ فعالیتی برای این پروژه ثبت نشده است
             </div>
           ) : (
-            <div className="relative pr-4 border-r-2 border-slate-200 dark:border-slate-800 space-y-4 my-2">
+            <div className="relative ps-4 border-s-2 border-slate-200 dark:border-slate-800 space-y-4 my-2">
               {activities.map((act) => (
                 <div key={act.id} className="relative">
-                  <span className="absolute -right-[21px] top-1 w-2.5 h-2.5 rounded-full bg-blue-600 dark:bg-blue-400 border-2 border-white dark:border-slate-900" />
+                  <span className="absolute -start-[21px] top-1 w-2.5 h-2.5 rounded-full bg-blue-600 dark:bg-blue-400 border-2 border-white dark:border-slate-900" />
                   <div className="space-y-1">
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-snug">
                       {act.text}
@@ -615,13 +615,13 @@ export const OverviewTab: React.FC = () => {
       {/* ====================================================================== */}
       {isTaskModalOpen && currentProj && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-right animate-scale-up" dir="rtl">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-start animate-scale-up">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                 <span className="p-1.5 bg-blue-100 dark:bg-blue-950 text-blue-600 rounded-lg">
                   <Plus size={16} />
                 </span>
-                ثبت تسک جدید برای {currentProj.title}
+                ثبت وظیفه جدید برای {currentProj.title}
               </h3>
               <button 
                 onClick={() => setIsTaskModalOpen(false)}
@@ -633,7 +633,7 @@ export const OverviewTab: React.FC = () => {
 
             <form onSubmit={handleAddTaskSubmit} className="space-y-3 text-xs font-medium">
               <div className="space-y-1">
-                <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">عنوان تسک</label>
+                <label className="text-[11px] text-slate-500 dark:text-slate-400 font-bold block">عنوان وظیفه</label>
                 <input
                   type="text"
                   required
@@ -689,7 +689,7 @@ export const OverviewTab: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold cursor-pointer transition-all shadow-xs"
                 >
-                  ایجاد تسک
+                  ایجاد وظیفه
                 </button>
               </div>
             </form>

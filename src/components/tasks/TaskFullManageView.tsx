@@ -90,14 +90,14 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
     return (
       <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
         <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2">
-          {isRtl ? 'تسک مورد نظر یافت نشد.' : 'Task not found.'}
+          {isRtl ? 'وظیفه مورد نظر یافت نشد.' : 'Task not found.'}
         </h3>
         <button
           type="button"
           onClick={onBack}
           className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer"
         >
-          {isRtl ? 'بازگشت به لیست تسک‌ها' : 'Back to Tasks'}
+          {isRtl ? 'بازگشت به لیست وظایف' : 'Back to Tasks'}
         </button>
       </div>
     );
@@ -161,7 +161,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
             onClick={onBack}
             className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
           >
-            <ArrowRight className={`w-5 h-5 ${isRtl ? '' : 'rotate-180'}`}/>
+            <ArrowRight className="w-5 h-5"/>
           </button>
           <div>
             <div className="flex items-center gap-2">
@@ -208,7 +208,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
           <div className="p-6 bg-white dark:bg-slate-900 rounded-[28px] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                {isRtl ? 'عنوان تسک' : 'Task Title'}
+                {isRtl ? 'عنوان وظیفه' : 'Task Title'}
               </label>
               <input
                 type="text"
@@ -220,7 +220,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                {isRtl ? 'شرح و نیازمندی‌های اجرایی تسک' : 'Description & Requirements'}
+                {isRtl ? 'شرح و نیازمندی‌های اجرایی وظیفه' : 'Description & Requirements'}
               </label>
               <textarea
                 rows={5}
@@ -237,7 +237,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-blue-600"/>
                 <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">
-                  {isRtl ? 'چک‌لیست و زیرتسک‌های پروژه' : 'Subtasks Checklist'}
+                  {isRtl ? 'چک‌لیست و زیرکارهای پروژه' : 'Subtasks Checklist'}
                 </h3>
               </div>
               <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-2.5 py-1 rounded-xl">
@@ -306,7 +306,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-blue-600"/>
                 <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">
-                  {isRtl ? 'گفتگو و یادداشت‌های فنی تسک' : 'Comments & Notes'}
+                  {isRtl ? 'گفتگو و یادداشت‌های فنی وظیفه' : 'Comments & Notes'}
                 </h3>
               </div>
             </div>
@@ -325,7 +325,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
                 ))
               ) : (
                 <div className="text-center py-6 text-slate-400 text-xs font-bold">
-                  {isRtl ? 'هنوز نظری برای این تسک ثبت نشده است.' : 'No comments yet.'}
+                  {isRtl ? 'هنوز نظری برای این وظیفه ثبت نشده است.' : 'No comments yet.'}
                 </div>
               )}
             </div>
@@ -357,7 +357,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
           {/* Status & Priority Box */}
           <div className="p-6 bg-white dark:bg-slate-900 rounded-[28px] border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">
-              {isRtl ? 'وضعیت و اولویت تسک' : 'Status & Priority'}
+              {isRtl ? 'وضعیت و اولویت وظیفه' : 'Status & Priority'}
             </h3>
 
             <div>
@@ -380,7 +380,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                {isRtl ? 'اولویت تسک' : 'Priority'}
+                {isRtl ? 'اولویت وظیفه' : 'Priority'}
               </label>
               <select
                 value={priority}

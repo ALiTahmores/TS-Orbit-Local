@@ -76,10 +76,10 @@ export const SmsReminderModal: React.FC<SmsReminderModalProps> = ({
   const [customTime, setCustomTime] = useState('10:00');
 
   const scheduleOptions: CustomSelectOption[] = [
-    { value: '24h_before', label: '۲۴ ساعت قبل از رسیدن ددلاین (پیش‌فرض)' },
-    { value: '48h_before', label: '۴۸ ساعت قبل از رسیدن ددلاین' },
-    { value: '1w_before', label: '۱ هفته قبل از رسیدن ددلاین' },
-    { value: '2h_before', label: '۲ ساعت قبل از ددلاین (هشدار فوری)' },
+    { value: '24h_before', label: '۲۴ ساعت قبل از رسیدن سررسید (پیش‌فرض)' },
+    { value: '48h_before', label: '۴۸ ساعت قبل از رسیدن سررسید' },
+    { value: '1w_before', label: '۱ هفته قبل از رسیدن سررسید' },
+    { value: '2h_before', label: '۲ ساعت قبل از سررسید (هشدار فوری)' },
     { value: 'custom', label: 'تاریخ و ساعت سفارشی (انتخاب دستی)' },
   ];
 
@@ -152,8 +152,6 @@ export const SmsReminderModal: React.FC<SmsReminderModalProps> = ({
   return createPortal(
     <div 
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto dir-rtl font-sans" 
-      dir="rtl" 
-      style={{ fontFeatureSettings: '"ss01" 1' }}
     >
       {/* 1. Translucent Gradient Backdrop (Background remains bright, sharp & readable) */}
       <div 
@@ -164,7 +162,7 @@ export const SmsReminderModal: React.FC<SmsReminderModalProps> = ({
       {/* 2. Modal Card Container with High-Contrast Elevation */}
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="relative z-10 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-[28px] p-6 sm:p-7 max-w-xl w-full shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18),0_10px_30px_-10px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.6)] space-y-5 text-right animate-in fade-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh] cursor-default"
+        className="relative z-10 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-[28px] p-6 sm:p-7 max-w-xl w-full shadow-[0_25px_70px_-15px_rgba(0,0,0,0.18),0_10px_30px_-10px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_70px_-15px_rgba(0,0,0,0.6)] space-y-5 text-start animate-in fade-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh] cursor-default"
       >
         
         {/* MODAL HEADER */}
@@ -204,7 +202,7 @@ export const SmsReminderModal: React.FC<SmsReminderModalProps> = ({
               </span>
             </div>
             <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 font-bold mt-1">
-              <span>ددلاین پروژه:</span>
+              <span>سررسید پروژه:</span>
               <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black">{formatJalaliDate(project.deadline) || 'تعیین نشده'}</span>
             </div>
           </div>

@@ -45,9 +45,8 @@ const Folder: React.FC<FolderProps> = ({
   );
 
   const folderBackColor = darkenColor(color, 0.12);
-  const paper1 = darkenColor('#ffffff', 0.1);
-  const paper2 = darkenColor('#ffffff', 0.05);
-  const paper3 = '#ffffff';
+  // Back-to-front paper shades, light and dark.
+  const paperShades = ['bg-slate-200 dark:bg-slate-700', 'bg-slate-100 dark:bg-slate-800', 'bg-white dark:bg-slate-900'];
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -105,11 +104,11 @@ const Folder: React.FC<FolderProps> = ({
         role="button"
       >
         <div
-          className="relative w-[110px] h-[85px] rounded-tl-0 rounded-tr-[10px] rounded-br-[10px] rounded-bl-[10px] shadow-lg"
+          className="relative w-[110px] h-[85px] rounded-se-0 rounded-ss-[10px] rounded-es-[10px] rounded-ee-[10px] shadow-lg"
           style={{ backgroundColor: folderBackColor }}
         >
           <span
-            className="absolute z-0 bottom-[98%] left-0 w-[35px] h-[12px] rounded-tl-[6px] rounded-tr-[6px]"
+            className="absolute z-0 bottom-[98%] end-0 w-[35px] h-[12px] rounded-se-[6px] rounded-ss-[6px]"
             style={{ backgroundColor: folderBackColor }}
           />
 
@@ -125,10 +124,9 @@ const Folder: React.FC<FolderProps> = ({
                 onMouseMove={e => handlePaperMouseMove(e, i)}
                 className={`absolute z-20 bottom-[10%] left-1/2 transition-all duration-300 ease-in-out border border-gray-200 dark:border-gray-700 overflow-hidden shadow-md flex items-center justify-center ${
                   !open ? 'transform -translate-x-1/2 translate-y-[10%] group-hover:translate-y-0' : 'hover:scale-110'
-                } ${sizeClasses}`}
+                } ${paperShades[Math.min(i, paperShades.length - 1)]} ${sizeClasses}`}
                 style={{
                   ...(!open ? {} : { transform: transformStyle }),
-                  backgroundColor: i === 0 ? paper1 : i === 1 ? paper2 : paper3,
                   borderRadius: '8px'
                 }}
               >

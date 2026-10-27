@@ -1,9 +1,10 @@
 import { LocalImage } from './common/LocalImage';
 import React from 'react';
 import { useProject } from '../context/ProjectContext';
-import { Users, CheckSquare, TrendingUp, Clock, Calendar, BarChart2, Award } from 'lucide-react';
+import { Users, CheckSquare, TrendingUp, Clock, BarChart2, Award } from 'lucide-react';
 import { completedAt, deliveredOnTime, isOverdue, tasksAssignedTo } from '../lib/taskAnalytics';
 import { STATUS_LABELS, statusKey } from '../lib/taskLabels';
+import { ActivityHeatmap } from './common/ActivityHeatmap';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === null || n === undefined) return '';
@@ -11,15 +12,12 @@ const toPersianDigits = (n: string | number): string => {
   return String(n).replace(/[0-9]/g, (x) => farsiDigits[parseInt(x, 10)]);
 };
 
-const DAY = 24 * 60 * 60 * 1000;
-const WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
 const isOpen = (task: any) => task.status !== 'completed' && task.status !== 'cancelled';
 const rate = (values: (boolean | undefined)[]) => {
   const judged = values.filter((value): value is boolean => value !== undefined);
   return judged.length ? Math.round(judged.filter(Boolean).length / judged.length * 100) : null;
 };
 const percent = (value: number | null) => value === null ? '—' : `${toPersianDigits(value)}٪`;
-const HEAT = ['bg-slate-100 dark:bg-slate-800/60', 'bg-blue-200 dark:bg-blue-900', 'bg-blue-400 dark:bg-blue-700', 'bg-blue-600', 'bg-blue-800'];
 
 /** Team delivery metrics computed from stored tasks only. */
 export const TeamPerformanceView: React.FC = () => {
@@ -47,22 +45,7 @@ export const TeamPerformanceView: React.FC = () => {
   })), [openTasks]);
   const maxStatus = Math.max(1, ...statusRows.map(row => row.count));
 
-  // Completions per weekday for the last four weeks (rows = weeks, oldest first).
-  const heatmap = React.useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekStart = new Date(today.getTime() - ((today.getDay() + 1) % 7) * DAY);
-    const first = new Date(weekStart.getTime() - 21 * DAY);
-    const grid = Array.from({ length: 4 }, () => Array.from({ length: 7 }, () => 0));
-    for (const task of completedTasks) {
-      const at = completedAt(task);
-      if (!at) continue;
-      const index = Math.floor((new Date(at.getFullYear(), at.getMonth(), at.getDate()).getTime() - first.getTime()) / DAY);
-      if (index >= 0 && index < 28) grid[Math.floor(index / 7)][index % 7]++;
-    }
-    return { grid, max: Math.max(0, ...grid.flat()) };
-  }, [completedTasks]);
-  const heatClass = (count: number) => !count || !heatmap.max ? HEAT[0] : HEAT[Math.min(4, Math.ceil(count / heatmap.max * 4))];
+  const completionDates = React.useMemo(() => completedTasks.map(completedAt).filter((at): at is Date => !!at), [completedTasks]);
 
   const kpis = [
     { label: 'اعضای تیم', value: `${toPersianDigits(teamMembers.length)} نفر`, icon: Users },
@@ -72,7 +55,7 @@ export const TeamPerformanceView: React.FC = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full font-sans text-right pt-1" dir="rtl">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full font-sans text-start pt-1">
       <div className="lg:col-span-8 flex flex-col gap-6">
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -116,35 +99,7 @@ export const TeamPerformanceView: React.FC = () => {
             )}
           </div>
 
-          {/* Completion heatmap */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">نقشهٔ تکمیل وظایف</h3>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">چهار هفتهٔ اخیر، هر خانه یک روز</p>
-              </div>
-              <Calendar size={18} className="text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="space-y-1.5" role="table" aria-label="تعداد وظایف تکمیل‌شده در هر روز">
-              <div className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] gap-1.5 text-[9px] font-bold text-slate-400 text-center">
-                <span />
-                {WEEKDAYS.map(day => <span key={day} className="truncate">{day}</span>)}
-              </div>
-              {heatmap.grid.map((week, weekIndex) => (
-                <div key={weekIndex} className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] gap-1.5 items-center">
-                  <span className="text-[9px] font-bold text-slate-400">{weekIndex === 3 ? 'این هفته' : `${toPersianDigits(3 - weekIndex)} هفته پیش`}</span>
-                  {week.map((count, dayIndex) => (
-                    <div key={dayIndex} title={`${WEEKDAYS[dayIndex]}: ${toPersianDigits(count)} وظیفه`} className={`h-6 rounded-md ${heatClass(count)}`} />
-                  ))}
-                </div>
-              ))}
-              <div className="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 font-bold pt-2">
-                <span>کمتر</span>
-                {HEAT.map(cls => <span key={cls} className={`w-3 h-3 rounded ${cls}`} />)}
-                <span>بیشتر</span>
-              </div>
-            </div>
-          </div>
+          <ActivityHeatmap dates={completionDates} title="نقشهٔ تکمیل وظایف" subtitle="چهار هفتهٔ اخیر، هر خانه یک روز" describe={count => `${toPersianDigits(count)} وظیفهٔ تکمیل‌شده`} />
         </div>
       </div>
 

@@ -256,9 +256,9 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
   const statusHistory = project.statusHistory || [];
 
   return (
-    <div className="space-y-6 dir-rtl text-right font-sans pb-12" dir="rtl" style={{ fontFeatureSettings: '"ss01" 1' }}>
+    <div className="space-y-6 text-start font-sans pb-12">
       
-      {saveError && <p role="alert" className="p-3 text-red-600">{saveError}</p>}
+      {saveError && <p role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold">{saveError}</p>}
       {/* HEADER ACTION BAR */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -266,7 +266,8 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
             type="button"
             onClick={onBack}
             className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl transition-all cursor-pointer shrink-0"
-            title="← بازگشت به مدیریت پروژه‌ها"
+            title="بازگشت به مدیریت پروژه‌ها"
+            aria-label="بازگشت به مدیریت پروژه‌ها"
           >
             <ArrowRight size={18} />
           </button>
@@ -289,15 +290,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5"
-          >
-            <span>← بازگشت به مدیریت پروژه‌ها</span>
-          </button>
-
-          <button
+          {activeTab !== 'portal' && <button
             type="button"
             onClick={() => handleSave()}
             disabled={isSaving}
@@ -305,7 +298,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
           >
             <Save size={15} />
             <span>{isSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}</span>
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -313,7 +306,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
       {savedSuccess && (
         <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200 rounded-2xl p-4 flex items-center gap-3 animate-in fade-in zoom-in-95 duration-200">
           <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span className="text-xs font-bold">تغییرات پروژه با موفقیت در دیتابیس سیستم ثبت شد.</span>
+          <span className="text-xs font-bold">تغییرات پروژه ذخیره شد.</span>
         </div>
       )}
 
@@ -653,7 +646,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 <div>
                   <span className="text-[11px] text-slate-400 font-bold block">کل وظایف تعریف‌شده</span>
                   <span className="text-base font-black text-slate-800 dark:text-slate-100 font-mono">
-                    {toPersianDigits(totalTasksCount)} تسک
+                    {toPersianDigits(totalTasksCount)} وظیفه
                   </span>
                 </div>
               </div>
@@ -666,7 +659,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 <div>
                   <span className="text-[11px] text-slate-400 font-bold block">وظایف تکمیل‌شده</span>
                   <span className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                    {toPersianDigits(completedTasksCount)} تسک
+                    {toPersianDigits(completedTasksCount)} وظیفه
                   </span>
                 </div>
               </div>
@@ -679,7 +672,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                 <div>
                   <span className="text-[11px] text-slate-400 font-bold block">وظایف در جریان</span>
                   <span className="text-base font-black text-amber-600 dark:text-amber-400 font-mono">
-                    {toPersianDigits(pendingTasksCount)} تسک
+                    {toPersianDigits(pendingTasksCount)} وظیفه
                   </span>
                 </div>
               </div>
@@ -719,8 +712,8 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
             {statusHistory.length > 0 ? (
               <div className="space-y-4 pt-2">
                 {statusHistory.slice().reverse().map((log: StatusLog, idx: number) => (
-                  <div key={idx} className="relative pr-6 border-r-2 border-blue-500/30 dark:border-blue-500/20 pb-4 last:pb-0">
-                    <div className="absolute -right-[9px] top-1 w-4 h-4 rounded-full bg-blue-600 border-2 border-white dark:border-slate-900 shadow-xs" />
+                  <div key={idx} className="relative ps-6 border-s-2 border-blue-500/30 dark:border-blue-500/20 pb-4 last:pb-0">
+                    <div className="absolute -start-[9px] top-1 w-4 h-4 rounded-full bg-blue-600 border-2 border-white dark:border-slate-900 shadow-xs" />
                     
                     <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl p-4 space-y-3">
                       
@@ -736,7 +729,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                         <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-bold flex items-center gap-1">
                           <Clock size={12} className="text-blue-500" />
                           <span>{formatJalaliDateTime(log.timestamp)}</span>
-                          {log.username && <span className="mr-2 text-slate-400" dir="ltr">@{log.username}</span>}
+                          {log.username && <span className="ms-2 text-slate-400" dir="ltr">@{log.username}</span>}
                         </div>
                       </div>
 
@@ -746,7 +739,7 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
                           <MessageSquare size={12} className="text-blue-500" />
                           <span>علت ثبت‌شده توسط راهبر:</span>
                         </span>
-                        <div className="bg-white dark:bg-slate-800 p-3 rounded-xl text-slate-700 dark:text-slate-200 text-xs font-medium leading-relaxed border-r-4 border-blue-600 shadow-2xs">
+                        <div className="bg-white dark:bg-slate-800 p-3 rounded-xl text-slate-700 dark:text-slate-200 text-xs font-medium leading-relaxed border-s-4 border-blue-600 shadow-2xs">
                           {log.reason || 'بدون توضیحات ثبت شده.'}
                         </div>
                       </div>
@@ -770,15 +763,14 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
           </div>
         )}
 
-        {/* SECTION 4: پورتال کارفرما و مرکز بازخوردهای دریافتی */}
-        {/* BOTTOM SAVE ACTIONS */}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        {/* The client portal tab saves its own changes. */}
+        {activeTab !== 'portal' && <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
             onClick={onBack}
             className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-xs font-extrabold transition-all cursor-pointer"
           >
-            ← انصراف و بازگشت
+            انصراف
           </button>
 
           <button
@@ -787,9 +779,9 @@ export const ProjectSettingsView: React.FC<ProjectSettingsViewProps> = ({
             className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black shadow-md shadow-blue-600/20 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50"
           >
             <Save size={15} />
-            <span>{isSaving ? 'در حال ذخیره...' : 'ذخیره تمام تغییرات'}</span>
+            <span>{isSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}</span>
           </button>
-        </div>
+        </div>}
 
       </form>
       {(activeTab==='all'||activeTab==='portal')&&<ClientPortalView projectOverride={project}/>}

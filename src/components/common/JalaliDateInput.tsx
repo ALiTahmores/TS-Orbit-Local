@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import {
-  JALALI_WEEKDAYS_SHORT, formatJalaliDate, jalaliMonthGrid, jalaliMonthLabel, jalaliMonthOf,
+  jalaliWeekdaysShort, formatJalaliDate, jalaliMonthGrid, jalaliMonthLabel, jalaliMonthOf,
   localISODate, persianNumber, shiftJalaliMonth, type JalaliMonth,
 } from '../../lib/dates';
 
@@ -44,7 +44,7 @@ export const JalaliDateInput: React.FC<JalaliDateInputProps> = ({
   const pick = (iso: string) => { onChange(iso); setOpen(false); };
 
   return (
-    <div ref={rootRef} className={`relative ${className}`} dir="rtl">
+    <div ref={rootRef} className={`relative ${className}`}>
       <button
         id={id}
         type="button"
@@ -56,7 +56,7 @@ export const JalaliDateInput: React.FC<JalaliDateInputProps> = ({
         className="w-full h-10 flex items-center gap-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs font-bold text-slate-800 dark:text-slate-100 hover:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition-colors"
       >
         <Calendar size={14} className="text-slate-400 shrink-0" />
-        <span className={`flex-1 text-right truncate ${valid ? '' : 'text-slate-400 font-medium'}`}>{valid ? formatJalaliDate(valid) : placeholder}</span>
+        <span className={`flex-1 text-start truncate ${valid ? '' : 'text-slate-400 font-medium'}`}>{valid ? formatJalaliDate(valid) : placeholder}</span>
         {clearable && valid && !disabled && (
           <span
             role="button"
@@ -72,7 +72,7 @@ export const JalaliDateInput: React.FC<JalaliDateInputProps> = ({
       </button>
 
       {open && (
-        <div role="dialog" aria-label="انتخاب تاریخ" className="absolute z-50 mt-1.5 right-0 w-72 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
+        <div role="dialog" aria-label="انتخاب تاریخ" className="absolute z-50 mt-1.5 start-0 w-72 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
           <div className="flex items-center justify-between mb-2">
             <button type="button" onClick={() => setMonth(current => shiftJalaliMonth(current, -1))} aria-label="ماه قبل" className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
               <ChevronRight size={16} />
@@ -84,7 +84,7 @@ export const JalaliDateInput: React.FC<JalaliDateInputProps> = ({
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 mb-1">
-            {JALALI_WEEKDAYS_SHORT.map(day => <span key={day}>{day}</span>)}
+            {jalaliWeekdaysShort().map(day => <span key={day}>{day}</span>)}
           </div>
           <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: grid.leading }, (_, index) => <span key={`blank-${index}`} />)}

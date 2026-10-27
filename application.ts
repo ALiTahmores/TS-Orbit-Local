@@ -33,11 +33,22 @@ import { PersistenceCoordinator } from './server/persistence.ts';
 import { localAvatar } from './src/lib/localAssets.ts';
 const app = express();
 app.enable('case sensitive routing');
-// Both HTTP and WebSocket admission await the same database/schema initialization.
-app.use((_req, res, next) => { void ready.then(() => next(), () => res.status(503).json({error:'CLOUD_INITIALIZATION_FAILED',message:'سرویس ذخیره‌سازی آماده نیست.'})); });
+const backendPath = (path: string) => /^\/(?:api|socket\.io)(?:\/|$)/.test(path);
+// API and WebSocket admission await the same database/schema initialization. In the
+// cloud the client shell needs no storage, so a cold start paints the app while
+// the database connects instead of holding the first page behind it.
+app.use((req, res, next) => {
+    if (config.cloud && !backendPath(req.path)) return next();
+    void ready.then(() => next(), () => res.status(503).json({error:'CLOUD_INITIALIZATION_FAILED',message:'سرویس ذخیره‌سازی آماده نیست.'}));
+});
 app.disable('x-powered-by');
 app.set('trust proxy', config.trustProxy);
 app.use(securityHeaders({ production: process.env.NODE_ENV === 'production', appOrigin: config.appOrigin, secureOrigin: config.secureOrigin, cloud:config.cloud }));
+if (config.cloud) {
+    const client = express.Router();
+    client.use(...clientApp(config.clientDir));
+    app.use((req, res, next) => backendPath(req.path) ? next() : client(req, res, next));
+}
 const PORT = config.port;
 const parseJson = express.json({ limit: '1mb', verify: (req: any, _res, buffer) => { req.rawBody = buffer.toString('utf8'); } });
 app.use((req, res, next) => {
@@ -481,6 +492,8 @@ const notifications = createNotificationService({scoped,broadcast,broadcastWorks
 chat = new ChatService({scoped,files,broadcast,broadcastRoom,presence:realtime.presence,notify: input => notifications.notify(input),recordActivity: input => notifications.recordActivity(input)});
 // Password hashing runs before the serialized storage queue (see prepareCredentials).
 if(!config.cloud) app.use('/api/auth', auth.prepareCredentials);
+// Static runtime facts need no storage transaction.
+app.get('/api/runtime',(_req,res)=>res.json({cloud:config.cloud,directUpload:config.cloud,maxFileBytes:files.maxBytes}));
 app.use(persistence.middleware);
 if(config.cloud) {
     await db.cloudStore!.sharedQuery(`CREATE TABLE IF NOT EXISTS orbit_auth_limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL, until_at TIMESTAMPTZ NOT NULL)`);
@@ -496,7 +509,6 @@ if(config.cloud) {
     });
     app.use('/api/auth',auth.prepareCredentials);
 }
-app.get('/api/runtime',(_req,res)=>res.json({cloud:config.cloud,directUpload:config.cloud,maxFileBytes:files.maxBytes}));
 app.use(requestAudit(RAW));
 app.use((req, _res, next) => {
     if (config.cloud && /^\/api\//.test(req.path) && (req.method==='DELETE'||Date.now()-lastCloudCleanup>60_000)) {
@@ -900,6 +912,8 @@ process.once('SIGTERM', () => { shutdown().then(() => process.exit(0)).catch(err
 // Vite / static file router orchestration
 async function startServer() {
     app.use('/api', (_req, res) => res.status(404).json({ error: 'ENDPOINT_NOT_FOUND' }));
+    // In the cloud the compiled client was mounted ahead of initialization.
+    if (config.cloud) return;
     if (process.env.NODE_ENV !== "production") {
         console.log("Staging dev mode. Mounting Vite integration...");
         const { createServer: createViteServer } = await import('vite');

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Laptop, LogOut, RefreshCw, Smartphone } from 'lucide-react';
 import { apiFetch, clearCredential } from '../../lib/api';
+import { formatJalaliDateTime } from '../../lib/dates';
 
 interface SessionRow {
   id: string;
@@ -22,7 +23,7 @@ export const describeUserAgent = (agent = '') => {
 
 const when = (iso?: string) => {
   const date = iso ? new Date(iso) : undefined;
-  return date && !Number.isNaN(date.getTime()) ? date.toLocaleString('fa-IR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '';
+  return date && !Number.isNaN(date.getTime()) ? formatJalaliDateTime(date) : '';
 };
 
 /** The signed-in user's active sessions, read from and revoked on the server. */

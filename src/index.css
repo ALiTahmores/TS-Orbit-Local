@@ -5,6 +5,13 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+/* A border without a color class takes the theme's divider color rather than the
+   text color (the Tailwind v4 default), so it stays subtle in both themes. */
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--color-slate-200, currentColor); }
+  .dark *, .dark ::after, .dark ::before, .dark ::backdrop, .dark ::file-selector-button { border-color: var(--color-slate-700, currentColor); }
+}
+
 :root {
   /* Spacing Scale */
   --space-4: 0.25rem;   /* 4px */
@@ -200,6 +207,12 @@ html, body {
 .latin-digits, .en-num {
   font-feature-settings: "ss01" 0;
   font-family: "Inter", sans-serif;
+}
+
+/* The interface is drawn right-to-left; in English, horizontal arrows and chevrons
+   point the other way. */
+[dir="ltr"] :is(.lucide-arrow-left, .lucide-arrow-right, .lucide-chevron-left, .lucide-chevron-right, .lucide-chevrons-left, .lucide-chevrons-right) {
+  transform: scaleX(-1);
 }
 
 /* URLs, emails, codes and other left-to-right text keep Latin digits. */

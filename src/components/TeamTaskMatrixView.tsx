@@ -34,7 +34,9 @@ export interface TeamGroupDef {
 
 
 export const TeamTaskMatrixView: React.FC = () => {
-  const { tasks, updateTaskStatus, createTask, deleteTask, projects, teams, departments, teamMembers, t, locale } = useProject();
+  const { tasks, updateTaskStatus, createTask, deleteTask, projects, teams, departments, teamMembers, t, locale, userRole, setActiveTab, setActiveSubTab } = useProject();
+  // Teams are defined in the organization builder, which owners and admins can open.
+  const canDefineTeams = ['OWNER', 'ADMIN'].includes(String(userRole || '').toUpperCase());
   const TEAMS_GROUPS:TeamGroupDef[] = teams.map((team:any) => {
     const dept=departments.find((department:any)=>department.id===team.departmentId);
     const memberIds=[...new Set<string>([...(team.memberIds || []),...(team.leaderId?[team.leaderId]:[])])];
@@ -111,20 +113,20 @@ export const TeamTaskMatrixView: React.FC = () => {
   };
 
   return (
-    <div className={`w-full space-y-6 ${isRtl ? 'font-vazirmatn text-right' : 'font-sans text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className={`w-full space-y-6 ${isRtl ? 'font-vazirmatn text-start' : 'font-sans text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       
       {/* SUB-HEADER BANNER & GLOBAL CONTROLS */}
       <div className="bg-white dark:bg-[#0d121f] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
         {/* Global Search and Status Filter */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
-            <Search size={14} className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500`} />
+            <Search size={14} className={`absolute ${isRtl ? 'start-3' : 'end-3'} top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500`} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('search_tasks_placeholder')}
-              className={`w-full ${isRtl ? 'pr-9 pl-3' : 'pl-9 pr-3'} py-2.5 bg-slate-50 dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors`}
+              className={`w-full ${isRtl ? 'ps-9 pe-3' : 'pe-9 ps-3'} py-2.5 bg-slate-50 dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors`}
             />
           </div>
 
@@ -152,6 +154,16 @@ export const TeamTaskMatrixView: React.FC = () => {
             <Users size={40} className="text-slate-300 dark:text-slate-600 mx-auto" />
             <h3 className="text-sm font-extrabold text-slate-700 dark:text-slate-200">{t('no_teams_registered')}</h3>
             <p className="text-xs text-slate-400 dark:text-slate-500">{t('no_teams_desc')}</p>
+            {canDefineTeams && (
+              <button
+                type="button"
+                onClick={() => { setActiveTab('org_builder'); setActiveSubTab('org_builder_main'); }}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>تعریف تیم جدید</span>
+              </button>
+            )}
           </div>
         ) : (
           TEAMS_GROUPS.map((team) => {
@@ -201,7 +213,7 @@ export const TeamTaskMatrixView: React.FC = () => {
                 {/* TEAM TASK TABLE STRUCTURE */}
                 <div className="bg-white dark:bg-[#0d121f] border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
                   <div className="overflow-x-auto">
-                    <table className={`w-full ${isRtl ? 'text-right' : 'text-left'} border-collapse min-w-[760px]`}>
+                    <table className={`w-full ${isRtl ? 'text-start' : 'text-left'} border-collapse min-w-[760px]`}>
                       <thead>
                         <tr className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-50/80 dark:bg-[#131b2e] border-b border-slate-200/80 dark:border-slate-800 select-none">
                           <th className="p-3 w-10 text-center">
@@ -353,7 +365,7 @@ export const TeamTaskMatrixView: React.FC = () => {
                                   </button>
 
                                   {activeMenuId === task.id && (
-                                    <div className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-10 w-40 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-20 py-1 ${isRtl ? 'text-right' : 'text-left'} text-xs font-bold`}>
+                                    <div className={`absolute ${isRtl ? 'end-4' : 'start-4'} top-10 w-40 bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-20 py-1 ${isRtl ? 'text-start' : 'text-left'} text-xs font-bold`}>
                                       <button
                                         type="button"
                                         onClick={() => {

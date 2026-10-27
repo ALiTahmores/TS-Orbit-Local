@@ -55,11 +55,11 @@ export const DynamicModuleView: React.FC<DynamicModuleViewProps> = ({ instanceId
   };
 
   return (
-    <div className="w-full space-y-6 text-right" style={{ direction: 'rtl' }}>
+    <div className="w-full space-y-6 text-start">
       {error && <p role="alert" className="text-red-600 p-3">{error}</p>}
       {/* Banner */}
       <div className="bg-surface-primary border border-border-primary rounded-2xl p-6 relative overflow-hidden shadow-sm">
-        <div className="absolute top-0 left-0 w-32 h-32 bg-[#6C63FF]/5 blur-3xl rounded-full" />
+        <div className="absolute top-0 end-0 w-32 h-32 bg-[#6C63FF]/5 blur-3xl rounded-full" />
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
           <div>
             <span className="text-[10px] bg-[#6C63FF]/15 text-[#6C63FF] px-2.5 py-1 rounded-full font-bold">
@@ -133,12 +133,12 @@ export const DynamicModuleView: React.FC<DynamicModuleViewProps> = ({ instanceId
           </div>
         ) : (
           <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-            <table className="w-full text-right text-xs min-w-[700px]">
+            <table className="w-full text-start text-xs min-w-[700px]">
               <thead>
                 <tr className="border-b border-border-primary/50 text-text-secondary font-black pb-2">
-                  <th className="pb-2 text-right pr-2">تاریخ ثبت</th>
+                  <th className="pb-2 text-start ps-2">تاریخ ثبت</th>
                   {fields.map(f => (
-                    <th key={f} className="pb-2 text-right">{f}</th>
+                    <th key={f} className="pb-2 text-start">{f}</th>
                   ))}
                   <th className="pb-2 text-left">عملیات</th>
                 </tr>
@@ -146,7 +146,7 @@ export const DynamicModuleView: React.FC<DynamicModuleViewProps> = ({ instanceId
               <tbody className="divide-y divide-border-primary/30">
                 {records.map((rec: any) => (
                   <tr key={rec.id} className="hover:bg-hover-overlay/40 transition-colors">
-                    <td className="py-3 pr-2 text-text-secondary font-mono text-[10px]">{formatJalaliDateTime(rec.createdAt)}</td>
+                    <td className="py-3 ps-2 text-text-secondary font-mono text-[10px]">{formatJalaliDateTime(rec.createdAt)}</td>
                     {fields.map(f => (
                       <td key={f} className="py-3 text-text-primary font-bold">{rec.data[f] || '—'}</td>
                     ))}

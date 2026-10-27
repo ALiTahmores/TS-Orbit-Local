@@ -1,4 +1,5 @@
 import { projectStatusUI } from '../../lib/domain';
+import { formatJalaliDate } from '../../lib/dates';
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useProject } from '../../context/ProjectContext';
@@ -96,7 +97,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
       );
     }
     return (
-      <div className="w-full h-full p-1.5 flex flex-col justify-between text-right font-sans select-none pointer-events-none bg-white dark:bg-slate-900 rounded-md border border-slate-200/80 dark:border-slate-700/80">
+      <div className="w-full h-full p-1.5 flex flex-col justify-between text-start font-sans select-none pointer-events-none bg-white dark:bg-slate-900 rounded-md border border-slate-200/80 dark:border-slate-700/80">
         <div className="flex items-center gap-1 min-w-0">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
           <span className="text-[10px] font-black text-slate-800 dark:text-slate-100 truncate dir-rtl">
@@ -211,7 +212,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
     ];
 
     return (
-      <div className="relative inline-block text-right" dir="rtl">
+      <div className="relative inline-block text-start">
         {/* Date-picker style trigger pill */}
         <button
           type="button"
@@ -241,7 +242,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
 
         {/* Floating Popover Dropdown Menu Rendered via Portal */}
         {isOpen && popoverCoords && createPortal(
-          <div className="fixed inset-0 z-[100] font-sans" dir="rtl">
+          <div className="fixed inset-0 z-[100] font-sans">
             <div 
               className="fixed inset-0 bg-transparent" 
               onClick={(e) => {
@@ -437,7 +438,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
   }
 
   return (
-    <div className="w-full space-y-6 dir-rtl font-sans" dir="rtl" style={{ fontFeatureSettings: '"ss01" 1' }}>
+    <div className="w-full space-y-6 font-sans">
       
       {/* 1. TOP ACTION BAR */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-2xs space-y-4">
@@ -552,11 +553,11 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
       {filteredProjects.length > 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xs overflow-visible relative z-10">
           <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-            <table className="w-full text-right text-xs border-collapse min-w-[750px]">
+            <table className="w-full text-start text-xs border-collapse min-w-[750px]">
               <thead>
                 <tr className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-black">
-                  <th className="py-3.5 px-4 text-right">عنوان پروژه</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">نام کارفرما</th>
+                  <th className="py-3.5 px-4 text-start">عنوان پروژه</th>
+                  <th className="py-3.5 px-4 text-start whitespace-nowrap">نام کارفرما</th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">تاریخ شروع</th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">سررسید</th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap w-36">درصد پیشرفت</th>
@@ -587,12 +588,12 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                           }`}>
                             {project.title ? project.title.substring(0, 1) : 'پ'}
                           </div>
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 flex flex-col items-start">
                             <Tooltip content={project.title}>
                               <button
                                 type="button"
                                 onClick={() => handleSelectAndEnter(project)}
-                                className="font-extrabold text-slate-800 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline text-xs block max-w-[180px] sm:max-w-[260px] xl:max-w-[320px] truncate text-right cursor-pointer"
+                                className="font-extrabold text-slate-800 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline text-xs block max-w-[180px] sm:max-w-[260px] xl:max-w-[320px] truncate text-start cursor-pointer"
                               >
                                 {project.title}
                               </button>
@@ -609,7 +610,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                       </td>
 
                       {/* Client Name */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap text-slate-700 dark:text-slate-300 font-bold">
+                      <td className="py-3.5 px-4 text-start whitespace-nowrap text-slate-700 dark:text-slate-300 font-bold">
                         <Tooltip content={project.clientName || 'نامشخص'}>
                           <div className="flex items-center gap-1.5 cursor-default">
                             <User size={13} className="text-slate-400 shrink-0" />
@@ -622,7 +623,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                       <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap text-slate-500 dark:text-slate-400">
                         <div className="flex items-center justify-center gap-1.5">
                           <Calendar size={13} className="text-slate-400 shrink-0" />
-                          <span>{project.startDate ? toPersianDigits(project.startDate) : '—'}</span>
+                          <span>{formatJalaliDate((project as any).startDateCanonical || project.startDate) || (project.startDate ? toPersianDigits(project.startDate) : '—')}</span>
                         </div>
                       </td>
 
@@ -630,7 +631,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                       <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap text-slate-500 dark:text-slate-400">
                         <div className="flex items-center justify-center gap-1.5">
                           <Clock size={13} className="text-slate-400 shrink-0" />
-                          <span>{project.deadline ? toPersianDigits(project.deadline) : '—'}</span>
+                          <span>{formatJalaliDate((project as any).deadlineCanonical || project.deadline) || (project.deadline ? toPersianDigits(project.deadline) : '—')}</span>
                         </div>
                       </td>
 
@@ -706,7 +707,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
         </div>
       ) : (
         /* 3. ZERO STATE CARD */
-        <div className="bg-white dark:bg-[#111322] border border-gray-200/70 dark:border-[#1E2235] rounded-2xl p-8 sm:p-12 text-center space-y-6 shadow-sm dark:shadow-2xl dir-rtl" dir="rtl">
+        <div className="bg-white dark:bg-[#111322] border border-gray-200/70 dark:border-[#1E2235] rounded-2xl p-8 sm:p-12 text-center space-y-6 shadow-sm dark:shadow-2xl dir-rtl">
           <div className="w-20 h-20 rounded-2xl bg-blue-50 dark:bg-blue-600/10 border border-blue-200 dark:border-blue-500/20 text-blue-600 dark:text-blue-500 flex items-center justify-center mx-auto shadow-inner">
             <FolderOpen size={36} className="stroke-[1.75]" />
           </div>
@@ -716,7 +717,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
               {t('هیچ پروژه‌ای یافت نشد. برای شروع، نخستین پروژه خود را ثبت کنید.')}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              {t('با ایجاد اولین پروژه، امکان مدیریت وب‌سایت، ثبت تسک‌ها، بارگذاری رسانه‌ها و ارتباط با کارفرما فعال می‌گردد.')}
+              {t('با ایجاد اولین پروژه، امکان مدیریت وب‌سایت، ثبت وظیفه‌ها، بارگذاری رسانه‌ها و ارتباط با کارفرما فعال می‌گردد.')}
             </p>
           </div>
 
@@ -733,7 +734,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
 
       {/* 4. SAFETY DELETION CONFIRMATION MODAL */}
       {deletingProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 dir-rtl" dir="rtl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 dir-rtl">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
               <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center justify-center shrink-0">

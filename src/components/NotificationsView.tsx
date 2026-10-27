@@ -84,7 +84,7 @@ export const NotificationsView: React.FC = () => {
     switch (type) {
       case 'task_assigned': return isRtl ? 'وظیفه جدید' : 'Task Assigned';
       case 'task_completed': return isRtl ? 'تکمیل وظیفه' : 'Task Completed';
-      case 'deadline_warning': return isRtl ? 'هشدار ددلاین' : 'Deadline Warning';
+      case 'deadline_warning': return isRtl ? 'هشدار سررسید' : 'Deadline Warning';
       case 'approval_needed': return isRtl ? 'نیازمند تایید' : 'Approval Needed';
       case 'file_uploaded': return isRtl ? 'آپلود فایل' : 'File Uploaded';
       case 'project_updated': return isRtl ? 'تغییر وضعیت پروژه' : 'Project Updated';
@@ -93,10 +93,9 @@ export const NotificationsView: React.FC = () => {
   };
 
   return (
-    <div className="w-full space-y-6 pb-12 font-vazirmatn text-right" style={{ direction: isRtl ? 'rtl' : 'ltr' }}>
-      
-      {(error||collaborationError)&&<p role="alert" className="text-sm text-rose-600">{error||collaborationError}</p>}
-      <button className="text-xs underline" disabled={busy||!notifications.length} onClick={()=>void act(clearNotifications)}>پاک کردن اعلان‌های من</button>
+    <div className="w-full space-y-6 pb-12 font-vazirmatn text-start">
+
+      {(error||collaborationError)&&<p role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold">{error||collaborationError}</p>}
       {/* HEADER SECTION */}
       <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 md:p-6 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3.5">
@@ -120,15 +119,26 @@ export const NotificationsView: React.FC = () => {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => void act(markAllNotificationsAsRead)}
-          disabled={busy || unreadCount === 0}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold rounded-2xl text-xs transition-all flex items-center gap-2 shadow-sm cursor-pointer shrink-0"
-        >
-          <CheckCheck size={16} />
-          <span>{isRtl ? 'علامت‌گذاری همه به عنوان خوانده شده' : 'Mark all as read'}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => void act(clearNotifications)}
+            disabled={busy || !notifications.length}
+            className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-bold rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <Trash2 size={15} />
+            <span>پاک کردن اعلان‌ها</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => void act(markAllNotificationsAsRead)}
+            disabled={busy || unreadCount === 0}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold rounded-2xl text-xs transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+          >
+            <CheckCheck size={16} />
+            <span>{isRtl ? 'علامت‌گذاری همه به عنوان خوانده شده' : 'Mark all as read'}</span>
+          </button>
+        </div>
       </div>
 
       {/* FILTER TABS */}

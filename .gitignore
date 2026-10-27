@@ -7,7 +7,7 @@ npm-cache/
 build/
 dist/
 coverage/
-data/
+/data/
 .stage1-test-data/
 .DS_Store
 *.log

@@ -46,10 +46,10 @@ const toPersianDigits = (n: string | number): string => {
 const statusFilterOptions: CustomSelectOption[] = [
   { value: 'all', label: 'همه وضعیت‌ها' },
   { value: 'pending', label: 'در انتظار' },
-  { value: 'inprogress', label: 'در جریان' },
+  { value: 'inprogress', label: 'در حال انجام' },
   { value: 'review', label: 'در حال بررسی' },
-  { value: 'completed', label: 'تکمیل شده' },
-  { value: 'blocked', label: 'مسدود شده' },
+  { value: 'completed', label: 'تکمیل‌شده' },
+  { value: 'blocked', label: 'مسدود' },
   { value: 'cancelled', label: 'لغوشده' },
 ];
 
@@ -69,10 +69,10 @@ export const TasksAndSchedulingView: React.FC = () => {
   const localizedStatusFilterOptions = useMemo(() => [
     { value: 'all', label: t('همه وضعیت‌ها') },
     { value: 'pending', label: t('در انتظار') },
-    { value: 'inprogress', label: t('در جریان') },
+    { value: 'inprogress', label: t('در حال انجام') },
     { value: 'review', label: t('در حال بررسی') },
-    { value: 'completed', label: t('تکمیل شده') },
-    { value: 'blocked', label: t('مسدود شده') },
+    { value: 'completed', label: t('تکمیل‌شده') },
+    { value: 'blocked', label: t('مسدود') },
     { value: 'cancelled', label: t('لغوشده') },
   ], [t]);
 
@@ -131,7 +131,7 @@ export const TasksAndSchedulingView: React.FC = () => {
 
   const handleSmsSaveSuccess = (data: { projectId: string; customDateTime?: string }) => {
     setActiveReminders(prev => ({ ...prev, [data.projectId]: true }));
-    setToastMessage('یادآوری پیامکی برای ددلاین پروژه با موفقیت فعال شد');
+    setToastMessage('یادآوری پیامکی برای سررسید پروژه با موفقیت فعال شد');
     setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -188,10 +188,10 @@ export const TasksAndSchedulingView: React.FC = () => {
 
   const getPriorityBadge = (p: TaskPriority) => {
     switch (p) {
-      case 'critical': return { label: 'بحرانی', style: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400' };
-      case 'high': return { label: 'زیاد', style: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' };
+      case 'critical': return { label: 'فوری', style: 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400' };
+      case 'high': return { label: 'بالا', style: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' };
       case 'medium': return { label: 'متوسط', style: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' };
-      case 'low': return { label: 'کم', style: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' };
+      case 'low': return { label: 'پایین', style: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' };
     }
   };
 
@@ -206,7 +206,7 @@ export const TasksAndSchedulingView: React.FC = () => {
     const isCollapsed = collapsedGroups[groupKey];
 
     return (
-      <div key={groupKey} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs text-right" dir="rtl">
+      <div key={groupKey} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-2xs text-start">
         {/* Accordion Group Header */}
         <div 
           onClick={() => toggleGroup(groupKey)}
@@ -238,15 +238,15 @@ export const TasksAndSchedulingView: React.FC = () => {
                 {t('هیچ پروژه‌ای در این بخش یافت نشد.')}
               </div>
             ) : (
-              <table className={`w-full border-collapse ${isRtl ? 'text-right' : 'text-left'}`}>
+              <table className={`w-full border-collapse ${isRtl ? 'text-start' : 'text-left'}`}>
                 <thead>
                   <tr className="bg-slate-50/60 dark:bg-slate-800/40 text-[11px] font-black text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase">
-                    <th className={`p-3.5 whitespace-nowrap ${isRtl ? 'pr-4 text-right' : 'pl-4 text-left'}`}>{t('عنوان پروژه')}</th>
+                    <th className={`p-3.5 whitespace-nowrap ${isRtl ? 'ps-4 text-start' : 'pe-4 text-left'}`}>{t('عنوان پروژه')}</th>
                     <th className="p-3.5 whitespace-nowrap">{t('اعضای تیم')}</th>
                     <th className="p-3.5 whitespace-nowrap">{t('وضعیت')}</th>
                     <th className="p-3.5 whitespace-nowrap">{t('پیشرفت')}</th>
                     <th className="p-3.5 whitespace-nowrap">{t('زمان ثبت‌شده (کارکرد)')}</th>
-                    <th className={`p-3.5 whitespace-nowrap ${isRtl ? 'text-left pl-4' : 'text-right pr-4'}`}>{t('اقدامات تسک')}</th>
+                    <th className={`p-3.5 whitespace-nowrap ${isRtl ? 'text-left pe-4' : 'text-start ps-4'}`}>{t('اقدامات وظیفه')}</th>
                   </tr>
                 </thead>
 
@@ -268,7 +268,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                     return (
                       <React.Fragment key={project.id}>
                         <tr className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                          <td className="p-3.5 pr-4">
+                          <td className="p-3.5 ps-4">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center font-black shrink-0 shadow-2xs">
                                 <Folder size={15} />
@@ -359,7 +359,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                             </div>
                           </td>
 
-                          <td className="p-3.5 text-left pl-4 whitespace-nowrap">
+                          <td className="p-3.5 text-left pe-4 whitespace-nowrap">
                             <button
                               type="button"
                               onClick={() => toggleExpandProject(project.id)}
@@ -370,7 +370,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                               }`}
                             >
                               <CheckSquare size={13} />
-                              <span>مشاهده تسک‌ها ({toPersianDigits(projectTaskList.length)})</span>
+                              <span>مشاهده وظایف ({toPersianDigits(projectTaskList.length)})</span>
                               {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                             </button>
                           </td>
@@ -397,23 +397,23 @@ export const TasksAndSchedulingView: React.FC = () => {
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
                                       <h5 className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                                         <ListTodo size={15} className="text-blue-600" />
-                                        <span>تسک‌های فنی پروژه ({toPersianDigits(projectTaskList.length)})</span>
+                                        <span>وظایف فنی پروژه ({toPersianDigits(projectTaskList.length)})</span>
                                       </h5>
                                       
-                                      {/* Requirement 1: Only keep the drawer's "+ افزودن تسک جدید" button */}
+                                      {/* Requirement 1: Only keep the drawer's "+ افزودن وظیفه جدید" button */}
                                       <button
                                         type="button"
                                         onClick={() => openCreateTaskModal(project.id)}
                                         className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-xl transition-all shadow-sm cursor-pointer shrink-0 flex items-center gap-1"
                                       >
                                         <Plus size={14} />
-                                        <span>+ افزودن تسک جدید</span>
+                                        <span>+ افزودن وظیفه جدید</span>
                                       </button>
                                     </div>
 
                                     <div className="space-y-2">
                                       {projectTaskList.length === 0 ? (
-                                        <p className="text-xs text-slate-400 py-2 font-bold">تسکی برای این پروژه ثبت نشده است.</p>
+                                        <p className="text-xs text-slate-400 py-2 font-bold">وظیفه‌ای برای این پروژه ثبت نشده است.</p>
                                       ) : (
                                         projectTaskList.map((t) => {
                                           const pBadge = getPriorityBadge(t.priority);
@@ -439,7 +439,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                                                 <button
                                                   type="button"
                                                   onClick={() => setDetailTask(t)}
-                                                  className={`text-right hover:text-blue-600 hover:underline cursor-pointer ${isCompleted ? 'line-through text-slate-400' : ''}`}
+                                                  className={`text-start hover:text-blue-600 hover:underline cursor-pointer ${isCompleted ? 'line-through text-slate-400' : ''}`}
                                                 >
                                                   {t.title}
                                                 </button>
@@ -459,7 +459,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                                                   type="button"
                                                   onClick={() => { if (confirm('آیا از حذف این وظیفه مطمئن هستید؟')) void deleteTask(t.id); }}
                                                   className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                                                  title="حذف تسک"
+                                                  title="حذف وظیفه"
                                                 >
                                                   <Trash2 size={13} />
                                                 </button>
@@ -490,7 +490,7 @@ export const TasksAndSchedulingView: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 w-full font-sans relative ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'} style={{ fontFeatureSettings: '"ss01" 1' }}>
+    <div className={`space-y-6 w-full font-sans relative ${isRtl ? 'text-start' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       
       {/* Toast Notification */}
       {toastMessage && (
@@ -506,14 +506,14 @@ export const TasksAndSchedulingView: React.FC = () => {
         {/* Search & Status Filter */}
         <div className="flex flex-wrap items-center gap-3 flex-1">
           <div className="relative flex-1 min-w-[200px]">
-            <Search size={14} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${isRtl ? 'right-3' : 'left-3'}`} />
+            <Search size={14} className={`absolute top-1/2 -translate-y-1/2 text-slate-400 ${isRtl ? 'start-3' : 'end-3'}`} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('جستجو در نام پروژه، کارفرما یا تسک...')}
+              placeholder={t('جستجو در نام پروژه، کارفرما یا وظیفه...')}
               className={`w-full py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                isRtl ? 'pr-9 pl-3' : 'pl-9 pr-3'
+                isRtl ? 'ps-9 pe-3' : 'pe-9 ps-3'
               }`}
             />
           </div>
@@ -531,7 +531,7 @@ export const TasksAndSchedulingView: React.FC = () => {
         {/* Right Action & View Mode Switcher */}
         <div className="flex items-center gap-3 shrink-0">
           
-          {/* Requirement 1: Removed duplicate top "+ افزودن تسک" button here. Keeping only clean 2-Tab Switcher */}
+          {/* Requirement 1: Removed duplicate top "+ افزودن وظیفه" button here. Keeping only clean 2-Tab Switcher */}
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl shrink-0">
             <button
               type="button"
@@ -556,7 +556,7 @@ export const TasksAndSchedulingView: React.FC = () => {
               }`}
             >
               <Timer size={14} />
-              <span>{t('زمان‌بندی و ددلاین‌ها')}</span>
+              <span>{t('زمان‌بندی و سررسیدها')}</span>
             </button>
           </div>
 
@@ -619,7 +619,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                 <Calendar size={20} />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-400">کل ددلاین‌های فعال</p>
+                <p className="text-[11px] font-bold text-slate-400">کل سررسیدهای فعال</p>
                 <h4 className="text-base font-black text-slate-800 dark:text-slate-100 mt-0.5">
                   {toPersianDigits(groupedProjects.active.length)} پروژه
                 </h4>
@@ -631,7 +631,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                 <AlertTriangle size={20} />
               </div>
               <div>
-                <p className="text-[11px] font-bold text-slate-400">ددلاین‌های نزدیک</p>
+                <p className="text-[11px] font-bold text-slate-400">سررسیدهای نزدیک</p>
                 <h4 className="text-base font-black text-slate-800 dark:text-slate-100 mt-0.5">
                   {toPersianDigits(Math.min(groupedProjects.active.length, 3))} پروژه
                 </h4>
@@ -645,7 +645,7 @@ export const TasksAndSchedulingView: React.FC = () => {
               <div>
                 <p className="text-[11px] font-bold text-slate-400">یادآوری پیامکی فعال</p>
                 <h4 className="text-base font-black text-slate-800 dark:text-slate-100 mt-0.5">
-                  {toPersianDigits(Object.keys(activeReminders).length)} ددلاین
+                  {toPersianDigits(Object.keys(activeReminders).length)} سررسید
                 </h4>
               </div>
             </div>
@@ -659,7 +659,7 @@ export const TasksAndSchedulingView: React.FC = () => {
               <div>
                 <h3 className="font-black text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
                   <Timer size={20} className="text-emerald-600" />
-                  <span>پایش ددلاین‌ها و سیستم یادآوری هوشمند</span>
+                  <span>پایش سررسیدها و سیستم یادآوری هوشمند</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   پایش زمان‌بندی تحویل پروژه‌ها، محاسبه شمارش معکوس و ارسال یادآوری خودکار SMS و پنل.
@@ -711,7 +711,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                         <div className="text-xs font-bold text-slate-500 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-3">
                           <span>شروع: <strong className="font-mono text-slate-700 dark:text-slate-200">{formatJalaliDate(project.startDate) || '—'}</strong></span>
                           <span className="text-slate-300">|</span>
-                          <span>ددلاین: <strong className="font-mono text-emerald-600 dark:text-emerald-400">{formatJalaliDate(project.deadline) || '—'}</strong></span>
+                          <span>سررسید: <strong className="font-mono text-emerald-600 dark:text-emerald-400">{formatJalaliDate(project.deadline) || '—'}</strong></span>
                         </div>
 
                         {/* Reminder Status Badge or Button */}

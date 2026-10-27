@@ -115,7 +115,7 @@ export const TaskQuickDetailModal: React.FC<TaskQuickDetailModalProps> = ({
       {/* Modal Card */}
       <div 
         onClick={(e) => e.stopPropagation()}
-        className={`relative z-10 w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-[#0d121f] rounded-[28px] border border-slate-200/90 dark:border-slate-800 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.2)] animate-in fade-in zoom-in-95 duration-150 overflow-hidden ${isRtl ? 'text-right' : 'text-left'}`}
+        className={`relative z-10 w-full max-w-2xl max-h-[90vh] flex flex-col bg-white dark:bg-[#0d121f] rounded-[28px] border border-slate-200/90 dark:border-slate-800 shadow-[0_25px_70px_-15px_rgba(0,0,0,0.2)] animate-in fade-in zoom-in-95 duration-150 overflow-hidden ${isRtl ? 'text-start' : 'text-left'}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-5 px-7 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-[#0d121f]">
@@ -198,13 +198,13 @@ export const TaskQuickDetailModal: React.FC<TaskQuickDetailModalProps> = ({
           <div>
             <h4 className="font-black text-slate-800 dark:text-slate-200 mb-1.5">{isRtl ? 'شرح و نیازمندی‌ها' : 'Description'}</h4>
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-              {task.description || (isRtl ? 'توضیحات بیشتری برای این تسک ثبت نشده است.' : 'No description provided.')}
+              {task.description || (isRtl ? 'توضیحات بیشتری برای این وظیفه ثبت نشده است.' : 'No description provided.')}
             </div>
           </div>
 
           {/* Assignees */}
           <div>
-            <h4 className="font-black text-slate-800 dark:text-slate-200 mb-1.5">{isRtl ? 'اعضای مجری تسک' : 'Assignees'}</h4>
+            <h4 className="font-black text-slate-800 dark:text-slate-200 mb-1.5">{isRtl ? 'اعضای مجری وظیفه' : 'Assignees'}</h4>
             <div className="flex items-center gap-2">
               {task.assignees && task.assignees.length > 0 ? (
                 task.assignees.map((a, i) => (
@@ -226,7 +226,7 @@ export const TaskQuickDetailModal: React.FC<TaskQuickDetailModalProps> = ({
           {task.subtasks && task.subtasks.length > 0 && (
             <div>
               <h4 className="font-black text-slate-800 dark:text-slate-200 mb-1.5 flex items-center justify-between">
-                <span>{isRtl ? 'چک‌لیست زیرتسک‌ها' : 'Subtasks'}</span>
+                <span>{isRtl ? 'چک‌لیست زیرکارها' : 'Subtasks'}</span>
                 <span className="text-[11px] font-mono text-blue-600 dark:text-blue-400">
                   {toPersianDigits(task.subtasks.filter(s => s.completed).length)} / {toPersianDigits(task.subtasks.length)}
                 </span>

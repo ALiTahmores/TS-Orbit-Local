@@ -12,7 +12,7 @@ export const LogoutConfirmModal: React.FC<LogoutConfirmModalProps> = ({ isOpen, 
   if (!isOpen || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" dir="rtl">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
         onClick={onClose} 

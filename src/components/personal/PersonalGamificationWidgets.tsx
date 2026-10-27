@@ -104,15 +104,15 @@ export const PersonalProductivityChartWidget: React.FC = () => {
     >
       {/* Glow Effects */}
       <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#5B7CFF]/5 dark:bg-[#5B7CFF]/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-12 w-48 h-48 bg-[#FFD66B]/5 dark:bg-[#FFD66B]/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute top-0 start-0 w-64 h-64 bg-[#5B7CFF]/5 dark:bg-[#5B7CFF]/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 end-12 w-48 h-48 bg-[#FFD66B]/5 dark:bg-[#FFD66B]/5 rounded-full blur-2xl pointer-events-none" />
       </div>
 
-      <div dir="rtl" className="w-full flex flex-col h-full justify-between z-10">
+      <div className="w-full flex flex-col h-full justify-between z-10">
         
         {/* Header Block */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 w-full">
-          <div className="text-right">
+          <div className="text-start">
             <span className="text-[10px] font-black text-[#5B7CFF] dark:text-[#5B7CFF] tracking-widest uppercase flex items-center gap-1.5 justify-start">
               <Sparkles size={11} className="text-[#5B7CFF]" />
               تحلیل داده‌های آماری
@@ -168,15 +168,15 @@ export const PersonalProductivityChartWidget: React.FC = () => {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: 5 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute left-0 mt-2 w-48 bg-white dark:bg-[#121621] border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl p-2.5 z-40 text-right"
+                      className="absolute end-0 mt-2 w-48 bg-white dark:bg-[#121621] border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl p-2.5 z-40 text-start"
                     >
-                      <span className="text-[10px] font-bold text-slate-400 block mb-2 px-1 border-b border-slate-100 dark:border-slate-800 pb-1 text-right">
+                      <span className="text-[10px] font-bold text-slate-400 block mb-2 px-1 border-b border-slate-100 dark:border-slate-800 pb-1 text-start">
                         فیلتر نمایش نمودارها
                       </span>
                       <button 
                         type="button"
                         onClick={() => setVisibleSeries(prev => ({ ...prev, productivity: !prev.productivity }))}
-                        className="w-full flex items-center justify-between text-xs font-bold p-2 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 text-right cursor-pointer text-slate-700 dark:text-slate-200"
+                        className="w-full flex items-center justify-between text-xs font-bold p-2 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 text-start cursor-pointer text-slate-700 dark:text-slate-200"
                       >
                         <span className="w-2.5 h-2.5 rounded-full bg-[#5B7CFF] block" />
                         <span>تحویل به‌موقع (٪)</span>
@@ -185,10 +185,10 @@ export const PersonalProductivityChartWidget: React.FC = () => {
                       <button 
                         type="button"
                         onClick={() => setVisibleSeries(prev => ({ ...prev, completed: !prev.completed }))}
-                        className="w-full flex items-center justify-between text-xs font-bold p-2 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 text-right cursor-pointer text-slate-700 dark:text-slate-200"
+                        className="w-full flex items-center justify-between text-xs font-bold p-2 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 text-start cursor-pointer text-slate-700 dark:text-slate-200"
                       >
                         <span className="w-2.5 h-2.5 rounded-full bg-[#FFD66B] block" />
-                        <span>تسک‌های انجام شده</span>
+                        <span>وظایف انجام شده</span>
                         <span className="text-[9px] text-slate-400">{visibleSeries.completed ? 'ON' : 'OFF'}</span>
                       </button>
                     </motion.div>
@@ -216,7 +216,7 @@ export const PersonalProductivityChartWidget: React.FC = () => {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: 5 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute left-0 mt-2 w-48 bg-white dark:bg-[#121621] border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl p-2 z-40 text-right"
+                      className="absolute end-0 mt-2 w-48 bg-white dark:bg-[#121621] border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl p-2 z-40 text-start"
                     >
                       <button 
                         type="button"
@@ -225,7 +225,7 @@ export const PersonalProductivityChartWidget: React.FC = () => {
                           setVisibleSeries({ productivity: true, completed: true });
                           setOptionsMenuOpen(false);
                         }}
-                        className="w-full text-xs font-bold p-2.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 text-right cursor-pointer flex items-center justify-between text-slate-700 dark:text-slate-200"
+                        className="w-full text-xs font-bold p-2.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 text-start cursor-pointer flex items-center justify-between text-slate-700 dark:text-slate-200"
                       >
                         <RotateCcw size={12} />
                         <span>بازنشانی پیش‌فرض‌ها</span>
@@ -236,7 +236,7 @@ export const PersonalProductivityChartWidget: React.FC = () => {
                           downloadCsv(`my-tasks-${period}.csv`, seriesToCsv(series));
                           setOptionsMenuOpen(false);
                         }}
-                        className="w-full text-xs font-bold p-2.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 text-right cursor-pointer flex items-center justify-between text-slate-700 dark:text-slate-200"
+                        className="w-full text-xs font-bold p-2.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-800/50 text-start cursor-pointer flex items-center justify-between text-slate-700 dark:text-slate-200"
                       >
                         <Download size={12} />
                         <span>خروجی گزارش (CSV)</span>
@@ -300,7 +300,7 @@ export const PersonalProductivityChartWidget: React.FC = () => {
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     return (
-                      <div className="bg-white/95 dark:bg-[#121621]/95 border border-slate-200/60 dark:border-slate-800/80 backdrop-blur-md rounded-2xl p-4 shadow-2xl text-right z-50 min-w-44" dir="rtl">
+                      <div className="bg-white/95 dark:bg-[#121621]/95 border border-slate-200/60 dark:border-slate-800/80 backdrop-blur-md rounded-2xl p-4 shadow-2xl text-start z-50 min-w-44">
                         <span className="text-[10px] font-sans font-black text-slate-400 dark:text-slate-400 block mb-2 tracking-wide uppercase">
                           {label}
                         </span>
@@ -311,7 +311,7 @@ export const PersonalProductivityChartWidget: React.FC = () => {
                                 {toPersianDigits(entry.value as number)}{entry.name === 'Productivity' ? '٪' : ''}
                               </span>
                               <span className="text-slate-600 dark:text-slate-300">
-                                {entry.name === 'Productivity' ? 'تحویل به‌موقع' : 'تسک‌های تکمیل‌شده'}
+                                {entry.name === 'Productivity' ? 'تحویل به‌موقع' : 'وظایف تکمیل‌شده'}
                               </span>
                             </div>
                           ))}
@@ -370,7 +370,7 @@ export const PersonalProductivityChartWidget: React.FC = () => {
             </ComposedChart>
           </ResponsiveContainer>
           {!hasCompletions && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" dir="rtl">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <span className="text-xs font-bold text-slate-400 bg-white/80 dark:bg-[#121621]/80 px-3 py-1.5 rounded-xl">
                 هنوز وظیفه‌ای در این بازه تکمیل نشده است.
               </span>
@@ -395,7 +395,7 @@ export const PersonalProductivityChartWidget: React.FC = () => {
               className={`flex items-center gap-2 cursor-pointer transition-opacity ${visibleSeries.completed ? 'opacity-100' : 'opacity-35'}`}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-[#FFD66B] shadow-[0_0_8px_rgba(255,214,107,0.4)]" />
-              <span>تسک‌های تکمیل‌شده</span>
+              <span>وظایف تکمیل‌شده</span>
             </button>
           </div>
         </div>
@@ -513,14 +513,14 @@ export const Personal12TabsHealthWidget: React.FC = () => {
     >
       {/* Background Glows */}
       <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full bg-[#5B7CFF]/8 dark:bg-[#5B7CFF]/4 blur-3xl pointer-events-none transition-all duration-500 group-hover:scale-125" />
-        <div className="absolute -bottom-16 -right-16 w-40 h-40 rounded-full bg-[#4ADE80]/8 dark:bg-[#4ADE80]/4 blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 -end-12 w-40 h-40 rounded-full bg-[#5B7CFF]/8 dark:bg-[#5B7CFF]/4 blur-3xl pointer-events-none transition-all duration-500 group-hover:scale-125" />
+        <div className="absolute -bottom-16 -start-16 w-40 h-40 rounded-full bg-[#4ADE80]/8 dark:bg-[#4ADE80]/4 blur-3xl pointer-events-none" />
       </div>
 
-      <div dir="rtl" className="w-full flex flex-col h-full justify-between space-y-4 z-10">
+      <div className="w-full flex flex-col h-full justify-between space-y-4 z-10">
         
         {/* Header */}
-        <div className="text-right">
+        <div className="text-start">
           <span className="text-[10px] font-black text-[#5B7CFF] dark:text-[#5B7CFF] tracking-widest uppercase flex items-center gap-1.5 justify-start">
             <Sparkles size={11} className="text-[#5B7CFF]" />
             پایش میزان پیشرفت
@@ -529,7 +529,7 @@ export const Personal12TabsHealthWidget: React.FC = () => {
             پیشرفت کل کارهای من
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-            نسبت تسک‌های تکمیل شده به کل کارهای محوله.
+            نسبت وظایف تکمیل شده به کل کارهای محوله.
           </p>
         </div>
 
@@ -616,7 +616,7 @@ export const Personal12TabsHealthWidget: React.FC = () => {
                       <PremiumCounter value={overallProgress} suffix="%" />
                     </span>
                     <span className="text-xs text-slate-500 dark:text-slate-300 font-medium mt-1 leading-none">
-                      {toPersianDigits(stats.completed)} از {toPersianDigits(analytics.totalMyTasks)} تسک
+                      {toPersianDigits(stats.completed)} از {toPersianDigits(analytics.totalMyTasks)} وظیفه
                     </span>
                   </motion.div>
                 ) : (

@@ -4,13 +4,14 @@ import { apiFetch } from '../../lib/api';
 import { invitePath } from '../../lib/pendingInvite';
 import { LocalImage } from '../common/LocalImage';
 import { useProject } from '../../context/ProjectContext';
+import { formatJalaliDate } from '../../lib/dates';
 
 const toPersianDigits = (n: string | number | undefined | null): string =>
   n === undefined || n === null ? '' : n.toString().replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d, 10)] || '۰');
 
 const jalaliDate = (value?: string) => {
   const date = value ? new Date(value) : undefined;
-  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  return date && !Number.isNaN(date.getTime()) ? formatJalaliDate(date) : '';
 };
 
 /** The signed-in user's profile, the workspace invite and its members — all from stored data. */

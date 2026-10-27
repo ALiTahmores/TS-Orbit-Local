@@ -203,7 +203,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
       {/* Modal Dialog Card (Faithful to 47ae26cf758c666ddd1c3.jpg) */}
       <div 
         onClick={(e) => e.stopPropagation()}
-        className={`relative z-10 w-full max-w-xl max-h-[92vh] flex flex-col bg-white dark:bg-[#0d121f] rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden ${isRtl ? 'text-right' : 'text-left'}`}
+        className={`relative z-10 w-full max-w-xl max-h-[92vh] flex flex-col bg-white dark:bg-[#0d121f] rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-2xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden ${isRtl ? 'text-start' : 'text-left'}`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-5 px-6 border-b border-slate-100 dark:border-slate-800/80 shrink-0 bg-white dark:bg-[#0d121f]">
@@ -216,7 +216,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
                 {isRtl ? 'ثبت وظیفه جدید' : 'Create Task'}
               </h2>
               <p className="text-[11px] text-slate-400">
-                {isRtl ? 'تنظیمات و جزئیات تسک پروژه' : 'Configure task properties, assignees & milestones'}
+                {isRtl ? 'تنظیمات و جزئیات وظیفه پروژه' : 'Configure task properties, assignees & milestones'}
               </p>
             </div>
           </div>
@@ -235,7 +235,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           {/* Task Title */}
           <div>
             <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-              {isRtl ? 'عنوان تسک *' : 'Task Title *'}
+              {isRtl ? 'عنوان وظیفه *' : 'Task Title *'}
             </label>
             <input
               type="text"
@@ -323,7 +323,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                {isRtl ? 'مسئولین تسک' : 'Assignees'}
+                {isRtl ? 'مسئولین وظیفه' : 'Assignees'}
               </label>
               <span className="text-[10px] text-slate-400">
                 {selectedMembers.length} {isRtl ? 'نفر انتخاب شده' : 'selected'}
@@ -445,7 +445,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Create wireframe for Dashboard page..."
+              placeholder="شرح کار، معیار پذیرش یا نکته‌های لازم برای انجام وظیفه…"
               className="w-full p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/80 text-slate-800 dark:text-slate-100 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none leading-relaxed"
             />
           </div>
@@ -454,7 +454,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                {isRtl ? 'زیرتسک‌ها و بخش‌ها' : 'Subsections & Milestones'}
+                {isRtl ? 'زیرکارها و بخش‌ها' : 'Subsections & Milestones'}
               </span>
               {!isAddingSection && (
                 <button
@@ -495,7 +495,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
                   value={newSectionTitle}
                   onChange={(e) => setNewSectionTitle(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddSection(); } }}
-                  placeholder={isRtl ? "عنوان بخش یا تسک فرعی..." : "Section title..."}
+                  placeholder={isRtl ? "عنوان بخش یا وظیفه فرعی..." : "Section title..."}
                   className="flex-1 px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none"
                 />
                 <button
@@ -519,7 +519,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
           <div className="space-y-2">
             <span className="block text-[11px] font-bold text-slate-600 dark:text-slate-300">پیوست‌ها</span>
             <div className="flex flex-wrap items-center gap-2">
-              {draftAssets.map(file=><span key={file.id} className="inline-flex items-center gap-1.5 h-8 pl-1.5 pr-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 max-w-[220px]"><span className="truncate" dir="auto">{file.name}</span><button type="button" aria-label={`برداشتن ${file.name}`} onClick={()=>setDraftAssets(previous=>previous.filter(item=>item.id!==file.id))} className="p-0.5 rounded text-slate-400 hover:text-rose-500 cursor-pointer"><X size={12}/></button></span>)}
+              {draftAssets.map(file=><span key={file.id} className="inline-flex items-center gap-1.5 h-8 pe-1.5 ps-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-200 max-w-[220px]"><span className="truncate" dir="auto">{file.name}</span><button type="button" aria-label={`برداشتن ${file.name}`} onClick={()=>setDraftAssets(previous=>previous.filter(item=>item.id!==file.id))} className="p-0.5 rounded text-slate-400 hover:text-rose-500 cursor-pointer"><X size={12}/></button></span>)}
               <label className={cn('inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600 cursor-pointer', (uploading||isSubmitting||!projectId) && 'opacity-50 pointer-events-none')}>
                 <Paperclip size={13}/>{uploading?'در حال بارگذاری…':'افزودن فایل'}
                 <input aria-label="افزودن پیوست به وظیفه" type="file" className="sr-only" disabled={uploading||isSubmitting||!projectId} onChange={async event=>{const element=event.target,file=element.files?.[0];if(!file)return;const generation=attachmentScope.current;setUploading(true);setSubmitError('');try{const saved=await uploadAsset(file,{name:file.name,projectId});if(generation===attachmentScope.current){setDraftAssets(previous=>[...previous,saved]);element.value='';}}catch(error){if(generation===attachmentScope.current)setSubmitError(error instanceof Error?error.message:'فایل ذخیره نشد.');}finally{if(generation===attachmentScope.current)setUploading(false);}}}/>
@@ -591,7 +591,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
               disabled={uploading || isSubmitting || !title.trim()}
               className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? (isRtl ? 'در حال ثبت...' : 'Saving...') : (isRtl ? 'ذخیره تسک' : 'Save')}
+              {isSubmitting ? (isRtl ? 'در حال ثبت...' : 'Saving...') : (isRtl ? 'ذخیره وظیفه' : 'Save')}
             </button>
           </div>
         </div>

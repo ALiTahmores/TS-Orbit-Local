@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Clock, ArrowUpRight } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { weeklyTimeTotals } from '../../lib/taskAnalytics';
+import { formatJalaliDayMonth } from '../../lib/dates';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === undefined || n === null) return '';
@@ -30,7 +31,7 @@ export const WeeklyTimesheetWidget: React.FC<WeeklyTimesheetWidgetProps> = ({
   const week = useMemo(() => {
     const totals = weeklyTimeTotals(tasks || []);
     const { start } = totals;
-    const label = (date: Date) => date.toLocaleDateString('fa-IR', { day: 'numeric', month: 'long' });
+    const label = (date: Date) => formatJalaliDayMonth(date);
     const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
     return { ...totals, range: `${label(start)} تا ${label(end)}` };
   }, [tasks]);

@@ -6,7 +6,7 @@ import { CustomSelect } from './common/CustomSelect';
 import { TaskDetailModal } from './tasks/TaskDetailModal';
 import { dueDate, isOverdue } from '../lib/taskAnalytics';
 import {
-  JALALI_WEEKDAYS_SHORT, formatJalaliDate, jalaliMonthGrid, jalaliMonthLabel, jalaliMonthOf,
+  jalaliWeekdaysShort, formatJalaliDate, jalaliMonthGrid, jalaliMonthLabel, jalaliMonthOf,
   localISODate, persianNumber, shiftJalaliMonth, type JalaliMonth,
 } from '../lib/dates';
 
@@ -44,7 +44,7 @@ export const TaskDeadlinesTimelineView: React.FC = () => {
   const projectTitle = (id: string) => projects.find(project => project.id === id)?.title || '';
 
   return (
-    <div className="space-y-4 font-sans" dir="rtl">
+    <div className="space-y-4 font-sans">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <CalendarDays size={18} className="text-blue-600" />
@@ -75,7 +75,7 @@ export const TaskDeadlinesTimelineView: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 overflow-x-auto">
         <div className="min-w-[680px]">
           <div className="grid grid-cols-7 gap-1.5 mb-1.5">
-            {JALALI_WEEKDAYS_SHORT.map((day, index) => (
+            {jalaliWeekdaysShort().map((day, index) => (
               <span key={day} className={`text-center text-[11px] font-bold py-1 ${index === 6 ? 'text-rose-500' : 'text-slate-400'}`}>{day}</span>
             ))}
           </div>
@@ -98,7 +98,7 @@ export const TaskDeadlinesTimelineView: React.FC = () => {
                       type="button"
                       onClick={() => setDetailTask(task)}
                       title={[task.title, projectTitle(task.projectId)].filter(Boolean).join(' — ')}
-                      className={`block w-full text-right truncate px-1.5 py-1 rounded-md text-[10px] font-bold cursor-pointer hover:brightness-95 ${chipClass(task, today)}`}
+                      className={`block w-full text-start truncate px-1.5 py-1 rounded-md text-[10px] font-bold cursor-pointer hover:brightness-95 ${chipClass(task, today)}`}
                     >
                       {task.title}
                     </button>
@@ -116,7 +116,7 @@ export const TaskDeadlinesTimelineView: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
-        {[['bg-blue-400', 'در جریان'], ['bg-rose-400', 'دارای تأخیر'], ['bg-amber-400', 'متوقف'], ['bg-emerald-400', 'تکمیل‌شده']].map(([dot, label]) => (
+        {[['bg-blue-400', 'در حال انجام'], ['bg-rose-400', 'دارای تأخیر'], ['bg-amber-400', 'متوقف'], ['bg-emerald-400', 'تکمیل‌شده']].map(([dot, label]) => (
           <span key={label} className="inline-flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${dot}`} />{label}</span>
         ))}
       </div>

@@ -64,7 +64,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
     available: null
   });
 
-  const ArrowIcon = isRtl ? ArrowLeft : ArrowRight;
+  const ArrowIcon = ArrowLeft;
 
   // Step 1: Username & Name Validation
   const nameVal = (formData['name'] || '').trim();
@@ -253,7 +253,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
             >
               {/* Header Title & Step Indicator */}
               <div className="flex items-baseline justify-between">
-                <label className={cn('text-xl font-bold text-white/95 tracking-tight', isRtl ? 'text-right' : 'text-left')}>
+                <label className={cn('text-xl font-bold text-white/95 tracking-tight', isRtl ? 'text-start' : 'text-left')}>
                   {currentStep === 1 && (isRtl ? 'مشخصات و نام کاربری' : 'Profile & Username')}
                   {currentStep === 2 && (isRtl ? 'شماره تلفن همراه' : 'Phone Number')}
                   {currentStep === 3 && (isRtl ? 'تعیین گذرواژه' : 'Create Password')}
@@ -264,7 +264,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
               </div>
 
               {/* Subtitle / Description */}
-              <p className={cn('text-xs text-white/60', isRtl ? 'text-right' : 'text-left')}>
+              <p className={cn('text-xs text-white/60', isRtl ? 'text-start' : 'text-left')}>
                 {currentStep === 1 && (isRtl ? 'نام و شناسه یکتای اختصاصی جهت یافتن شما در فضاهای کاری' : 'Unique identity to discover you across workspaces')}
                 {currentStep === 2 && (isRtl ? 'شماره همراه جهت بازیابی، ورود و جستجوی همکاران' : 'Phone for workspace invites, recovery, and login')}
                 {currentStep === 3 && (isRtl ? 'حداقل ۱۲ کاراکتر (حداکثر ۷۲ حرف لاتین)، شامل حروف بزرگ و کوچک، عدد و نماد' : 'Must meet all security criteria below')}
@@ -274,7 +274,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
                   STEP 1: FULL NAME & @USERNAME INPUTS
                  ======================================================== */}
               {currentStep === 1 && (
-                <div className="space-y-4 text-right" dir={isRtl ? 'rtl' : 'ltr'}>
+                <div className="space-y-4 text-start" dir={isRtl ? 'rtl' : 'ltr'}>
                   {/* Full Name Input */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-300 block">
@@ -286,7 +286,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
                         'focus-within:border-cyan-500 focus-within:ring-2 focus-within:ring-cyan-500/20'
                       )}
                     >
-                      <User className="w-4 h-4 text-slate-500 mr-2 shrink-0" />
+                      <User className="w-4 h-4 text-slate-500 ms-2 shrink-0" />
                       <input
                         id="name_input"
                         type="text"
@@ -298,7 +298,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
                         autoComplete="name"
                         className={cn(
                           'flex-1 h-full px-2 bg-transparent border-0 outline-none ring-0 text-slate-100 placeholder-slate-500 text-xs font-medium',
-                          isRtl ? 'text-right' : 'text-left'
+                          isRtl ? 'text-start' : 'text-left'
                         )}
                       />
                     </div>
@@ -342,7 +342,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
                           : 'bg-slate-900/80 border border-slate-700/80 focus-within:border-cyan-500 focus-within:ring-2 focus-within:ring-cyan-500/20'
                       )}
                     >
-                      <AtSign className="w-4 h-4 text-slate-500 mr-2 shrink-0" />
+                      <AtSign className="w-4 h-4 text-slate-500 ms-2 shrink-0" />
                       <input
                         id="username_input"
                         type="text"
@@ -402,7 +402,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
                   STEP 2: MASKED PHONE (+98) WITH COMPLETION ANIMATION
                  ======================================================== */}
               {currentStep === 2 && (
-                <div className="space-y-3 text-right" dir={isRtl ? 'rtl' : 'ltr'}>
+                <div className="space-y-3 text-start" dir={isRtl ? 'rtl' : 'ltr'}>
                   <label className="text-xs font-semibold text-slate-300 block">
                     {isRtl ? 'شماره تلفن همراه' : 'Mobile Phone Number'}
                   </label>
@@ -460,7 +460,7 @@ export const MultiStepForm: React.FC<MultiStepFormProps> = ({
                     <span dir="ltr" className={cn('font-bold tracking-wider text-left', isPhoneComplete ? 'text-emerald-400' : 'text-cyan-400')}>
                       {formatPhoneMask(rawPhone)}
                     </span>
-                    <span dir="rtl" className="text-slate-400">
+                    <span className="text-slate-400">
                       {isRtl ? 'الگو: ۰۹۱۲۳۴۵۶۷۸۹' : 'Format: 09123456789'}
                     </span>
                   </div>

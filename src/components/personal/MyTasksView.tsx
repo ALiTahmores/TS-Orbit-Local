@@ -65,7 +65,7 @@ export const MyTasksView: React.FC = () => {
   },[tasks,currentUser]);
   const timelineDays = useMemo(() => {
     const dates=[...new Set(myTasks.map(task=>task.deadlineCanonical || task.dueDateCanonical || task.deadline || task.dueDate).filter(Boolean))].sort().slice(0,8);
-    return dates.map(date=>({day:String(date),jalali:/^\d{4}-\d{2}-\d{2}$/.test(String(date))?new Date(date+'T12:00:00Z').toLocaleDateString('fa-IR'):'',hasTasks:true,label:myTasks.filter(task=>(task.deadlineCanonical || task.dueDateCanonical || task.deadline || task.dueDate)===date).map(task=>task.title).join('، '),color:'bg-blue-600 text-white'}));
+    return dates.map(date=>({day:String(date),jalali:/^\d{4}-\d{2}-\d{2}$/.test(String(date))?formatJalaliDate(String(date)):'',hasTasks:true,label:myTasks.filter(task=>(task.deadlineCanonical || task.dueDateCanonical || task.deadline || task.dueDate)===date).map(task=>task.title).join('، '),color:'bg-blue-600 text-white'}));
   },[myTasks]);
 
   // Every persisted task status remains reachable in the personal board.
@@ -134,7 +134,7 @@ export const MyTasksView: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-black text-slate-900 dark:text-slate-100">
-            {isRtl ? 'تسک‌های من' : 'My Tasks'}
+            {isRtl ? 'وظایف من' : 'My Tasks'}
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
             {isRtl ? 'تقویم زمانبندی و بورد مدیریت کلیه وظایف محوله' : 'Interactive Date-Driven Timeline & Kanban Matrix'}
@@ -149,7 +149,7 @@ export const MyTasksView: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isRtl ? "جستجو در تسک‌ها..." : "Search tasks..."}
+              placeholder={isRtl ? "جستجو در وظایف..." : "Search tasks..."}
               className="w-full h-10 ps-9 pe-4 text-xs rounded-2xl bg-white dark:bg-[#0d121f] border border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 shadow-xs"
             />
           </div>
@@ -161,7 +161,7 @@ export const MyTasksView: React.FC = () => {
             className="h-10 px-5 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4" />
-            <span>{isRtl ? 'تسک جدید' : 'New Task'}</span>
+            <span>{isRtl ? 'وظیفه جدید' : 'New Task'}</span>
           </button>
         </div>
       </div>
@@ -211,8 +211,7 @@ export const MyTasksView: React.FC = () => {
                 )}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.day}</span>
-                  <span className="text-[10px] text-slate-400 font-mono">{item.jalali}</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{item.jalali || item.day}</span>
                 </div>
 
                 {item.hasTasks ? (
@@ -240,7 +239,7 @@ export const MyTasksView: React.FC = () => {
             {isRtl ? 'تمام وظایف' : 'All Tasks'}
           </h2>
           <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-400">
-            {displayTasks.length} {isRtl ? 'تسک' : 'tasks'}
+            {displayTasks.length} {isRtl ? 'وظیفه' : 'tasks'}
           </span>
         </div>
 
@@ -346,7 +345,7 @@ export const MyTasksView: React.FC = () => {
                 <div className="space-y-3 flex-1">
                   {colTasks.length === 0 ? (
                     <div className="py-12 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-xs">
-                      {isRtl ? 'تسکی در این بخش وجود ندارد' : 'No tasks in this stage'}
+                      {isRtl ? 'وظیفه‌ای در این بخش وجود ندارد' : 'No tasks in this stage'}
                     </div>
                   ) : (
                     colTasks.map((task) => {
@@ -453,10 +452,10 @@ export const MyTasksView: React.FC = () => {
       {activeTab === 'spreadsheet' && (
         <div className="rounded-3xl bg-white dark:bg-[#0d121f] border border-slate-200/90 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left rtl:text-right">
+            <table className="w-full text-xs text-left rtl:text-start">
               <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="p-4 px-5">{isRtl ? 'عنوان تسک' : 'Task Title'}</th>
+                  <th className="p-4 px-5">{isRtl ? 'عنوان وظیفه' : 'Task Title'}</th>
                   <th className="p-4">{isRtl ? 'وضعیت' : 'Status'}</th>
                   <th className="p-4">{isRtl ? 'سررسید' : 'Due Date'}</th>
                   <th className="p-4">{isRtl ? 'اولویت' : 'Priority'}</th>

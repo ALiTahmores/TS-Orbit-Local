@@ -118,7 +118,6 @@ export const Tooltip: React.FC<TooltipProps> = ({
           className={`z-[9999] pointer-events-none transition-all duration-150 ease-out font-sans ${
             isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           }`}
-          dir="rtl"
         >
           <div className="relative bg-slate-900 dark:bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xl border border-slate-700/80 dark:border-blue-400/40 whitespace-nowrap tracking-wide leading-tight">
             {content}

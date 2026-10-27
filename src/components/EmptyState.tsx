@@ -78,15 +78,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <div 
       id={id} 
-      className="flex flex-col items-center justify-center text-center p-8 bg-white border border-slate-200 rounded-3xl space-y-5 max-w-xl mx-auto my-6 hover:shadow-md transition-all duration-300 relative overflow-hidden"
+      className="flex flex-col items-center justify-center text-center p-8 bg-white border border-slate-200 rounded-3xl space-y-5 max-w-xl mx-auto my-6 hover:shadow-md transition-all duration-300 relative overflow-hidden dark:bg-slate-900 dark:border-slate-800"
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full blur-2xl opacity-50 -z-10" />
-      <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-50/30 rounded-full blur-xl opacity-40 -z-10" />
+      <div className="absolute top-0 start-0 w-32 h-32 bg-slate-50 rounded-full blur-2xl opacity-50 -z-10 dark:bg-slate-800/50" />
+      <div className="absolute bottom-0 end-0 w-24 h-24 bg-blue-50/30 rounded-full blur-xl opacity-40 -z-10" />
       
       {renderIcon()}
       
       <div className="space-y-2">
-        <h3 className="text-sm font-black text-slate-800 leading-snug">{title}</h3>
+        <h3 className="text-sm font-black text-slate-800 leading-snug dark:text-slate-100">{title}</h3>
         <p className="text-xs text-slate-500 leading-relaxed max-w-sm">{description}</p>
       </div>
 

@@ -4,7 +4,7 @@ import { Shield } from 'lucide-react';
 import { iconByName } from '../lib/icons';
 
 const ACTIONS_LIST = [
-  { id: 'create', label: 'ایجاد تسک/مدرک', icon: 'PlusCircle' },
+  { id: 'create', label: 'ایجاد وظیفه/مدرک', icon: 'PlusCircle' },
   { id: 'read', label: 'مشاهده اطلاعات', icon: 'Eye' },
   { id: 'update', label: 'ویرایش ساختار', icon: 'Edit3' },
   { id: 'delete', label: 'حذف داده‌ها', icon: 'Trash2' },
@@ -55,10 +55,10 @@ export const OrgPermissions: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 text-right animate-fade-in" style={{ direction: 'rtl' }}>
+    <div className="space-y-6 text-start animate-fade-in">
       {/* Top Banner */}
       <div className="bg-surface-primary border border-border-primary rounded-2xl p-6 relative overflow-hidden shadow-sm">
-        <div className="absolute top-0 left-0 w-32 h-32 bg-brand-info/5 blur-3xl rounded-full" />
+        <div className="absolute top-0 end-0 w-32 h-32 bg-brand-info/5 blur-3xl rounded-full" />
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
           <div>
             <h1 className="text-xl font-black text-text-primary flex items-center gap-2">
@@ -116,10 +116,10 @@ export const OrgPermissions: React.FC = () => {
             </div>
           ) : (
             <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-              <table className="w-full text-right text-xs min-w-[700px]">
+              <table className="w-full text-start text-xs min-w-[700px]">
                 <thead>
                   <tr className="border-b border-border-primary/50 text-text-secondary font-black">
-                    <th className="pb-3 pr-2 w-48 text-right">تیم‌ها و نقش‌ها</th>
+                    <th className="pb-3 ps-2 w-48 text-start">تیم‌ها و نقش‌ها</th>
                     {ACTIONS_LIST.map(act => (
                       <th key={act.id} className="pb-3 text-center px-3" title={act.label}>
                         <div className="flex flex-col items-center gap-1">
@@ -133,7 +133,7 @@ export const OrgPermissions: React.FC = () => {
                 <tbody className="divide-y divide-border-primary/30">
                   {activeTeams.map((team: any) => (
                     <tr key={team.id} className="hover:bg-hover-overlay/40 transition-colors">
-                      <td className="py-4 pr-2 font-black text-text-primary flex items-center gap-2">
+                      <td className="py-4 ps-2 font-black text-text-primary flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold" style={{ backgroundColor: team.color }}>
                           {team.avatar || team.name.substring(0,1)}
                         </div>

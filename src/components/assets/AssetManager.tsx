@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {Download,Eye,FileText,History,Search,Trash2,UploadCloud,X} from 'lucide-react';
+import {Download,Eye,FileText,FolderOpen,History,Search,Trash2,UploadCloud,X} from 'lucide-react';
 import {apiFetch} from '../../lib/api';
 import {downloadAsset,uploadAsset,canPreviewAsset,type ManagedAsset} from '../../lib/assets';
 import {formatJalaliDateTime} from '../../lib/dates';
@@ -19,12 +19,12 @@ export const formatBytes=(bytes?:number)=>{
 const field='w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500 disabled:opacity-60';
 const iconButton='inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed';
 
-interface AssetManagerProps {projectId?:string;taskId?:string;personal?:boolean;compact?:boolean;assetId?:string}
+interface AssetManagerProps {projectId?:string;taskId?:string;personal?:boolean;compact?:boolean;assetId?:string;title?:string}
 export const AssetManager:React.FC<AssetManagerProps> = props=>{
   const {activeWorkspaceId,currentUser}=useProject();
   return <AssetManagerView key={JSON.stringify([activeWorkspaceId,currentUser?.id,props.projectId,props.taskId,props.personal,props.assetId])} {...props}/>;
 };
-const AssetManagerView:React.FC<AssetManagerProps> = ({projectId,taskId,personal=false,compact=false,assetId})=>{
+const AssetManagerView:React.FC<AssetManagerProps> = ({projectId,taskId,personal=false,compact=false,assetId,title})=>{
   const {activeWorkspaceId,currentUser,tasks}=useProject();
   const [assets,setAssets]=useState<ManagedAsset[]>([]),[file,setFile]=useState<File|null>(null),[name,setName]=useState(''),[category,setCategory]=useState('general'),[tag,setTag]=useState('');
   const [search,setSearch]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[status,setStatus]=useState(''),[dragging,setDragging]=useState(false);
@@ -44,9 +44,15 @@ const AssetManagerView:React.FC<AssetManagerProps> = ({projectId,taskId,personal
   const sizeOf=(asset:any)=>formatBytes(asset.byteSize)||asset.formattedSize||'';
   const meta=(asset:any)=>[sizeOf(asset),asset.version?`نسخهٔ ${Number(asset.version).toLocaleString('fa-IR')}`:'',categoryLabel(asset.category),asset.uploadedBy?.name,formatJalaliDateTime(asset.updatedAt||asset.createdAt)].filter(Boolean).join(' • ');
 
-  return <section className="space-y-4" dir="rtl" aria-label="مدیریت فایل‌ها">
+  return <section className="space-y-4" aria-label="مدیریت فایل‌ها">
     {preview&&<AssetImagePreview asset={preview} onClose={()=>setPreview(null)}/>}
-    {!compact&&<h2 className="font-black text-lg text-slate-900 dark:text-white">{personal?'فایل‌های من':'فایل‌ها'}</h2>}
+    {!compact&&<header className="flex items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 shrink-0"><FolderOpen className="w-6 h-6"/></div>
+        <div className="min-w-0"><h2 className="text-lg font-black text-slate-900 dark:text-white truncate">{title||(personal?'فایل‌های من':'فایل‌های پروژه')}</h2><p className="text-xs text-slate-500 dark:text-slate-400 font-bold mt-0.5">{personal?'فایل‌هایی که خودتان بارگذاری کرده‌اید':'اسناد، طرح‌ها و پیوست‌های این پروژه'}</p></div>
+      </div>
+      {!loading&&<span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">{`${rows.length.toLocaleString('fa-IR')} فایل`}</span>}
+    </header>}
     {error&&<p role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold">{error}</p>}
     {status&&<p role="status" className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold">{status}</p>}
 
@@ -58,7 +64,7 @@ const AssetManagerView:React.FC<AssetManagerProps> = ({projectId,taskId,personal
         className={`flex flex-col sm:flex-row items-center gap-3 p-4 rounded-xl border-2 border-dashed transition-colors ${dragging?'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30':'border-slate-200 dark:border-slate-700'}`}
       >
         <UploadCloud size={26} className="text-blue-500 shrink-0"/>
-        <div className="flex-1 text-center sm:text-right min-w-0">
+        <div className="flex-1 text-center sm:text-start min-w-0">
           {file?<><p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" dir="auto">{file.name}</p><p className="text-[11px] text-slate-500">{formatBytes(file.size)}</p></>
             :<p className="text-xs text-slate-500 dark:text-slate-400">فایل را اینجا رها کنید یا از رایانه انتخاب کنید.</p>}
         </div>
@@ -77,8 +83,8 @@ const AssetManagerView:React.FC<AssetManagerProps> = ({projectId,taskId,personal
     </form>}
 
     {!assetId&&<div className="relative">
-      <Search size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-      <input type="search" aria-label="جستجوی فایل" value={search} onChange={event=>setSearch(event.target.value)} placeholder="جستجو در نام فایل‌ها…" className={`${field} pr-9`}/>
+      <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+      <input type="search" aria-label="جستجوی فایل" value={search} onChange={event=>setSearch(event.target.value)} placeholder="جستجو در نام فایل‌ها…" className={`${field} ps-9`}/>
     </div>}
 
     <div className="space-y-2">

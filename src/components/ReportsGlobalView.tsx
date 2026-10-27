@@ -154,7 +154,7 @@ export const ReportsGlobalView: React.FC = () => {
       </div>
 
       {/* REPORT TABS */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 pb-2.5 gap-2 overflow-x-auto scrollbar-none">
+      <div className="tab-scroller border-b border-slate-200 dark:border-slate-800 pb-2.5 gap-2">
         <button type="button" onClick={() => setActiveReport('automated')} className={tabClass('automated')}>گزارش‌های مدیریتی</button>
         <button type="button" onClick={() => setActiveReport('project')} className={tabClass('project')}>پیشرفت پروژه‌ها</button>
         <button type="button" onClick={() => setActiveReport('team')} className={tabClass('team')}>کارکرد اعضا</button>

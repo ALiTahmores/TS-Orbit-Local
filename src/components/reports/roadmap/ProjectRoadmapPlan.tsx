@@ -569,7 +569,7 @@ export const ProjectRoadmapPlan: React.FC = () => {
         <div className="p-2 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
           
           {/* Department Selection Pills */}
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+          <div className="tab-scroller items-center gap-1.5 sm:gap-2 pb-1 sm:pb-0">
             {DOMAIN_OPTIONS.map((opt) => {
               const Icon = opt.icon;
               const isActive = activeDomain === opt.id;

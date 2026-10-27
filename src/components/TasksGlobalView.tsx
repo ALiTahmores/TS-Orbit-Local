@@ -67,7 +67,8 @@ import {
   Layers,
   ChevronLeft,
   Trello,
-  LayoutGrid
+  LayoutGrid,
+  SlidersHorizontal
 } from 'lucide-react';
 
 export const TasksGlobalView: React.FC = () => {
@@ -90,6 +91,8 @@ export const TasksGlobalView: React.FC = () => {
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFilterCount = [projectFilter, deptFilter, priorityFilter].filter(value => value !== 'all').length;
 
   // Unified Create Task Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -332,10 +335,11 @@ export const TasksGlobalView: React.FC = () => {
       
       {/* SINGLE FLOATING TOP-TAB NAVIGATION BAR WITH ACTION BUTTON */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-1">
-        <div className="flex items-center gap-2 overflow-x-auto select-none">
+        <div className="tab-scroller page-bleed items-center gap-2 select-none self-stretch sm:self-auto sm:flex-1 min-w-0">
           <button
             type="button"
             onClick={() => setActiveSubTab('kanban_board')}
+            aria-current={activeSubTab === 'kanban_board' || !activeSubTab || activeSubTab === 'tasks' ? 'page' : undefined}
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
               activeSubTab === 'kanban_board' || !activeSubTab || activeSubTab === 'tasks'
                 ? 'bg-blue-600 text-white shadow-md'
@@ -349,6 +353,7 @@ export const TasksGlobalView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveSubTab('team_matrix')}
+            aria-current={activeSubTab === 'team_matrix' || activeSubTab === 'list_view' ? 'page' : undefined}
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
               activeSubTab === 'team_matrix' || activeSubTab === 'list_view'
                 ? 'bg-blue-600 text-white shadow-md'
@@ -362,6 +367,7 @@ export const TasksGlobalView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveSubTab('timeline')}
+            aria-current={activeSubTab === 'timeline' || activeSubTab === 'calendar' ? 'page' : undefined}
             className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
               activeSubTab === 'timeline' || activeSubTab === 'calendar'
                 ? 'bg-blue-600 text-white shadow-md'
@@ -396,10 +402,11 @@ export const TasksGlobalView: React.FC = () => {
       ) : (
         <>
           {/* FILTERS AND CONTROLS */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-4 rounded-2xl shadow-xs flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 sm:gap-4">
         
+        <div className="flex items-center gap-2 flex-1 lg:max-w-md">
         {/* Search input with modern styling */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1">
           <Search className="absolute start-3.5 top-3 text-slate-400 dark:text-zinc-500" size={15} />
           <input 
             type="text" 
@@ -409,12 +416,24 @@ export const TasksGlobalView: React.FC = () => {
             className="w-full bg-slate-50 dark:bg-[#0d0d0f] border border-slate-200 dark:border-zinc-800 text-xs text-slate-800 dark:text-zinc-100 ps-10 pe-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-sans text-start"
           />
         </div>
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(open => !open)}
+          aria-expanded={filtersOpen}
+          aria-controls="task-filters"
+          className={`sm:hidden relative shrink-0 h-10 px-3 inline-flex items-center gap-1.5 rounded-xl border text-xs font-bold cursor-pointer ${filtersOpen || activeFilterCount ? 'border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300' : 'border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300'}`}
+        >
+          <SlidersHorizontal size={15} />
+          <span>فیلترها</span>
+          {activeFilterCount > 0 && <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] flex items-center justify-center">{activeFilterCount}</span>}
+        </button>
+        </div>
 
         {/* Compact filters */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div id="task-filters" className={`${filtersOpen ? 'grid' : 'hidden'} grid-cols-1 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3`}>
           {/* Project filter */}
-          <div className="flex items-center gap-1.5 w-44">
-            <span className="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0">پروژه:</span>
+          <div className="flex items-center gap-1.5 w-full sm:w-44">
+            <span className="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0 w-14 sm:w-auto">پروژه:</span>
             <CustomSelect 
               options={[
                 { value: 'all', label: 'همه پروژه‌ها' },
@@ -426,8 +445,8 @@ export const TasksGlobalView: React.FC = () => {
           </div>
 
           {/* Department Filter */}
-          <div className="flex items-center gap-1.5 w-44">
-            <span className="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0">دپارتمان:</span>
+          <div className="flex items-center gap-1.5 w-full sm:w-44">
+            <span className="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0 w-14 sm:w-auto">دپارتمان:</span>
             <CustomSelect 
               options={deptFilterOptions}
               value={deptFilter}
@@ -436,8 +455,8 @@ export const TasksGlobalView: React.FC = () => {
           </div>
 
           {/* Priority filter */}
-          <div className="flex items-center gap-1.5 w-40">
-            <span className="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0">اولویت:</span>
+          <div className="flex items-center gap-1.5 w-full sm:w-40">
+            <span className="text-[10px] text-slate-400 dark:text-zinc-500 shrink-0 w-14 sm:w-auto">اولویت:</span>
             <CustomSelect 
               options={priorityFilterOptions}
               value={priorityFilter}
@@ -449,8 +468,9 @@ export const TasksGlobalView: React.FC = () => {
       </div>
 
       {/* KANBAN BOARD WRAPPER */}
-      <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800">
-        <div className="grid grid-flow-col auto-cols-[minmax(15rem,1fr)] gap-4 pb-2">
+      {/* Phones swipe one column at a time, with the next one peeking in. */}
+      <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-zinc-800 snap-x snap-mandatory sm:snap-none -mx-4 px-4 sm:mx-0 sm:px-0 scroll-px-4 sm:scroll-px-0">
+        <div className="grid grid-flow-col auto-cols-[82%] sm:auto-cols-[minmax(15rem,1fr)] gap-3 sm:gap-4 pb-2 [&>*]:snap-start">
           
           {columns.map(col => {
             const colTasks = filteredTasks.filter(t => t.status === col.id);

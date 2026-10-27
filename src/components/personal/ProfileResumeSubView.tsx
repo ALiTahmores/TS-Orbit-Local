@@ -68,15 +68,15 @@ export const ProfileResumeSubView: React.FC = () => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Profile */}
         <section className="xl:col-span-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
-          <div className="flex flex-wrap items-center gap-4">
-            <LocalImage src={currentUser?.avatar} alt={currentUser?.name || ''} className="w-20 h-20 rounded-2xl object-cover border border-slate-200 dark:border-slate-700" />
+          <div className="flex items-center gap-3 sm:gap-4">
+            <LocalImage src={currentUser?.avatar} alt={currentUser?.name || ''} className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl object-cover border border-slate-200 dark:border-slate-700" />
             <div className="flex-1 min-w-0">
               <h1 className="text-xl font-black text-slate-900 dark:text-white truncate">{currentUser?.name}</h1>
               <p className="text-sm font-bold text-blue-600 dark:text-blue-400 mt-1">{getRoleLabel(currentUser?.role)}</p>
               {currentUser?.jobTitle && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{currentUser.jobTitle}</p>}
             </div>
-            <button type="button" onClick={editProfile} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer">
-              <Pencil size={14} /> ویرایش پروفایل
+            <button type="button" onClick={editProfile} aria-label="ویرایش پروفایل" className="shrink-0 inline-flex items-center justify-center gap-1.5 w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer">
+              <Pencil size={14} /> <span className="hidden sm:inline">ویرایش پروفایل</span>
             </button>
           </div>
 

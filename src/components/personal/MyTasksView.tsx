@@ -243,9 +243,9 @@ export const MyTasksView: React.FC = () => {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Priority Quick Filter */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl text-xs">
+          <div className="tab-scroller items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl text-xs">
             {['ALL', 'Urgent', 'High', 'Medium', 'Low'].map(p => (
               <button
                 type="button"
@@ -275,8 +275,8 @@ export const MyTasksView: React.FC = () => {
                   : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
               )}
             >
-              <Table className="w-3.5 h-3.5" />
-              <span>{isRtl ? 'صفحه گسترده' : 'Spreadsheet'}</span>
+              <Table className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="sr-only sm:not-sr-only">{isRtl ? 'صفحه گسترده' : 'Spreadsheet'}</span>
             </button>
 
             <button 
@@ -289,8 +289,8 @@ export const MyTasksView: React.FC = () => {
                   : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
               )}
             >
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>{isRtl ? 'تایملاین' : 'Timeline'}</span>
+              <TrendingUp className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="sr-only sm:not-sr-only">{isRtl ? 'تایملاین' : 'Timeline'}</span>
             </button>
 
             <button 
@@ -303,8 +303,8 @@ export const MyTasksView: React.FC = () => {
                   : "text-slate-500 hover:text-slate-800 dark:text-slate-400"
               )}
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>{isRtl ? 'برد کانبان' : 'Kanban'}</span>
+              <LayoutGrid className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="sr-only sm:not-sr-only">{isRtl ? 'برد کانبان' : 'Kanban'}</span>
             </button>
           </div>
         </div>

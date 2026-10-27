@@ -246,7 +246,7 @@ export const OrgBuilder: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border-primary gap-1">
+      <div className="tab-scroller border-b border-border-primary gap-1">
         <button
           onClick={() => setActiveTab('depts')}
           className={`px-4 py-2.5 text-xs font-black border-b-2 transition-all flex items-center gap-2 ${

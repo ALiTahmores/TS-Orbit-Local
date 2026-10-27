@@ -496,7 +496,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-1">
           {folderCategories.map((cat) => {
             const catProjects = (projects || []).filter(
               p => p && p.id !== 'no_project' && (cat.id === 'all' || getProjectCategory(p) === cat.id)
@@ -514,13 +514,17 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
               <div
                 key={cat.id}
                 onClick={() => setCategoryFilter(cat.id)}
-                className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-3 relative group ${
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setCategoryFilter(cat.id); } }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isActive}
+                className={`p-3 sm:p-4 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center gap-3 relative group ${
                   isActive
                     ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500/80 shadow-md scale-[1.02] ring-2 ring-blue-500/20'
                     : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
-                <div className="py-2 flex items-center justify-center">
+                <div className="py-2 flex items-center justify-center scale-[0.7] sm:scale-100 -my-4 sm:my-0">
                   <Folder
                     color={cat.color}
                     size={0.9}
@@ -536,8 +540,8 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                     {cat.name}
                   </span>
                   <div className="flex items-center justify-center gap-2 text-[11px] font-bold text-slate-400">
-                    <span>{cat.desc}</span>
-                    <span>•</span>
+                    <span className="hidden sm:inline">{cat.desc}</span>
+                    <span className="hidden sm:inline">•</span>
                     <span className="text-slate-600 dark:text-slate-300 font-black">
                       {toPersianDigits(catProjects.length)} پروژه
                     </span>
@@ -552,13 +556,55 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
       {/* 2. PROJECTS TABLE & GRID LIST */}
       {filteredProjects.length > 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xs overflow-visible relative z-10">
-          <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-            <table className="w-full text-start text-xs border-collapse min-w-[750px]">
+          {/* Phones: one card per project instead of the wide table */}
+          <ul className="xl:hidden divide-y md:divide-y-0 md:grid md:grid-cols-2 md:gap-3 md:p-3 divide-slate-100 dark:divide-slate-800/60">
+            {filteredProjects.map((project) => {
+              const isSelected = selectedProject?.id === project.id;
+              const isPopoverOpen = activePopoverProjectId === project.id;
+              const progressPct = Math.min(100, Math.max(0, project.progress || 0));
+              const start = formatJalaliDate((project as any).startDateCanonical || project.startDate) || (project.startDate ? toPersianDigits(project.startDate) : '—');
+              const due = formatJalaliDate((project as any).deadlineCanonical || project.deadline) || (project.deadline ? toPersianDigits(project.deadline) : '—');
+              return (
+                <li key={project.id} className={`p-4 space-y-3 md:rounded-xl md:border md:border-slate-200/80 md:dark:border-slate-800 ${isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''} ${isPopoverOpen ? 'relative z-30' : 'relative z-0'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}>
+                      {project.title ? project.title.substring(0, 1) : 'پ'}
+                    </div>
+                    <button type="button" onClick={() => handleSelectAndEnter(project)} className="flex-1 min-w-0 text-start cursor-pointer">
+                      <span className="block font-extrabold text-sm text-slate-800 dark:text-slate-100 truncate">{project.title}</span>
+                      {project.description && <span className="block text-[11px] text-slate-400 truncate mt-0.5">{project.description}</span>}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 min-w-0">
+                      <span className="flex items-center gap-1 min-w-0"><User size={12} className="shrink-0" /><span className="truncate max-w-[120px]">{project.clientName || 'نامشخص'}</span></span>
+                      <span className="flex items-center gap-1"><Calendar size={12} />{start}</span>
+                      <span className="flex items-center gap-1"><Clock size={12} />{due}</span>
+                    </div>
+                    <div className="shrink-0">{renderInteractiveStatusTrigger(project)}</div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100} aria-label="پیشرفت">
+                      <div className={`h-full rounded-full ${progressPct >= 100 ? 'bg-emerald-500' : progressPct > 50 ? 'bg-blue-600' : 'bg-amber-500'}`} style={{ width: `${progressPct}%` }} />
+                    </div>
+                    <span className="text-[11px] font-black text-blue-600 dark:text-blue-400 shrink-0">{toPersianDigits(progressPct)}٪</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button type="button" disabled={!project.websiteUrl?.trim()} aria-label={'مشاهده سایت ' + project.title} onClick={() => handleOpenProjectUrl(project)} className="w-9 h-9 flex items-center justify-center bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-200/80 dark:border-blue-900/40 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"><ExternalLink size={15} /></button>
+                      <button type="button" aria-label="تنظیمات پروژه" onClick={() => setSettingProject(project)} className="w-9 h-9 flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-200/80 dark:border-slate-700 cursor-pointer"><Settings size={15} /></button>
+                      <button type="button" aria-label="حذف پروژه" onClick={() => setDeletingProject(project)} className="w-9 h-9 flex items-center justify-center bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-200/60 dark:border-rose-900/40 cursor-pointer"><Trash2 size={15} /></button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden xl:block w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+            <table className="w-full text-start text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-black">
                   <th className="py-3.5 px-4 text-start">عنوان پروژه</th>
-                  <th className="py-3.5 px-4 text-start whitespace-nowrap">نام کارفرما</th>
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">تاریخ شروع</th>
+                  <th className="py-3.5 px-4 text-start whitespace-nowrap hidden 2xl:table-cell">نام کارفرما</th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap hidden 2xl:table-cell">تاریخ شروع</th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">سررسید</th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap w-36">درصد پیشرفت</th>
                   <th className="py-3.5 px-4 text-center whitespace-nowrap">وضعیت</th>
@@ -610,7 +656,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                       </td>
 
                       {/* Client Name */}
-                      <td className="py-3.5 px-4 text-start whitespace-nowrap text-slate-700 dark:text-slate-300 font-bold">
+                      <td className="py-3.5 px-4 text-start whitespace-nowrap text-slate-700 dark:text-slate-300 font-bold hidden 2xl:table-cell">
                         <Tooltip content={project.clientName || 'نامشخص'}>
                           <div className="flex items-center gap-1.5 cursor-default">
                             <User size={13} className="text-slate-400 shrink-0" />
@@ -620,7 +666,7 @@ export const ProjectsManagerView: React.FC<ProjectsManagerViewProps> = ({
                       </td>
 
                       {/* Start Date */}
-                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap text-slate-500 dark:text-slate-400">
+                      <td className="py-3.5 px-4 text-center font-mono whitespace-nowrap text-slate-500 dark:text-slate-400 hidden 2xl:table-cell">
                         <div className="flex items-center justify-center gap-1.5">
                           <Calendar size={13} className="text-slate-400 shrink-0" />
                           <span>{formatJalaliDate((project as any).startDateCanonical || project.startDate) || (project.startDate ? toPersianDigits(project.startDate) : '—')}</span>

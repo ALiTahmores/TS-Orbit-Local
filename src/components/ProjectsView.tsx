@@ -566,10 +566,11 @@ export const ProjectsView: React.FC = () => {
     <div className="w-full font-sans text-start space-y-4">
 
       {/* FLOATING OUTER SUB-HEADER TOP NAVIGATION TABS (MATCHING REFERENCE STYLING) */}
-      <div className="flex items-center gap-2 mb-4 justify-start overflow-x-auto pb-1 select-none">
+      <div className="tab-scroller page-bleed items-center gap-2 mb-4 pb-1 select-none">
         <button
           type="button"
           onClick={() => handleTabChange('overview')}
+          aria-current={activeTab === 'overview' || activeTab === 'active_projects' ? 'page' : undefined}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'overview' || activeTab === 'active_projects'
               ? 'bg-blue-600 text-white shadow-md'
@@ -583,6 +584,7 @@ export const ProjectsView: React.FC = () => {
         <button
           type="button"
           onClick={() => handleTabChange('tasks')}
+          aria-current={activeTab === 'tasks' ? 'page' : undefined}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'tasks'
               ? 'bg-blue-600 text-white shadow-md'
@@ -596,6 +598,7 @@ export const ProjectsView: React.FC = () => {
         <button
           type="button"
           onClick={() => handleTabChange('files')}
+          aria-current={activeTab === 'files' ? 'page' : undefined}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'files'
               ? 'bg-blue-600 text-white shadow-md'
@@ -609,6 +612,7 @@ export const ProjectsView: React.FC = () => {
         <button
           type="button"
           onClick={() => handleTabChange('portal')}
+          aria-current={activeTab === 'portal' || activeTab === 'feedback' ? 'page' : undefined}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
             activeTab === 'portal' || activeTab === 'feedback'
               ? 'bg-blue-600 text-white shadow-md'

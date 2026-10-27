@@ -242,10 +242,10 @@ export const TasksAndSchedulingView: React.FC = () => {
                 <thead>
                   <tr className="bg-slate-50/60 dark:bg-slate-800/40 text-[11px] font-black text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase">
                     <th className={`p-3.5 whitespace-nowrap ${isRtl ? 'ps-4 text-start' : 'pe-4 text-left'}`}>{t('عنوان پروژه')}</th>
-                    <th className="p-3.5 whitespace-nowrap">{t('اعضای تیم')}</th>
-                    <th className="p-3.5 whitespace-nowrap">{t('وضعیت')}</th>
-                    <th className="p-3.5 whitespace-nowrap">{t('پیشرفت')}</th>
-                    <th className="p-3.5 whitespace-nowrap">{t('زمان ثبت‌شده (کارکرد)')}</th>
+                    <th className="p-3.5 whitespace-nowrap hidden sm:table-cell">{t('اعضای تیم')}</th>
+                    <th className="p-3.5 whitespace-nowrap hidden xl:table-cell">{t('وضعیت')}</th>
+                    <th className="p-3.5 whitespace-nowrap hidden sm:table-cell">{t('پیشرفت')}</th>
+                    <th className="p-3.5 whitespace-nowrap hidden 2xl:table-cell">{t('زمان ثبت‌شده (کارکرد)')}</th>
                     <th className={`p-3.5 whitespace-nowrap ${isRtl ? 'text-left pe-4' : 'text-start ps-4'}`}>{t('اقدامات وظیفه')}</th>
                   </tr>
                 </thead>
@@ -276,19 +276,22 @@ export const TasksAndSchedulingView: React.FC = () => {
                               <div className="min-w-0">
                                 <h4 
                                   onClick={() => setSelectedProject(project)}
-                                  className="font-black text-slate-800 dark:text-slate-100 text-xs hover:text-blue-600 cursor-pointer transition-colors truncate"
+                                  className="font-black text-slate-800 dark:text-slate-100 text-xs hover:text-blue-600 cursor-pointer transition-colors truncate max-w-[150px] sm:max-w-none"
                                 >
                                   {project.title}
                                 </h4>
                                 <p className="text-[10px] text-slate-400 mt-0.5 truncate">
                                   کارفرما: <strong className="text-slate-600 dark:text-slate-300">{project.clientName}</strong>
                                 </p>
+                                <div className="sm:hidden mt-1.5 h-1 w-28 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={calculatedProgress} aria-valuemin={0} aria-valuemax={100} aria-label="پیشرفت">
+                                  <div className="h-full bg-blue-600 rounded-full" style={{ width: `${calculatedProgress}%` }} />
+                                </div>
                               </div>
                             </div>
                           </td>
 
                           {/* Team Member Avatars */}
-                          <td className="p-3.5 whitespace-nowrap">
+                          <td className="p-3.5 whitespace-nowrap hidden sm:table-cell">
                             <div className="flex items-center -space-x-1.5 space-x-reverse">
                               {teamMembers.filter(member=>(project.assignedMemberIds || []).includes(member.id)).slice(0, 3).map((m, idx) => (
                                 <div 
@@ -306,7 +309,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                             </div>
                           </td>
 
-                          <td className="p-3.5 whitespace-nowrap">
+                          <td className="p-3.5 whitespace-nowrap hidden xl:table-cell">
                             {groupKey === 'active' && (
                               <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 text-[10px] font-black rounded-full inline-flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -334,7 +337,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                           </td>
 
                           {/* Progress bar */}
-                          <td className="p-3.5">
+                          <td className="p-3.5 hidden sm:table-cell">
                             <div className="space-y-1 min-w-[110px]">
                               <div className="flex justify-between items-center text-[10px] font-bold">
                                 <span className="text-slate-400">پیشرفت</span>
@@ -352,7 +355,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                           </td>
 
                           {/* Requirement 2: Dynamic time calculation */}
-                          <td className="p-3.5 whitespace-nowrap font-mono text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
+                          <td className="p-3.5 whitespace-nowrap font-mono text-[11px] font-extrabold text-slate-700 dark:text-slate-300 hidden 2xl:table-cell">
                             <div className="flex items-center gap-1.5">
                               <Clock size={13} className="text-slate-400" />
                               <span>{dynamicTimeStr}</span>
@@ -363,6 +366,8 @@ export const TasksAndSchedulingView: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => toggleExpandProject(project.id)}
+                              aria-expanded={isExpanded}
+                              aria-label={`مشاهده وظایف ${project.title}`}
                               className={`px-3 py-1.5 text-xs font-black rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                                 isExpanded
                                   ? 'bg-blue-600 text-white shadow-2xs'
@@ -370,7 +375,8 @@ export const TasksAndSchedulingView: React.FC = () => {
                               }`}
                             >
                               <CheckSquare size={13} />
-                              <span>مشاهده وظایف ({toPersianDigits(projectTaskList.length)})</span>
+                              <span className="hidden sm:inline">مشاهده وظایف</span>
+                              <span>({toPersianDigits(projectTaskList.length)})</span>
                               {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                             </button>
                           </td>

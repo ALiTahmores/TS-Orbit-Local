@@ -181,7 +181,7 @@ export const MyProjectsView: React.FC = () => {
             </div>
 
             {/* Quick Status Filters */}
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+            <div className="tab-scroller items-center gap-1.5 py-1">
               {[
                 { id: 'ALL', label: isRtl ? 'همه' : 'All' },
                 { id: 'IN_PROGRESS', label: isRtl ? 'در حال انجام' : 'In Progress' },

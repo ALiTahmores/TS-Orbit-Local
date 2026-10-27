@@ -305,7 +305,7 @@ export const OverviewTab: React.FC = () => {
       </div>
 
       {/* QUICK NAVIGATION BAR */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="tab-scroller items-center gap-2 pb-1">
         <button
           onClick={() => setActiveTab('tasks')}
           className="px-3.5 py-1.5 bg-white dark:bg-slate-900 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-slate-700 dark:text-slate-300 hover:text-blue-700 dark:hover:text-blue-300 border border-slate-200/80 dark:border-slate-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs"

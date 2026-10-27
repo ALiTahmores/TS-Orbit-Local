@@ -496,8 +496,8 @@ export const DashboardView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5 self-stretch lg:self-auto justify-end w-full sm:w-auto">
-          <div className="w-56 sm:w-64 shrink-0">
-            <CustomSelect 
+          <div className="flex-1 min-w-0 sm:flex-none sm:w-64">
+            <CustomSelect
               options={projects.map(p => ({ value: p.id, label: p.title }))}
               value={selectedProject.id}
               onChange={(val) => {

@@ -145,6 +145,8 @@ const navigationGroups = [
   }
 ];
 
+const COMPACT_LAPTOP = '(min-width: 1024px) and (max-width: 1279px)';
+
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { 
     activeTab, 
@@ -439,10 +441,20 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
   }, []);
 
-  // Sidebar state
+  // Sidebar state. Small laptops (lg up to xl) start with the icon rail so pages get
+  // the width; the rail can still be expanded there without changing the saved
+  // preference that wider screens use.
+  const compactLaptop = () => typeof window !== 'undefined' && !!window.matchMedia?.(COMPACT_LAPTOP).matches;
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(() => {
-    return localStorage.getItem('layout_menu_collapsed') === 'true';
+    return compactLaptop() || localStorage.getItem('layout_menu_collapsed') === 'true';
   });
+  useEffect(() => {
+    const query = window.matchMedia?.(COMPACT_LAPTOP);
+    if (!query) return;
+    const apply = () => setIsMenuCollapsed(query.matches || localStorage.getItem('layout_menu_collapsed') === 'true');
+    query.addEventListener('change', apply);
+    return () => query.removeEventListener('change', apply);
+  }, []);
   const [expandedSection, setExpandedSection] = useState<string | null>(() => activeTab);
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
   // Opening on a personal page (for example after a reload) shows the personal menu.
@@ -452,6 +464,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Native Dynamic Bottom Scroll Cue
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const [showBottomScrollCue, setShowBottomScrollCue] = useState(false);
+
+  // In a swipeable tab row the active tab can start off-screen on a phone; bring it
+  // into view once the page has rendered.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      mainScrollRef.current?.querySelectorAll<HTMLElement>('.tab-scroller [aria-current="page"]').forEach(tab => {
+        const row = tab.parentElement;
+        if (!row) return;
+        const rowBox = row.getBoundingClientRect(), tabBox = tab.getBoundingClientRect();
+        if (tabBox.left < rowBox.left || tabBox.right > rowBox.right) {
+          row.scrollBy({ left: tabBox.left - rowBox.left - (rowBox.width - tabBox.width) / 2, behavior: 'smooth' });
+        }
+      });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [activeTab, activeSubTab]);
 
   const checkBottomScrollCue = useCallback(() => {
     const el = mainScrollRef.current;
@@ -544,7 +572,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const toggleMenu = () => {
     setIsMenuCollapsed(prev => {
       const newVal = !prev;
-      localStorage.setItem('layout_menu_collapsed', String(newVal));
+      if (!compactLaptop()) localStorage.setItem('layout_menu_collapsed', String(newVal));
       return newVal;
     });
   };
@@ -1308,11 +1336,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   setActiveTab('settings');
                   setActiveSubTab('profile');
                 }}
-                className={`flex items-center gap-1.5 p-1 ps-2.5 pe-1.5 bg-bg-app/50 dark:bg-slate-900/40 border border-border-primary/50 dark:border-white/5 rounded-xl cursor-pointer active:scale-95 hover:bg-hover-overlay transition-all shrink-0 select-none lg:hidden ${
+                className={`flex items-center gap-1.5 p-1 sm:ps-2.5 sm:pe-1.5 bg-bg-app/50 dark:bg-slate-900/40 border border-border-primary/50 dark:border-white/5 rounded-xl cursor-pointer active:scale-95 hover:bg-hover-overlay transition-all shrink-0 select-none lg:hidden ${
                   isRtl ? 'flex-row-reverse' : 'flex-row'
                 }`}
               >
-                <div className={`min-w-0 ${isRtl ? 'text-start' : 'text-left'}`}>
+                <div className={`min-w-0 hidden sm:block ${isRtl ? 'text-start' : 'text-left'}`}>
                   <h4 className="text-[9px] font-black text-text-primary dark:text-white truncate max-w-[70px] leading-tight">{currentUser?.name || 'User'}</h4>
                   <span className="text-[7.5px] text-[#155DFC] font-black block mt-0.5 leading-none">
                     {getRoleLabel(currentUser?.role)}
@@ -1474,7 +1502,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
 
               {/* 2. Dedicated Unread Messages Popover Icon */}
-              <div ref={messagesDropdownRef} className="relative shrink-0">
+              <div ref={messagesDropdownRef} className="relative shrink-0 hidden lg:block">
                 <button
                   onClick={() => {
                     setShowMessagesDropdown(!showMessagesDropdown);
@@ -1570,7 +1598,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               {/* 3. Theme Switcher (Light / Dark Mode) */}
               <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+                className="w-10 h-10 hidden lg:flex items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-white transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
                 title={isRtl ? 'تغییر تم رنگی' : 'Toggle Theme'}
               >
                 {theme === 'dark' ? (
@@ -1593,7 +1621,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div
               ref={mainScrollRef}
               id="main-scroll-viewport"
-              className="w-full h-full relative overflow-y-auto overflow-x-hidden flex-1 flex flex-col min-h-0 px-4 md:px-6 pb-6 md:pb-8 pt-2 md:pt-4"
+              className="w-full h-full relative overflow-y-auto overflow-x-hidden flex-1 flex flex-col min-h-0 px-4 md:px-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-8 pt-2 md:pt-4"
             >
               {/* SUB HEADER - Secondary pills list (Only appears when entering specific multi-tab sections except projects and tasks) */}
             {computedNavigationGroups.map(group => {
@@ -1601,7 +1629,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               if (!isGroupActive || group.tabs.length <= 1 || group.id === 'projects' || group.id === 'tasks' || group.id === 'dept_tech') return null;
 
               return (
-                <div key={group.id} className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-4 border-b border-border-primary/50 scrollbar-none animate-fade-in shrink-0">
+                <div key={group.id} className="tab-scroller page-bleed items-center gap-1.5 pb-3 mb-4 border-b border-border-primary/50 animate-fade-in shrink-0">
                   {group.tabs.map(tab => {
                     // Correct active check supporting redirect tabs
                     const isTabActive = isSubTabActiveHelper(group.id, tab.id);
@@ -1610,6 +1638,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <button
                         key={tab.id}
                         onClick={() => handleSubTabClick(group.id, tab.id)}
+                        aria-current={isTabActive ? 'page' : undefined}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                           isTabActive
                             ? 'bg-brand-accent text-white shadow-lg shadow-[#155DFC]/15'
@@ -1977,13 +2006,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   </div>
 
                   {/* Sticky Footer Area */}
-                  <div className="shrink-0 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                  <div className="shrink-0 pt-2.5 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2">
                     <button
                       onClick={() => {
                         setIsMobileProfileOpen(false);
                         handleSubTabClick('settings', 'system_settings');
                       }}
-                      className="flex-1 flex items-center justify-center gap-1.5 min-h-[38px] rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
+                      className="flex items-center justify-center gap-1.5 min-h-[40px] rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
                     >
                       <Settings size={14} />
                       <span>{isRtl ? 'تنظیمات' : 'Settings'}</span>
@@ -1994,10 +2023,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         setActiveTab('projects');
                         setActiveSubTab('team');
                       }}
-                      className="flex-1 py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-sm bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200/60 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-500 cursor-pointer shrink-0"
+                      className="flex items-center justify-center gap-1.5 min-h-[40px] rounded-xl text-xs font-bold transition-all bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200/60 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-500 cursor-pointer"
                     >
-                      <UserPlus size={15} />
+                      <UserPlus size={14} />
                       <span>{isRtl ? 'دعوت اعضای تیم' : 'Invite Team'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                      className="flex items-center justify-center gap-1.5 min-h-[40px] rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all cursor-pointer"
+                    >
+                      {theme === 'dark' ? <Sun size={14} className="text-amber-400" /> : <Moon size={14} />}
+                      <span>{theme === 'dark' ? (isRtl ? 'حالت روشن' : 'Light mode') : (isRtl ? 'حالت تیره' : 'Dark mode')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setIsMobileProfileOpen(false); setIsLogoutModalOpen(true); }}
+                      className="flex items-center justify-center gap-1.5 min-h-[40px] rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-950/70 transition-all cursor-pointer"
+                    >
+                      <LogOut size={14} className="rtl:rotate-180" />
+                      <span>{isRtl ? 'خروج از حساب' : 'Sign out'}</span>
                     </button>
                   </div>
                 </div>
@@ -2127,22 +2172,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* MOBILE BOTTOM TAB BAR */}
       <nav 
         dir={isRtl ? 'rtl' : 'ltr'} 
-        className="fixed bottom-4 end-4 start-4 h-16 bg-surface-primary/80 dark:bg-[#1A1A24]/90 backdrop-blur-xl border border-border-primary/80 dark:border-white/5 z-[95] lg:hidden flex justify-around items-center px-2 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
+        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] end-4 start-4 h-16 bg-surface-primary/80 dark:bg-[#1A1A24]/90 backdrop-blur-xl border border-border-primary/80 dark:border-white/5 z-[95] lg:hidden flex justify-around items-center px-2 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.15)]"
       >
         {[
           { id: 'menu', label: { fa: 'منو', en: 'Menu' }, icon: 'Menu', defaultSubTab: '' },
           { id: 'dashboard', label: { fa: 'داشبورد', en: 'Dashboard' }, icon: 'LayoutGrid', defaultSubTab: 'overview' },
           { id: 'projects', label: { fa: 'پروژه‌ها', en: 'Projects' }, icon: 'Folder', defaultSubTab: 'overview' },
           { id: 'tasks', label: { fa: 'وظایف', en: 'Tasks' }, icon: 'CheckSquare', defaultSubTab: 'kanban_board' },
-          { id: 'teams', label: { fa: 'متخصصین', en: 'Teams' }, icon: 'Users', defaultSubTab: 'team' }
+          { id: 'chat', label: { fa: 'گفتگو', en: 'Chat' }, icon: 'MessageSquare', defaultSubTab: 'messenger' }
         ].map((item) => {
           const isMenuTab = item.id === 'menu';
           const isTabActive = isMenuTab 
             ? isMobileProfileOpen
             : item.id === 'projects'
             ? (activeTab === 'projects' && activeSubTab !== 'team' && !isMobileProfileOpen)
-            : item.id === 'teams'
-            ? ((activeTab === 'teams' || (activeTab === 'projects' && activeSubTab === 'team') || (activeTab === 'reports' && activeSubTab === 'team_reports')) && !isMobileProfileOpen)
+            : item.id === 'chat'
+            ? ((activeTab === 'chat' || (activeTab === 'personal_tasks' && ['messages', 'pv-messages'].includes(activeSubTab))) && !isMobileProfileOpen)
             : (activeTab === item.id && !isMobileProfileOpen);
 
           return (
@@ -2153,16 +2198,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   setIsMobileProfileOpen(prev => !prev);
                 } else {
                   setIsMobileProfileOpen(false);
-                  if (item.id === 'teams') {
-                    setActiveTab('projects');
-                    setActiveSubTab('team');
-                  } else {
-                    setActiveTab(item.id);
-                    setActiveSubTab(item.defaultSubTab);
-                  }
+                  setActiveTab(item.id);
+                  setActiveSubTab(item.defaultSubTab);
                 }
               }}
               className="flex flex-col items-center justify-center py-1 flex-1 relative cursor-pointer h-full"
+              aria-current={isTabActive ? 'page' : undefined}
             >
               {isTabActive && (
                 <motion.div
@@ -2174,9 +2215,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className={`p-1 transition-all duration-200 mt-1 ${
                 isTabActive ? 'text-brand-accent scale-110' : 'text-text-secondary'
               }`}>
-                {renderIcon(item.icon, 16)}
+                {renderIcon(item.icon, 18)}
               </div>
-              <span className={`text-[8.5px] font-black transition-colors duration-200 mt-0.5 ${
+              {item.id === 'chat' && (unreadMessages || []).some(m => m && !m.read) && (
+                <span className="absolute top-1.5 start-1/2 ms-1.5 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-black flex items-center justify-center">{(unreadMessages || []).filter(m => m && !m.read).length}</span>
+              )}
+              <span className={`text-[10px] font-black transition-colors duration-200 mt-0.5 ${
                 isTabActive ? 'text-brand-accent' : 'text-text-secondary/80'
               }`}>
                 {isRtl ? item.label.fa : item.label.en}

@@ -220,6 +220,29 @@ html, body {
   font-feature-settings: "ss01" 0;
 }
 
+/* Rows of tabs and filter chips: they never wrap or get cut off and swipe without a
+   scrollbar. Page-level rows (.page-bleed) reach the screen edges on phones, where
+   the page has a 1rem gutter. */
+.tab-scroller {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  max-width: 100%;
+}
+.tab-scroller::-webkit-scrollbar { display: none; }
+.tab-scroller > * { flex-shrink: 0; scroll-snap-align: start; }
+@media (max-width: 639px) {
+  .tab-scroller.page-bleed { margin-inline: -1rem; padding-inline: 1rem; scroll-padding-inline: 1rem; max-width: none; }
+}
+
+/* Touch screens scroll the page by swiping; a permanent scrollbar track only
+   takes space at the edge. */
+@media (pointer: coarse) {
+  #main-scroll-viewport { scrollbar-width: none; }
+  #main-scroll-viewport::-webkit-scrollbar { display: none; }
+}
+
 html:not(.dark), html:not(.dark) body {
   background-color: var(--bg-app);
   color: var(--text-primary);

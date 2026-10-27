@@ -38,7 +38,7 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; icon: React.El
   <button
     type="button"
     onClick={onClick}
-    aria-pressed={active}
+    aria-current={active ? 'page' : undefined}
     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
       active
         ? 'bg-blue-600 text-white shadow-sm'
@@ -113,7 +113,7 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
 
   return (
     <div className="w-full space-y-6 font-vazirmatn transition-colors duration-200">
-      <div className="flex items-center gap-2 justify-start overflow-x-auto pb-1 select-none scrollbar-none">
+      <div className="tab-scroller page-bleed items-center gap-2 pb-1 select-none">
         <TabButton active={currentSubTab === 'analytics'} onClick={() => handleTabChange('analytics')} icon={BarChart3} label="تحلیل عملکرد" />
         <TabButton active={currentSubTab === 'roadmap'} onClick={() => handleTabChange('roadmap')} icon={Network} label="نقشهٔ راه پروژه" />
         <TabButton active={currentSubTab === 'bottlenecks'} onClick={() => handleTabChange('bottlenecks')} icon={AlertTriangle} label="موانع و تأخیرها" badge={issueRows.length} />
@@ -237,7 +237,27 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
                 <span className="text-xs text-slate-500">هیچ وظیفه‌ای متوقف نیست و سررسید هیچ وظیفهٔ بازی نگذشته است.</span>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              <ul className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+                {issueRows.map(t => {
+                  const due = dueDate(t);
+                  const late = due && due < today ? daysBetween(due, today) : 0;
+                  return (
+                    <li key={t.id} className="py-3 space-y-1.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="font-bold text-sm text-slate-800 dark:text-slate-200 min-w-0">{t.title}</span>
+                        <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold ${t.status === 'blocked' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{statusLabel(t.status)}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span>{projectTitle(t.projectId)}</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300">{ownerName(t)}</span>
+                        <span className={late ? 'text-rose-600 dark:text-rose-400 font-bold' : ''}>{due ? jalali(due) : 'بدون سررسید'}{late ? ` (${fa(late)} روز تأخیر)` : ''}</span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-start text-xs min-w-[640px]">
                   <thead>
                     <tr className="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
@@ -267,6 +287,7 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         </div>

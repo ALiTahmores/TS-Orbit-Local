@@ -82,7 +82,7 @@ export const OrgPermissions: React.FC = () => {
             <p className="text-[11px] text-text-secondary">مجوزها بر اساس ساختار هر دپارتمان بارگذاری می‌شوند</p>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
+          <div className="tab-scroller gap-2 pb-1">
             {departments.map((dept: any) => (
               <button
                 key={dept.id}

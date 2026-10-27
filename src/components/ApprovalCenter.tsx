@@ -420,7 +420,7 @@ export const ApprovalCenter: React.FC = () => {
       </div>
 
       {/* Dynamic Sub Tab Selector */}
-      <div className="flex border-b border-slate-200 gap-1 overflow-x-auto dark:border-slate-800">
+      <div className="tab-scroller border-b border-slate-200 gap-1 dark:border-slate-800">
         <button
           onClick={() => setActiveSubTab('approval_queue')}
           className={`px-4 py-3 text-xs font-black flex items-center gap-2 border-b-2 transition-all cursor-pointer ${

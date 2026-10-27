@@ -52,9 +52,16 @@ export function clientApp(clientDir: string): RequestHandler[] {
     res.setHeader('Cache-Control', relative.startsWith('assets/') ? immutable : relative.startsWith('fonts/') ? 'public, max-age=2592000' : 'no-cache');
   } });
   const missingAsset: RequestHandler = (req, res, next) => /^\/assets\//.test(req.path) ? void res.status(404).type('text/plain').send('Not found') : next();
+  // The shell's validator is derived from its content (res.send). sendFile's ETag
+  // is only size and modification time, and a platform that stamps every release
+  // with the same time (Vercel) would answer 304 and keep browsers on an old release.
   const shell: RequestHandler = (req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-    res.sendFile(path.join(clientDir, 'index.html'), { cacheControl: false, headers: { 'Cache-Control': 'no-cache' } });
+    fs.readFile(path.join(clientDir, 'index.html'), 'utf8', (error, html) => {
+      if (error) return next(error);
+      res.setHeader('Cache-Control', 'no-cache');
+      res.type('html').send(html);
+    });
   };
   return [precompressed, files, missingAsset, shell];
 }

@@ -19,9 +19,9 @@ fs.mkdirSync(path.join(temp, 'assets')); fs.writeFileSync(path.join(temp, 'index
 for (const [suffix, value] of [['', 'identity-body'], ['.br', 'brotli-body'], ['.gz', 'gzip-body']]) fs.writeFileSync(path.join(temp, 'assets', 'bundle.js' + suffix), value);
 const app = express(); app.use(...clientApp(temp)); const server = app.listen(0, '127.0.0.1'); await once(server, 'listening');
 test.after(async () => { await new Promise(resolve => server.close(resolve)); fs.rmSync(temp, { recursive: true, force: true }); });
-function request(encoding, pathname = '/assets/bundle.js') {
+function request(encoding, pathname = '/assets/bundle.js', extraHeaders = {}) {
   return new Promise((resolve, reject) => {
-    const req = http.get({ hostname: '127.0.0.1', port: server.address().port, path: pathname, headers: encoding === undefined ? {} : { 'Accept-Encoding': encoding } }, res => {
+    const req = http.get({ hostname: '127.0.0.1', port: server.address().port, path: pathname, headers: { ...(encoding === undefined ? {} : { 'Accept-Encoding': encoding }), ...extraHeaders } }, res => {
       const chunks = []; res.on('data', chunk => chunks.push(chunk)); res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks).toString() }));
     }); req.on('error', reject);
   });
@@ -41,4 +41,14 @@ test('refusal of all available representations produces 406 without asset bytes'
 test('missing asset returns 404 rather than SPA HTML, while navigation returns fresh shell', async () => {
   const missing = await request(undefined, '/assets/missing.js'); assert.equal(missing.status, 404); assert.equal(missing.body, 'Not found');
   const shell = await request(undefined, '/projects/synthetic'); assert.equal(shell.status, 200); assert.equal(shell.body, 'synthetic shell'); assert.equal(shell.headers['cache-control'], 'no-cache');
+});
+test('a new release of the same size and file time is not answered 304 for the old shell', async () => {
+  const shellPath = path.join(temp, 'index.html'), stamp = new Date('2018-11-30T00:00:00Z');
+  fs.utimesSync(shellPath, stamp, stamp);
+  const first = await request(undefined, '/');
+  assert.equal((await request(undefined, '/', { 'If-None-Match': first.headers.etag })).status, 304);
+  fs.writeFileSync(shellPath, 'synthetic shelL'); fs.utimesSync(shellPath, stamp, stamp);
+  const next = await request(undefined, '/', { 'If-None-Match': first.headers.etag });
+  assert.equal(next.status, 200); assert.equal(next.body, 'synthetic shelL'); assert.notEqual(next.headers.etag, first.headers.etag);
+  fs.writeFileSync(shellPath, 'synthetic shell');
 });

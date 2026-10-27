@@ -167,7 +167,9 @@ export class PostgresStore {
     this.pool = options.pool; this.validateState = options.validateState;
     this.lockTimeout = boundedTimeout(options.lockTimeoutMs, 10_000);
     this.statementTimeout = boundedTimeout(options.statementTimeoutMs, 20_000);
-    this.idleTimeout = boundedTimeout(options.idleTransactionTimeoutMs, 30_000);
+    // Every unit holds the global lock. A transaction left idle (a paused or
+    // stalled instance) ends quickly so it cannot outlast other units' lock waits.
+    this.idleTimeout = boundedTimeout(options.idleTransactionTimeoutMs, 5_000);
   }
 
   private async openLocked(client: PgClient): Promise<void> {

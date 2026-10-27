@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { waitUntil } from '@vercel/functions';
 import type { Request, Response, NextFunction } from 'express';
 import type { DbService } from '../src/data/dbService.ts';
 
@@ -38,7 +39,10 @@ export class PersistenceCoordinator {
   }
   private dispatch(events: Unit['events']): void {
     for (const event of events) {
-      try { void Promise.resolve(event()).catch(error => console.error('Committed delivery failed:', error?.code || 'delivery error')); }
+      // Committed follow-ups run after the response and may open a new storage
+      // transaction. On Vercel the instance is paused once nothing is pending, so
+      // keep it running until they finish instead of pausing with the lock held.
+      try { waitUntil(Promise.resolve(event()).catch(error => console.error('Committed delivery failed:', error?.code || 'delivery error'))); }
       catch (error) { console.error('Committed delivery failed:', error); }
     }
   }

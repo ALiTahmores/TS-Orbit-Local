@@ -9,7 +9,9 @@ import { transform } from 'esbuild';
 
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-unit-test-'));
 const file = path.join(temp, 'persistence.cjs');
-fs.writeFileSync(file, (await transform(fs.readFileSync(new URL('../../server/persistence.ts', import.meta.url), 'utf8'), { loader: 'ts', format: 'cjs', target: 'node24' })).code);
+// The compiled copy lives outside the project, so its one package import is resolved from here.
+const vercelFunctions = JSON.stringify(createRequire(import.meta.url).resolve('@vercel/functions'));
+fs.writeFileSync(file, (await transform(fs.readFileSync(new URL('../../server/persistence.ts', import.meta.url), 'utf8'), { loader: 'ts', format: 'cjs', target: 'node24' })).code.replace('require("@vercel/functions")', `require(${vercelFunctions})`));
 const { PersistenceCoordinator } = createRequire(import.meta.url)(file);
 test.after(() => fs.rmSync(temp, { recursive: true, force: true }));
 const tick = () => new Promise(resolve => setImmediate(resolve));

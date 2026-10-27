@@ -926,6 +926,9 @@ await startServer();
 return {app,httpServer,db,persistence,realtime};
 }
 export const ready = initializeApplication();
-ready.catch(error => { console.error('Application initialization failed:', cloudFailureLabel(error)); if(!config.cloud)process.exitCode=1; });
+// A cloud instance that could not initialize would answer every API call with 503
+// for as long as it lives. It ends once pending replies are sent, so the platform
+// starts a fresh instance that initializes again.
+ready.catch(error => { console.error('Application initialization failed:', cloudFailureLabel(error)); if(!config.cloud)process.exitCode=1; else setTimeout(() => process.exit(1), 2_000); });
 export default httpServer;
 

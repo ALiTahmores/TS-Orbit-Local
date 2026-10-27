@@ -1219,12 +1219,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const logout = async () => {
     setIsLoading(true);
     try {
-      await apiFetch('/api/auth/logout',{method:'POST',body:'{}'});
-      clearCredential();
-    } catch(error) {
-      // A rejected credential is already cleared by the request layer; network failure leaves the session visible.
-      if (!(error instanceof ApiError && error.status===401)) throw error;
-    } finally { setIsLoading(false); }
+      // Ending the server session is best effort; this device signs out and shows
+      // the sign-in page even when the server cannot be reached.
+      await apiFetch('/api/auth/logout',{method:'POST',body:'{}'}).catch(() => undefined);
+    } finally { clearCredential(); setIsLoading(false); }
   };
 
   const updateProfile = async (name: string, phone: string, avatar?: string, bio?: string, email?: string, jobTitle?: string, currentPassword?: string) => {

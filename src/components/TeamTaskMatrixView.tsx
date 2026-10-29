@@ -19,6 +19,8 @@ import {
   Users
 } from 'lucide-react';
 import { CustomSelect } from './common/CustomSelect';
+import { TeamDirectory } from './team/TeamDirectory';
+import { isManagerRole } from '../lib/roles';
 
 export interface TeamGroupDef {
   id: string;
@@ -34,9 +36,10 @@ export interface TeamGroupDef {
 
 
 export const TeamTaskMatrixView: React.FC = () => {
-  const { tasks, updateTaskStatus, createTask, deleteTask, projects, teams, departments, teamMembers, t, locale, userRole, setActiveTab, setActiveSubTab } = useProject();
-  // Teams are defined in the organization builder, which owners and admins can open.
-  const canDefineTeams = ['OWNER', 'ADMIN'].includes(String(userRole || '').toUpperCase());
+  const { tasks, updateTaskStatus, createTask, deleteTask, projects, teams, departments, teamMembers, t, locale, userRole } = useProject();
+  const canDefineTeams = isManagerRole(userRole);
+  // The page opens on the team directory; the per-team task tables are one tab away.
+  const [view, setView] = useState<'teams' | 'tasks'>('teams');
   const TEAMS_GROUPS:TeamGroupDef[] = teams.map((team:any) => {
     const dept=departments.find((department:any)=>department.id===team.departmentId);
     const memberIds=[...new Set<string>([...(team.memberIds || []),...(team.leaderId?[team.leaderId]:[])])];
@@ -113,8 +116,17 @@ export const TeamTaskMatrixView: React.FC = () => {
   };
 
   return (
-    <div className={`w-full space-y-6 ${isRtl ? 'font-vazirmatn text-start' : 'font-sans text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
-      
+    <div className={`w-full space-y-6 ${isRtl ? 'font-vazirmatn' : 'font-sans'} text-start`} dir={isRtl ? 'rtl' : 'ltr'}>
+      <div role="tablist" aria-label="نمای تیم‌ها" className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80">
+        {([['teams', 'فهرست تیم‌ها'], ['tasks', 'وظایف هر تیم']] as const).map(([key, text]) => (
+          <button key={key} type="button" role="tab" aria-selected={view === key} onClick={() => setView(key)}
+            className={`h-8 px-4 rounded-lg text-xs font-bold transition-colors cursor-pointer ${view === key ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>
+            {text}
+          </button>
+        ))}
+      </div>
+
+      {view === 'teams' ? <TeamDirectory /> : <>
       {/* SUB-HEADER BANNER & GLOBAL CONTROLS */}
       <div className="bg-white dark:bg-[#0d121f] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
         {/* Global Search and Status Filter */}
@@ -157,7 +169,7 @@ export const TeamTaskMatrixView: React.FC = () => {
             {canDefineTeams && (
               <button
                 type="button"
-                onClick={() => { setActiveTab('org_builder'); setActiveSubTab('org_builder_main'); }}
+                onClick={() => setView('teams')}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors cursor-pointer"
               >
                 <Plus size={14} />
@@ -405,6 +417,7 @@ export const TeamTaskMatrixView: React.FC = () => {
           })
         )}
       </div>
+      </>}
 
       {/* QUICK ADD TASK MODAL */}
       {selectedTeamForAdd && (

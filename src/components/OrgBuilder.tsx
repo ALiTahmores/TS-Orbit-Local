@@ -1,906 +1,406 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Box, Check, Layers, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
-import { CustomSelect, CustomSelectOption } from './common/CustomSelect';
-import { Box, Sparkles } from 'lucide-react';
 import { iconByName } from '../lib/icons';
+import { formatJalaliDate } from '../lib/dates';
+import { SideSheet, sheetInput, sheetLabel } from './common/SideSheet';
+import { TeamDirectory } from './team/TeamDirectory';
+import { TEAM_COLORS } from './team/TeamEditor';
 
-const MODULE_ICONS_LIST = [
-  { value: 'Box', label: 'ماژول استاندارد' },
-  { value: 'Layers', label: 'لایه‌ها' },
-  { value: 'Database', label: 'پایگاه داده' },
-  { value: 'Folder', label: 'پوشه' },
-  { value: 'FileText', label: 'اسناد' },
-  { value: 'CheckSquare', label: 'وظایف' },
-  { value: 'Sliders', label: 'تنظیمات' },
-  { value: 'Grid', label: 'جدول' },
-];
-
-const detectIconByKeywords = (name: string): string => {
-  const lowerName = name.toLowerCase();
-  if (/توسعه|فنی|برنامه|کد|نرم|سایت|it|dev|tech/i.test(lowerName)) return 'Code';
-  if (/طراحی|گرافیک|دیزاین|رابط|بصری|ui|ux|design/i.test(lowerName)) return 'Palette';
-  if (/مارکتینگ|فروش|بازاریابی|تبلیغات|سئو|محتوا|seo|marketing/i.test(lowerName)) return 'Megaphone';
-  if (/مالی|حسابداری|اداری|پول|خرید|finance/i.test(lowerName)) return 'CircleDollarSign';
-  if (/منابع|انسانی|استخدام|پرسنل|تیم|hr/i.test(lowerName)) return 'Users';
-  if (/عملیات|زیرساخت|شبکه|پشتیبانی/i.test(lowerName)) return 'Layers';
-  return 'Building2'; // Default fallback icon
-};
+const fa = (value: number) => value.toLocaleString('fa-IR');
+const DEPARTMENT_ICONS = ['Building2', 'Code', 'Palette', 'Megaphone', 'CircleDollarSign', 'Users', 'Layers', 'Target', 'PenTool', 'Server', 'ShoppingBag', 'Rocket'];
+const MODULE_ICONS = ['Box', 'Layers', 'Database', 'Folder', 'FileText', 'CheckSquare', 'Sliders', 'Grid', 'Kanban', 'Calendar', 'LineChart', 'MessageSquare'];
 
 const PRESET_DEPARTMENTS = [
-  {
-    name: 'توسعه و فنی',
-    icon: 'Code',
-    color: '#3b82f6',
-    description: 'توسعه نرم‌افزار، وب‌سایت و زیرساخت'
-  },
-  {
-    name: 'دیجیتال مارکتینگ',
-    icon: 'Megaphone',
-    color: '#f97316',
-    description: 'سئو، شبکه‌های اجتماعی و کمپین‌های تبلیغاتی'
-  },
-  {
-    name: 'طراحی و گرافیک',
-    icon: 'Palette',
-    color: '#ec4899',
-    description: 'طراحی رابط کاربری، هویت بصری و گرافیک'
-  },
-  {
-    name: 'مالی و اداری',
-    icon: 'CircleDollarSign',
-    color: '#10b981',
-    description: 'حسابداری، قراردادها و امور مالی'
-  },
-  {
-    name: 'منابع انسانی',
-    icon: 'Users',
-    color: '#8b5cf6',
-    description: 'جذب نیرو، ارزیابی عملکرد و رفاهیات'
-  }
+  { name: 'توسعه و فنی', icon: 'Code', color: '#2563EB', description: 'توسعه نرم‌افزار، وب‌سایت و زیرساخت' },
+  { name: 'دیجیتال مارکتینگ', icon: 'Megaphone', color: '#EA580C', description: 'سئو، شبکه‌های اجتماعی و کمپین‌های تبلیغاتی' },
+  { name: 'طراحی و گرافیک', icon: 'Palette', color: '#DB2777', description: 'طراحی رابط کاربری، هویت بصری و گرافیک' },
+  { name: 'مالی و اداری', icon: 'CircleDollarSign', color: '#059669', description: 'حسابداری، قراردادها و امور مالی' },
+  { name: 'منابع انسانی', icon: 'Users', color: '#7C3AED', description: 'جذب نیرو، ارزیابی عملکرد و رفاهیات' },
 ];
 
+type Tab = 'depts' | 'modules' | 'teams' | 'templates';
+type Sheet = { kind: 'dept'; row?: any; preset?: typeof PRESET_DEPARTMENTS[number] } | { kind: 'module'; row?: any } | { kind: 'assign' } | null;
+
+const Icon: React.FC<{ name?: string; size?: number; className?: string }> = ({ name, size = 16, className }) => {
+  const Component = iconByName(name, Box);
+  return <Component size={size} className={className} />;
+};
+const Tile: React.FC<{ icon?: string; color?: string; size?: 'sm' | 'md' }> = ({ icon, color, size = 'md' }) => (
+  <span className={`shrink-0 rounded-xl flex items-center justify-center text-white ${size === 'md' ? 'w-10 h-10' : 'w-8 h-8'}`} style={{ background: color || '#2563EB' }}>
+    <Icon name={icon} size={size === 'md' ? 18 : 15} />
+  </span>
+);
+const Empty: React.FC<{ text: string; children?: React.ReactNode }> = ({ text, children }) => (
+  <div className="flex flex-col items-center text-center gap-3 px-6 py-12 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md leading-6">{text}</p>
+    {children}
+  </div>
+);
+const Toolbar: React.FC<{ text: string; children?: React.ReactNode }> = ({ text, children }) => (
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <p className="text-xs leading-6 text-slate-500 dark:text-slate-400 max-w-2xl">{text}</p>
+    {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+  </div>
+);
+const primary = 'shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold disabled:opacity-50 cursor-pointer';
+const secondary = 'shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold disabled:opacity-50 cursor-pointer';
+const iconAction = 'w-8 h-8 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer';
+const card = 'rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900';
+
+const ColorPicker: React.FC<{ value: string; onChange: (value: string) => void }> = ({ value, onChange }) => (
+  <div className="flex flex-wrap gap-2">
+    {TEAM_COLORS.map(color => (
+      <button key={color} type="button" onClick={() => onChange(color)} aria-label={`رنگ ${color}`} aria-pressed={value.toLowerCase() === color.toLowerCase()}
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-white transition-transform cursor-pointer ${value.toLowerCase() === color.toLowerCase() ? 'ring-2 ring-offset-2 ring-slate-400 dark:ring-offset-slate-900' : 'hover:scale-105'}`} style={{ background: color }}>
+        {value.toLowerCase() === color.toLowerCase() && <Check size={14} strokeWidth={3} />}
+      </button>
+    ))}
+  </div>
+);
+const IconPicker: React.FC<{ icons: string[]; value: string; color: string; onChange: (value: string) => void }> = ({ icons, value, color, onChange }) => (
+  <div className="grid grid-cols-6 gap-2">
+    {icons.map(name => (
+      <button key={name} type="button" onClick={() => onChange(name)} aria-label={name} aria-pressed={value === name}
+        className={`h-10 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${value === name ? 'border-transparent text-white' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}
+        style={value === name ? { background: color } : undefined}>
+        <Icon name={name} size={17} />
+      </button>
+    ))}
+  </div>
+);
+
+/** Departments, modules, teams and saved structures of the agency. */
 export const OrgBuilder: React.FC = () => {
   const {
-    departments,
-    teamMembers,
-    moduleDefinitions,
-    moduleInstances,
-    departmentModules,
-    teams,
-    createDepartment,
-    updateDepartment,
-    updateOrgTeam,
-    deleteOrgTeam,
-    updateModuleDefinition,
-    deleteDepartment,
-    createModule,
-    deleteModule,
-    instantiateModule,
-    createOrgTeam,
-    saveModuleTemplate,
-    fetchTemplates
+    departments, teamMembers, moduleDefinitions, moduleInstances, departmentModules, teams,
+    createDepartment, updateDepartment, deleteDepartment, createModule, updateModuleDefinition, deleteModule, instantiateModule,
+    saveModuleTemplate, fetchTemplates,
   } = useProject();
+  const [tab, setTab] = useState<Tab>('depts');
+  const [sheet, setSheet] = useState<Sheet>(null);
+  const [error, setError] = useState('');
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const [editingDept,setEditingDept]=useState<string|null>(null);
-  const [editingTeam,setEditingTeam]=useState<string|null>(null);
-  const [editingModule,setEditingModule]=useState<string|null>(null);
-  const [formError,setFormError]=useState('');
-  const perform=async(operation:()=>Promise<any>)=>{setFormError('');try{await operation();}catch(error){setFormError(error instanceof Error?error.message:'عملیات انجام نشد.');throw error;}};
-  const [activeTab, setActiveTab] = useState<'depts' | 'modules' | 'teams' | 'templates'>('depts');
+  const loadTemplates = async () => { if (fetchTemplates) setTemplates((await fetchTemplates()) || []); };
+  useEffect(() => { void loadTemplates().catch(() => {}); }, []);
 
-  // Form States - Department
-  const [deptName, setDeptName] = useState('');
-  const [deptIcon, setDeptIcon] = useState('Building2');
-  const [deptColor, setDeptColor] = useState('#3B82F6');
-  const [deptDesc, setDeptDesc] = useState('');
-  const [deptLeader, setDeptLeader] = useState('');
-
-  // Form States - Module Definition
-  const [modName, setModName] = useState('');
-  const [modIcon, setModIcon] = useState('Box');
-  const [modColor, setModColor] = useState('#10B981');
-  const [modDesc, setModDesc] = useState('');
-  const [modFields, setModFields] = useState<string>('عنوان\nتوضیحات\nوضعیت');
-
-  // Form States - Module Instantiation
-  const [instModDefId, setInstModDefId] = useState('');
-  const [instDeptId, setInstDeptId] = useState('');
-  const [instName, setInstName] = useState('');
-
-  // Form States - Team
-  const [teamName, setTeamName] = useState('');
-  const [teamDeptId, setTeamDeptId] = useState('');
-  const [teamLeaderId, setTeamLeaderId] = useState('');
-  const [teamMembersList, setTeamMembersList] = useState<string[]>([]);
-  const [teamDesc, setTeamDesc] = useState('');
-  const [teamColor, setTeamColor] = useState('#155DFC');
-
-  // Form States - Template
-  const [tpls, setTpls] = useState<any[]>([]);
-  const [tplName, setTplName] = useState('');
-  const [tplDesc, setTplDesc] = useState('');
-
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
-  const loadTemplates = async () => {
-    if (fetchTemplates) {
-      const data = await fetchTemplates();
-      setTpls(data || []);
-    }
+  const memberName = (id?: string) => teamMembers.find((person: any) => (person.userId || person.id) === id)?.name || '';
+  const departmentOf = (instance: any) => departments.find((row: any) => row.id === (instance.departmentId || departmentModules.find((link: any) => link.moduleId === instance.id)?.departmentId));
+  const remove = async (text: string, action: () => Promise<any>) => {
+    if (!window.confirm(text)) return;
+    setError('');
+    try { await action(); } catch (failure) { setError(failure instanceof Error ? failure.message : 'عملیات انجام نشد.'); }
+  };
+  const saveTemplate = async (event: React.FormEvent) => {
+    event.preventDefault(); if (!templateName.trim()) return;
+    setSaving(true); setError('');
+    try {
+      await saveModuleTemplate({ name: templateName.trim(), description: templateDescription.trim(), structure: { departments, moduleDefinitions, teams } });
+      setTemplateName(''); setTemplateDescription(''); await loadTemplates();
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'ذخیره انجام نشد.'); }
+    finally { setSaving(false); }
   };
 
-  const renderIcon = (name: string, size = 16, className = "") => {
-    const IconComp = iconByName(name, Box);
-    return <IconComp size={size} className={className} />;
-  };
-
-  // Handlers
-  const handleCreateDept = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!deptName.trim()) return;
-    const finalIcon = deptIcon || detectIconByKeywords(deptName);
-    await perform(()=>(editingDept ? updateDepartment(editingDept,{
-      name: deptName,
-      icon: finalIcon,
-      color: deptColor,
-      description: deptDesc,
-      leaderId: deptLeader
-    }) : createDepartment({name:deptName,icon:finalIcon,color:deptColor,description:deptDesc,leaderId:deptLeader})));
-    setEditingDept(null);
-    setDeptName('');
-    setDeptDesc('');
-    setDeptLeader('');
-    setDeptIcon('Building2');
-  };
-
-  const handleCreateModuleDef = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!modName.trim()) return;
-    let structure = {};
-    const fields = [...new Set(modFields.split(/[\n،,]/).map(field => field.trim()).filter(Boolean))];
-    if (!fields.length) { setFormError('دست‌کم یک فیلد وارد کنید.'); return; }
-    structure = { fields };
-    await perform(()=>(editingModule ? updateModuleDefinition(editingModule,{
-      name: modName,
-      icon: modIcon,
-      color: modColor,
-      description: modDesc,
-      structure
-    }) : createModule({name:modName,icon:modIcon,color:modColor,description:modDesc,structure})));
-    setEditingModule(null);
-    setModName('');
-    setModDesc('');
-  };
-
-  const handleInstantiate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!instModDefId || !instDeptId) return;
-    await instantiateModule({
-      definitionId: instModDefId,
-      departmentId: instDeptId,
-      name: instName || undefined
-    });
-    setInstModDefId('');
-    setInstDeptId('');
-    setInstName('');
-  };
-
-  const handleCreateTeam = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!teamName.trim() || !teamDeptId) return;
-    await perform(()=>(editingTeam ? updateOrgTeam(editingTeam,{
-      name: teamName,
-      departmentId: teamDeptId,
-      leaderId: teamLeaderId,
-      memberIds: teamMembersList,
-      description: teamDesc,
-      color: teamColor
-    }) : createOrgTeam({name:teamName,departmentId:teamDeptId,leaderId:teamLeaderId,memberIds:teamMembersList,description:teamDesc,color:teamColor})));
-    setEditingTeam(null);
-    setTeamName('');
-    setTeamDesc('');
-    setTeamLeaderId('');
-    setTeamMembersList([]);
-  };
-
-  const handleSaveTpl = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!tplName.trim()) return;
-    await saveModuleTemplate({
-      name: tplName,
-      description: tplDesc,
-      structure: { departments, moduleDefinitions, teams }
-    });
-    setTplName('');
-    setTplDesc('');
-    loadTemplates();
-  };
-
-  const toggleMemberSelection = (userId: string) => {
-    setTeamMembersList(prev => 
-      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-    );
-  };
+  const tabs: [Tab, string, number][] = [['depts', 'دپارتمان‌ها', departments.length], ['modules', 'ماژول‌ها', moduleDefinitions.length], ['teams', 'تیم‌ها', teams.length], ['templates', 'قالب‌ها', templates.length]];
 
   return (
     <div className="w-full space-y-6 text-start">
-      {formError && <p role="alert" className="p-3 text-red-600">{formError}</p>}
-      {/* Header Banner */}
-      <div className="bg-surface-primary border border-border-primary rounded-2xl p-6 relative overflow-hidden shadow-sm">
-        <div className="absolute top-0 end-0 w-32 h-32 bg-[#155DFC]/5 blur-3xl rounded-full" />
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
-          <div>
-            <h1 className="text-xl font-black text-text-primary flex items-center gap-2">
-              <span className="p-2 bg-[#155DFC]/10 text-[#155DFC] rounded-xl">
-                {renderIcon('Cpu', 20)}
-              </span>
-              پیکربندی هوشمند و سازمان‌دهی آژانس
-            </h1>
-            <p className="text-xs text-text-secondary mt-2">
-              دپارتمان‌ها، تیم‌های فنی و ماژول‌های اختصاصی خود را بسازید. سیستم به صورت کاملاً پویا با ساختار اختصاصی کسب‌وکار شما منطبق می‌شود.
-            </p>
+      <header className="space-y-1">
+        <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">سازنده دپارتمان و ماژول</h1>
+        <p className="text-xs leading-6 text-slate-500 dark:text-slate-400 max-w-3xl">ساختار آژانس را از اینجا بسازید: دپارتمان‌ها، تیم‌ها و ماژول‌هایی که هر دپارتمان با آن‌ها کار می‌کند.</p>
+      </header>
+
+      <nav role="tablist" aria-label="بخش‌های ساختار سازمان" className="tab-scroller page-bleed gap-6 border-b border-slate-200 dark:border-slate-800">
+        {tabs.map(([key, text, count]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => { setTab(key); setError(''); }}
+            className={`relative h-11 inline-flex items-center gap-2 text-[13px] font-bold transition-colors cursor-pointer ${tab === key ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}>
+            {text}
+            <span className={`min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold inline-flex items-center justify-center ${tab === key ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>{fa(count)}</span>
+            {tab === key && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-blue-600" />}
+          </button>
+        ))}
+      </nav>
+
+      {error && <p role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold">{error}</p>}
+
+      {tab === 'depts' && (
+        <section className="space-y-4">
+          <Toolbar text="دپارتمان‌ها واحدهای اصلی آژانس هستند. تیم‌ها و ماژول‌ها به یک دپارتمان وصل می‌شوند.">
+            <button type="button" onClick={() => setSheet({ kind: 'dept' })} className={primary}><Plus size={14} />دپارتمان جدید</button>
+          </Toolbar>
+          {departments.length === 0 ? (
+            <Empty text="هنوز دپارتمانی ندارید. با یکی از پیشنهادها شروع کنید یا دپارتمان دلخواه بسازید.">
+              <div className="flex flex-wrap justify-center gap-2">
+                {PRESET_DEPARTMENTS.map(preset => (
+                  <button key={preset.name} type="button" onClick={() => setSheet({ kind: 'dept', preset })} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 cursor-pointer">
+                    <Icon name={preset.icon} size={13} />{preset.name}
+                  </button>
+                ))}
+              </div>
+            </Empty>
+          ) : (
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {departments.map((department: any) => {
+                const teamCount = teams.filter((team: any) => team.departmentId === department.id).length;
+                const moduleCount = moduleInstances.filter((instance: any) => departmentOf(instance)?.id === department.id).length;
+                return (
+                  <article key={department.id} className={`${card} p-4 flex flex-col gap-3`}>
+                    <div className="flex items-start gap-3">
+                      <Tile icon={department.icon} color={department.color} />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-[13px] font-black text-slate-900 dark:text-white truncate">{department.name}</h3>
+                        <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 line-clamp-2">{department.description || 'بدون توضیح'}</p>
+                      </div>
+                      <div className="flex items-center -me-1.5">
+                        <button type="button" onClick={() => setSheet({ kind: 'dept', row: department })} aria-label={`ویرایش ${department.name}`} className={iconAction}><Pencil size={14} /></button>
+                        <button type="button" onClick={() => void remove(`دپارتمان «${department.name}» حذف شود؟`, () => deleteDepartment(department.id))} aria-label={`حذف ${department.name}`} className={`${iconAction} hover:!text-rose-600`}><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 mt-auto border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span>{`مدیر: ${memberName(department.leaderId) || 'تعیین نشده'}`}</span>
+                      <span>{`${fa(teamCount)} تیم`}</span>
+                      <span>{`${fa(moduleCount)} ماژول`}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab === 'modules' && (
+        <section className="space-y-8">
+          <div className="space-y-4">
+            <Toolbar text="هر ماژول یک فرم کاری با فیلدهای مشخص است؛ پس از ساخت، آن را به دپارتمانی که با آن کار می‌کند اضافه کنید.">
+              <button type="button" onClick={() => setSheet({ kind: 'assign' })} disabled={!moduleDefinitions.length || !departments.length} className={secondary}><Layers size={14} />افزودن به دپارتمان</button>
+              <button type="button" onClick={() => setSheet({ kind: 'module' })} className={primary}><Plus size={14} />ماژول جدید</button>
+            </Toolbar>
+            {moduleDefinitions.length === 0 ? <Empty text="هنوز ماژولی تعریف نشده است." /> : (
+              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {moduleDefinitions.map((module: any) => {
+                  const fields: string[] = module.structure?.fields || [];
+                  return (
+                    <article key={module.id} className={`${card} p-4 flex flex-col gap-3`}>
+                      <div className="flex items-start gap-3">
+                        <Tile icon={module.icon} color={module.color} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[13px] font-black text-slate-900 dark:text-white truncate">{module.name}</h3>
+                          <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 line-clamp-2">{module.description || 'بدون توضیح'}</p>
+                        </div>
+                        <div className="flex items-center -me-1.5">
+                          <button type="button" onClick={() => setSheet({ kind: 'module', row: module })} aria-label={`ویرایش ${module.name}`} className={iconAction}><Pencil size={14} /></button>
+                          <button type="button" onClick={() => void remove(`ماژول «${module.name}» حذف شود؟`, () => deleteModule(module.id))} aria-label={`حذف ${module.name}`} className={`${iconAction} hover:!text-rose-600`}><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                      {fields.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-3 mt-auto border-t border-slate-100 dark:border-slate-800">
+                          {fields.slice(0, 5).map(field => <span key={field} className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300">{field}</span>)}
+                          {fields.length > 5 && <span className="px-1 text-[10px] font-bold text-slate-400">{`+${fa(fields.length - 5)}`}</span>}
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="tab-scroller border-b border-border-primary gap-1">
-        <button
-          onClick={() => setActiveTab('depts')}
-          className={`px-4 py-2.5 text-xs font-black border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'depts'
-              ? 'border-[#155DFC] text-[#155DFC]'
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          {renderIcon('Building2', 14)}
-          دپارتمان‌ها و واحدها
-        </button>
-        <button
-          onClick={() => setActiveTab('modules')}
-          className={`px-4 py-2.5 text-xs font-black border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'modules'
-              ? 'border-[#155DFC] text-[#155DFC]'
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          {renderIcon('Box', 14)}
-          سازنده و انتساب ماژول‌ها
-        </button>
-        <button
-          onClick={() => setActiveTab('teams')}
-          className={`px-4 py-2.5 text-xs font-black border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'teams'
-              ? 'border-[#155DFC] text-[#155DFC]'
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          {renderIcon('Users', 14)}
-          مدیریت تیم‌ها و اتصالات
-        </button>
-        <button
-          onClick={() => setActiveTab('templates')}
-          className={`px-4 py-2.5 text-xs font-black border-b-2 transition-all flex items-center gap-2 ${
-            activeTab === 'templates'
-              ? 'border-[#155DFC] text-[#155DFC]'
-              : 'border-transparent text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          {renderIcon('Layers', 14)}
-          قالب‌های ساختاری سازمان
-        </button>
-      </div>
-
-      {/* Main Panel views */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Form/List */}
-        <div className="lg:col-span-2 space-y-6">
-          {activeTab === 'depts' && (
-            <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-              <h3 className="text-sm font-bold text-text-primary">دپارتمان‌های فعال سازمان</h3>
-              
-              {departments.length === 0 ? (
-                <div className="text-center py-8 text-xs text-text-secondary">
-                  هیچ دپارتمانی تعریف نشده است. از فرم روبرو اولین دپارتمان را ثبت فرمایید.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {departments.map((dept: any) => {
-                    const connectedTeams = teams.filter((t: any) => t.departmentId === dept.id);
-                    const leader = teamMembers.find((u: any) => u.id === dept.leaderId);
-
-                    return (
-                      <div key={dept.id} className="border border-border-primary/60 rounded-xl p-4 flex flex-col justify-between hover:border-border-primary transition-all relative group">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black" style={{ backgroundColor: dept.color || '#3B82F6' }}>
-                              {renderIcon(dept.icon, 18)}
-                            </div>
-                            <div>
-                              <h4 className="text-xs font-black text-text-primary">{dept.name}</h4>
-                              <p className="text-[10px] text-text-secondary mt-1 max-w-[180px] truncate">{dept.description || 'بدون توضیحات'}</p>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => {void perform(()=>deleteDepartment(dept.id)).catch(()=>{});}}
-                            className="p-1 text-text-secondary hover:text-brand-danger rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            title="حذف دپارتمان"
-                          >
-                            {renderIcon('Trash2', 13)}
-                          </button>
-                          <button type="button" onClick={()=>{setEditingDept(dept.id);setDeptName(dept.name);setDeptIcon(dept.icon);setDeptColor(dept.color);setDeptDesc(dept.description || '');setDeptLeader(dept.leaderId || '');}} className="text-xs text-blue-600">ویرایش</button>
-                        </div>
-
-                        <div className="border-t border-border-primary/50 mt-4 pt-3 flex items-center justify-between text-[10px] text-text-secondary">
-                          <div>
-                            <span className="font-bold">مدیر دپارتمان:</span> {leader?.name || 'تعیین نشده'}
-                          </div>
-                          <div>
-                            <span className="font-bold">تعداد تیم‌ها:</span> {connectedTeams.length} تیم
-                          </div>
-                        </div>
+          <div className="space-y-3">
+            <h2 className="text-sm font-black text-slate-900 dark:text-white">ماژول‌های فعال در دپارتمان‌ها</h2>
+            {moduleInstances.length === 0 ? <Empty text="هنوز ماژولی به دپارتمانی اضافه نشده است." /> : (
+              <ul className={`${card} divide-y divide-slate-100 dark:divide-slate-800`}>
+                {moduleInstances.map((instance: any) => {
+                  const definition = moduleDefinitions.find((row: any) => row.id === (instance.definitionId || instance.moduleDefinitionId));
+                  const department = departmentOf(instance);
+                  return (
+                    <li key={instance.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                      <Tile icon={definition?.icon} color={definition?.color || '#94A3B8'} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">{instance.name}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">{definition?.name || 'ماژول حذف‌شده'}</p>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: department?.color || '#94A3B8' }} />
+                        {department?.name || 'بدون دپارتمان'}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
 
-          {activeTab === 'modules' && (
-            <div className="space-y-6">
-              <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-                <h3 className="text-sm font-bold text-text-primary">تعاریف ماژول‌های سیستم</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {moduleDefinitions.map((mod: any) => (
-                    <div key={mod.id} className="border border-border-primary/60 rounded-xl p-4 flex items-start justify-between group hover:border-border-primary transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white" style={{ backgroundColor: mod.color || '#10B981' }}>
-                          {renderIcon(mod.icon, 16)}
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-black text-text-primary">{mod.name}</h4><button type="button" onClick={()=>{setEditingModule(mod.id);setModName(mod.name);setModDesc(mod.description || '');setModIcon(mod.icon);setModColor(mod.color);setModFields((mod.structure?.fields || []).join('\n'));}} className="text-xs text-blue-600">ویرایش</button>
-                          <p className="text-[10px] text-text-secondary mt-1">{mod.description || 'بدون توضیحات'}</p>
-                        </div>
+      {tab === 'teams' && <TeamDirectory />}
+
+      {tab === 'templates' && (
+        <section className="grid lg:grid-cols-[minmax(0,1fr)_20rem] gap-6 items-start">
+          <div className="space-y-3 order-2 lg:order-1">
+            <h2 className="text-sm font-black text-slate-900 dark:text-white">قالب‌های ذخیره‌شده</h2>
+            {templates.length === 0 ? <Empty text="هنوز قالبی ذخیره نشده است. ساختار فعلی را به‌عنوان قالب نگه دارید تا برای فضاهای کاری بعدی مرجع داشته باشید." /> : (
+              <ul className={`${card} divide-y divide-slate-100 dark:divide-slate-800`}>
+                {templates.map((template: any) => {
+                  const structure = template.structure || {};
+                  return (
+                    <li key={template.id} className="px-4 py-3.5 space-y-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-[13px] font-black text-slate-900 dark:text-white">{template.name}</h3>
+                        <span className="text-[10px] text-slate-400">{[template.createdBy, formatJalaliDate(template.createdAt)].filter(Boolean).join(' · ')}</span>
                       </div>
-                      <button
-                        onClick={() => {void perform(()=>deleteModule(mod.id)).catch(()=>{});}}
-                        className="p-1 text-text-secondary hover:text-brand-danger rounded-lg opacity-0 group-hover:opacity-100"
-                      >
-                        {renderIcon('Trash2', 13)}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-                <h3 className="text-sm font-bold text-text-primary">پیکربندی و تخصیص ماژول به دپارتمان</h3>
-                
-                {moduleInstances.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-text-secondary">
-                    هیچ تخصیصی انجام نشده است. از فرم روبرو برای اتصال ماژول استفاده فرمایید.
-                  </div>
-                ) : (
-                  <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-                    <table className="w-full text-xs text-start min-w-[700px]">
-                      <thead>
-                        <tr className="border-b border-border-primary/50 text-text-secondary font-bold">
-                          <th className="pb-2">عنوان نمونه</th>
-                          <th className="pb-2">نوع ماژول</th>
-                          <th className="pb-2">دپارتمان میزبان</th>
-                                                  </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border-primary/30">
-                        {moduleInstances.map((inst: any) => {
-                          const mapping = departmentModules.find((dm: any) => dm.moduleId === inst.id);
-                          const dept = departments.find((d: any) => d.id === mapping?.departmentId);
-                          const def = moduleDefinitions.find((m: any) => m.id === inst.definitionId);
-
-                          return (
-                            <tr key={inst.id} className="text-text-primary">
-                              <td className="py-2.5 font-bold">{inst.name}</td>
-                              <td className="py-2.5">
-                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] text-white" style={{ backgroundColor: def?.color || '#94A3B8' }}>
-                                  {renderIcon(def?.icon || 'Box', 10)}
-                                  {def?.name}
-                                </span>
-                              </td>
-                              <td className="py-2.5 text-text-secondary">{dept?.name || 'ناشناس'}</td>
-                                                          </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+                      {template.description && <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">{template.description}</p>}
+                      <p className="text-[10px] font-semibold text-slate-400">{`${fa(structure.departments?.length || 0)} دپارتمان · ${fa(structure.moduleDefinitions?.length || 0)} ماژول · ${fa(structure.teams?.length || 0)} تیم`}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <form onSubmit={event => void saveTemplate(event)} className={`${card} p-4 space-y-4 order-1 lg:order-2`}>
+            <div>
+              <h2 className="text-sm font-black text-slate-900 dark:text-white">ذخیرهٔ ساختار فعلی</h2>
+              <p className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 mt-0.5">{`${fa(departments.length)} دپارتمان، ${fa(moduleDefinitions.length)} ماژول و ${fa(teams.length)} تیم در قالب ذخیره می‌شود.`}</p>
             </div>
-          )}
+            <label className="block space-y-1.5">
+              <span className={sheetLabel}>نام قالب</span>
+              <input value={templateName} onChange={event => setTemplateName(event.target.value)} maxLength={200} placeholder="مثلاً ساختار استاندارد آژانس" className={sheetInput} />
+            </label>
+            <label className="block space-y-1.5">
+              <span className={sheetLabel}>توضیح</span>
+              <textarea value={templateDescription} onChange={event => setTemplateDescription(event.target.value)} rows={3} placeholder="این ساختار برای چه نوع آژانسی مناسب است؟" className={`${sheetInput} h-auto py-2.5 leading-6`} />
+            </label>
+            <button type="submit" disabled={saving || !templateName.trim()} className={`${primary} w-full justify-center`}>{saving ? 'در حال ذخیره…' : 'ذخیرهٔ قالب'}</button>
+          </form>
+        </section>
+      )}
 
-          {activeTab === 'teams' && (
-            <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-              <h3 className="text-sm font-bold text-text-primary flex items-center gap-2">
-                تیم‌های فعال و کانال‌های اتوماتیک متصل
-              </h3>
-              
-              {teams.length === 0 ? (
-                <div className="text-center py-8 text-xs text-text-secondary">
-                  هیچ تیمی ثبت نشده است. از فرم روبرو برای ایجاد تیم اقدام فرمایید.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {teams.map((team: any) => {
-                    const dept = departments.find((d: any) => d.id === team.departmentId);
-                    const leader = teamMembers.find((u: any) => u.id === team.leaderId);
-
-                    return (
-                      <div key={team.id} className="border border-border-primary/60 rounded-xl p-4 hover:border-border-primary transition-all space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: team.color || '#155DFC' }}>
-                              {team.avatar || team.name.substring(0,1)}
-                            </div>
-                            <div>
-                              <h4 className="text-xs font-black text-text-primary">{team.name}</h4><button type="button" className="text-xs text-blue-600" onClick={()=>{setEditingTeam(team.id);setTeamName(team.name);setTeamDeptId(team.departmentId || '');setTeamLeaderId(team.leaderId || '');setTeamMembersList(team.memberIds || []);setTeamDesc(team.description || '');setTeamColor(team.color || '#155DFC');}}>ویرایش</button><button type="button" className="text-xs text-red-600 px-2" onClick={()=>{void perform(()=>deleteOrgTeam(team.id)).catch(()=>{});}}>حذف</button>
-                              <p className="text-[10px] text-text-secondary mt-0.5">دپارتمان: {dept?.name || 'ناشناس'}</p>
-                            </div>
-                          </div>
-                          <span className="text-[10px] bg-[#155DFC]/15 text-[#155DFC] px-2 py-0.5 rounded-full font-bold">
-                            تعداد پرسنل: {team.membersCount} نفر
-                          </span>
-                        </div>
-
-                        {team.description && (
-                          <p className="text-[10.5px] text-text-secondary bg-hover-overlay p-2 rounded-lg leading-relaxed">
-                            {team.description}
-                          </p>
-                        )}
-
-                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border-primary/40">
-                          <span className="text-[9.5px] text-text-secondary flex items-center gap-1 bg-hover-overlay px-2 py-1 rounded-md">
-                            {renderIcon('Lock', 10, "text-brand-warning")} گپ خصوصی تیمی
-                          </span>
-                          <span className="text-[9.5px] text-text-secondary flex items-center gap-1 bg-hover-overlay px-2 py-1 rounded-md">
-                            {renderIcon('Megaphone', 10, "text-brand-success")} کانال عمومی
-                          </span>
-                          <span className="text-[9.5px] text-text-secondary flex items-center gap-1 bg-hover-overlay px-2 py-1 rounded-md">
-                            {renderIcon('Bell', 10, "text-[#155DFC]")} کانال اعلانات
-                          </span>
-                          <span className="text-[9.5px] text-text-secondary flex items-center gap-1 bg-hover-overlay px-2 py-1 rounded-md">
-                            {renderIcon('ShieldCheck', 10, "text-brand-info")} کانال مدیران تیمی
-                          </span>
-                        </div>
-
-                        <div className="text-[9px] text-text-secondary flex justify-between items-center mt-1">
-                          <span>مدیر تیم: <strong className="text-text-primary">{leader?.name || 'تعیین نشده'}</strong></span>
-                          <span className="font-mono text-[9px]">ID: {team.id}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'templates' && (
-            <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-              <h3 className="text-sm font-bold text-text-primary">لیست قالب‌های ساختاری</h3>
-              <p className="text-xs text-text-secondary leading-relaxed">
-                می‌توانید پیکربندی فعلی دپارتمان‌ها و الگوهای ساختار سازمانی خود را به عنوان قالب ذخیره کنید تا در پروژه‌های بعدی از نو ساخته نشوند.
-              </p>
-
-              {tpls.length === 0 ? (
-                <div className="text-center py-8 text-xs text-text-secondary">
-                  هیچ قالبی ثبت نشده است. از فرم روبرو اولین الگو را ثبت فرمایید.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {tpls.map((t: any) => (
-                    <div key={t.id} className="border border-border-primary/50 rounded-xl p-4 hover:border-border-primary transition-all">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-black text-text-primary">{t.name}</h4>
-                        <span className="text-[9px] text-[#155DFC] bg-[#155DFC]/10 px-2 py-0.5 rounded-full font-bold">
-                          ثبت شده توسط: {t.createdBy}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-text-secondary mt-1">{t.description || 'بدون توضیحات'}</p>
-                      <div className="mt-3 pt-2 border-t border-border-primary/40 flex justify-between items-center text-[9px] text-text-secondary">
-                        <span>قالب ساختار چند دپارتمانه</span>
-                        <button className="px-2.5 py-1 bg-[#155DFC] hover:bg-[#0E50D6] text-white rounded-md font-bold transition-all">
-                          اعمال این قالب به عنوان ساختار جدید
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Right 1 Col: Dynamic form sidebar based on active sub tab */}
-        <div className="space-y-6">
-          {activeTab === 'depts' && (
-            <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-              <h3 className="text-xs font-black text-text-primary flex items-center gap-1.5">
-                {renderIcon('PlusCircle', 14, "text-[#155DFC]")}
-                تعریف دپارتمان جدید
-              </h3>
-              
-              <form onSubmit={event=>{void handleCreateDept(event).catch(error=>setFormError(error instanceof Error?error.message:'عملیات انجام نشد.'));}} className="space-y-3">
-                {/* Quick-Start Department Templates (Auto-fill Chips) */}
-                <div className="space-y-1.5 pb-1 border-b border-border-primary/40">
-                  <div className="flex items-center gap-1.5 text-[10px] text-text-secondary font-bold">
-                    <Sparkles size={12} className="text-amber-500 shrink-0" />
-                    <span>پیشنهادهای متداول:</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_DEPARTMENTS.map((preset) => (
-                      <button
-                        key={preset.name}
-                        type="button"
-                        onClick={() => {
-                          setDeptName(preset.name);
-                          setDeptIcon(preset.icon);
-                          setDeptColor(preset.color);
-                          setDeptDesc(preset.description);
-                        }}
-                        className="text-[10px] font-bold border border-border-primary/70 bg-surface-secondary/50 hover:bg-[#155DFC]/10 hover:border-[#155DFC]/50 text-text-primary hover:text-[#155DFC] rounded-full px-2.5 py-1 transition-all cursor-pointer flex items-center gap-1 shrink-0"
-                      >
-                        {renderIcon(preset.icon, 11, "text-[#155DFC]")}
-                        <span>{preset.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">نام دپارتمان / واحد</label>
-                  <input
-                    type="text"
-                    value={deptName}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setDeptName(val);
-                      setDeptIcon(detectIconByKeywords(val));
-                    }}
-                    placeholder="مثال: دپارتمان دیجیتال مارکتینگ"
-                    className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs focus:outline-none focus:border-[#155DFC] text-text-primary font-bold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">توضیحات عملکرد</label>
-                  <textarea
-                    value={deptDesc}
-                    onChange={(e) => setDeptDesc(e.target.value)}
-                    placeholder="توضیحات وظایف این دپارتمان..."
-                    rows={2}
-                    className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs focus:outline-none focus:border-[#155DFC] text-text-primary"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-bold">رنگ نماد</label>
-                    <input
-                      type="color"
-                      value={deptColor}
-                      onChange={(e) => setDeptColor(e.target.value)}
-                      className="w-full h-8 bg-hover-overlay rounded-lg cursor-pointer border-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-bold">نماد هوشمند (خودکار)</label>
-                    <div className="h-8 bg-hover-overlay border border-border-primary/60 rounded-lg px-3 flex items-center justify-between text-xs text-text-primary font-bold">
-                      <div className="flex items-center gap-2">
-                        {renderIcon(deptIcon || detectIconByKeywords(deptName), 15, "text-[#155DFC]")}
-                        <span className="text-[10px] text-text-secondary font-medium">شناسایی هوشمند</span>
-                      </div>
-                      <Sparkles size={12} className="text-amber-500 shrink-0" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">مدیر ارشد دپارتمان</label>
-                  <CustomSelect
-                    options={[
-                      { value: '', label: 'انتخاب متخصص ارشد...' },
-                      ...teamMembers.map((member: any) => ({ value: member.id, label: member.name }))
-                    ]}
-                    value={deptLeader}
-                    onChange={(val) => setDeptLeader(val)}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-[#155DFC] hover:bg-[#0E50D6] text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
-                >
-                  {renderIcon('Plus', 12)}
-                  {editingDept?'ذخیره تغییرات دپارتمان':'ایجاد دپارتمان جدید'}
-                </button>
-              </form>
-            </div>
-          )}
-
-          {activeTab === 'modules' && (
-            <div className="space-y-6">
-              {/* Form 1: New Module Def */}
-              <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-                <h3 className="text-xs font-black text-text-primary flex items-center gap-1.5">
-                  {renderIcon('PlusCircle', 14, "text-brand-success")}
-                  ایجاد یک ماژول جدید در سیستم
-                </h3>
-                
-                <form onSubmit={event=>{void handleCreateModuleDef(event).catch(error=>setFormError(error instanceof Error?error.message:'عملیات انجام نشد.'));}} className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-bold">نام ماژول</label>
-                    <input
-                      type="text"
-                      value={modName}
-                      onChange={(e) => setModName(e.target.value)}
-                      placeholder="مثال: سئو کلاینت"
-                      className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs focus:outline-none focus:border-brand-success text-text-primary font-bold"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-bold">توضیحات ماژول</label>
-                    <input
-                      type="text"
-                      value={modDesc}
-                      onChange={(e) => setModDesc(e.target.value)}
-                      placeholder="توضیحات اهداف ماژول"
-                      className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-text-secondary font-bold">رنگ ماژول</label>
-                      <input
-                        type="color"
-                        value={modColor}
-                        onChange={(e) => setModColor(e.target.value)}
-                        className="w-full h-8 bg-hover-overlay rounded-lg border-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] text-text-secondary font-bold">نماد ماژول</label>
-                      <CustomSelect
-                        options={MODULE_ICONS_LIST}
-                        value={modIcon}
-                        onChange={(val) => setModIcon(val)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label htmlFor="module-fields" className="text-[10px] text-text-secondary font-bold">فیلدهای فرم (هر فیلد در یک خط)</label>
-                  <textarea
-                    id="module-fields"
-                    rows={4}
-                    value={modFields}
-                    onChange={(e) => setModFields(e.target.value)}
-                    placeholder={'مثلاً:\nنام مشتری\nتاریخ تماس\nنتیجه'}
-                    className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs leading-relaxed"
-                  />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-2 bg-brand-success text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5 hover:bg-opacity-90"
-                  >
-                    {renderIcon('Plus', 12)}
-                    تعریف ماژول پایه
-                  </button>
-                </form>
-              </div>
-
-              {/* Form 2: Instantiate module and bind to department */}
-              <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-                <h3 className="text-xs font-black text-text-primary flex items-center gap-1.5">
-                  {renderIcon('Layers', 14, "text-[#155DFC]")}
-                  تخصیص ماژول به دپارتمان
-                </h3>
-                
-                <form onSubmit={event=>{void handleInstantiate(event).catch(error=>setFormError(error instanceof Error?error.message:'عملیات انجام نشد.'));}} className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-bold">نام اختصاصی نمونه</label>
-                    <input
-                      type="text"
-                      value={instName}
-                      onChange={(e) => setInstName(e.target.value)}
-                      placeholder="مثال: ردیاب اهداف سئو کلاینت (پایلوت)"
-                      className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-bold">انتخاب نوع ماژول</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: 'نوع ماژول را انتخاب کنید...' },
-                        ...moduleDefinitions.map((md: any) => ({ value: md.id, label: md.name }))
-                      ]}
-                      value={instModDefId}
-                      onChange={(val) => setInstModDefId(val)}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-bold">دپارتمان میزبان</label>
-                    <CustomSelect
-                      options={[
-                        { value: '', label: 'انتخاب دپارتمان هدف...' },
-                        ...departments.map((d: any) => ({ value: d.id, label: d.name }))
-                      ]}
-                      value={instDeptId}
-                      onChange={(val) => setInstDeptId(val)}
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-2 bg-[#155DFC] hover:bg-[#0E50D6] text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    {renderIcon('Plus', 12)}
-                    تخصیص و ساخت نمونه ماژول
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'teams' && (
-            <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-              <h3 className="text-xs font-black text-text-primary flex items-center gap-1.5">
-                {renderIcon('PlusCircle', 14, "text-[#155DFC]")}
-                تشکیل تیم با کانال‌های خودکار
-              </h3>
-              
-              <form onSubmit={event=>{void handleCreateTeam(event).catch(error=>setFormError(error instanceof Error?error.message:'عملیات انجام نشد.'));}} className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">نام تیم</label>
-                  <input
-                    type="text"
-                    value={teamName}
-                    onChange={(e) => setTeamName(e.target.value)}
-                    placeholder="مثال: تیم متخصصان سئو فنی"
-                    className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs focus:outline-none font-bold text-text-primary"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">دپارتمان مادر</label>
-                  <CustomSelect
-                    options={[
-                      { value: '', label: 'دپارتمان مادر را انتخاب کنید...' },
-                      ...departments.map((d: any) => ({ value: d.id, label: d.name }))
-                    ]}
-                    value={teamDeptId}
-                    onChange={(val) => setTeamDeptId(val)}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">سرپرست تیم (لیدر)</label>
-                  <CustomSelect
-                    options={[
-                      { value: '', label: 'لیدر تیم را مشخص کنید...' },
-                      ...teamMembers.map((member: any) => ({ value: member.id, label: member.name }))
-                    ]}
-                    value={teamLeaderId}
-                    onChange={(val) => setTeamLeaderId(val)}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">توضیح مأموریت تیم</label>
-                  <input
-                    type="text"
-                    value={teamDesc}
-                    onChange={(e) => setTeamDesc(e.target.value)}
-                    placeholder="مأموریت کلیدی این تیم..."
-                    className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">رنگ تم تیم</label>
-                  <input
-                    type="color"
-                    value={teamColor}
-                    onChange={(e) => setTeamColor(e.target.value)}
-                    className="w-full h-8 bg-hover-overlay rounded-lg border-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">اعضای تیم را اضافه کنید</label>
-                  <div className="max-h-24 overflow-y-auto border border-border-primary/60 rounded-lg p-2 space-y-1 text-start">
-                    {teamMembers.map((member: any) => {
-                      const isSelected = teamMembersList.includes(member.id);
-                      return (
-                        <button
-                          key={member.id}
-                          type="button"
-                          onClick={() => toggleMemberSelection(member.id)}
-                          className={`w-full text-start px-2 py-1 rounded text-[11px] transition-all flex items-center justify-between ${
-                            isSelected ? 'bg-[#155DFC]/20 text-[#155DFC] font-bold' : 'hover:bg-hover-overlay'
-                          }`}
-                        >
-                          <span>{member.name}</span>
-                          {isSelected && renderIcon('Check', 11)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-[#155DFC] hover:bg-[#0E50D6] text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
-                >
-                  {renderIcon('Users', 12)}
-                  تشکیل تیم و کانال‌های خودکار
-                </button>
-              </form>
-            </div>
-          )}
-
-          {activeTab === 'templates' && (
-            <div className="bg-surface-primary border border-border-primary rounded-xl p-5 space-y-4">
-              <h3 className="text-xs font-black text-text-primary flex items-center gap-1.5">
-                {renderIcon('Layers', 14, "text-[#155DFC]")}
-                ذخیره قالب سازمان فعلی
-              </h3>
-              
-              <form onSubmit={event=>{void handleSaveTpl(event).catch(error=>setFormError(error instanceof Error?error.message:'عملیات انجام نشد.'));}} className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">نام قالب</label>
-                  <input
-                    type="text"
-                    value={tplName}
-                    onChange={(e) => setTplName(e.target.value)}
-                    placeholder="مثال: ساختار استاندارد آژانس‌های سئو"
-                    className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs focus:outline-none font-bold text-text-primary"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] text-text-secondary font-bold">توضیحات قالب ساختار</label>
-                  <textarea
-                    value={tplDesc}
-                    onChange={(e) => setTplDesc(e.target.value)}
-                    placeholder="درباره ویژگی‌های ساختار دپارتمان‌ها و تیم‌های این الگو..."
-                    rows={3}
-                    className="w-full px-3 py-2 bg-hover-overlay border border-border-primary/60 rounded-lg text-xs focus:outline-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-[#155DFC] hover:bg-[#0E50D6] text-white font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-1.5"
-                >
-                  {renderIcon('Plus', 12)}
-                  ذخیره الگو به عنوان قالب
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
-      </div>
+      {sheet?.kind === 'dept' && <DepartmentSheet row={sheet.row} preset={sheet.preset} people={teamMembers} onClose={() => setSheet(null)}
+        save={async values => { if (sheet.row) await updateDepartment(sheet.row.id, values); else await createDepartment(values); }} />}
+      {sheet?.kind === 'module' && <ModuleSheet row={sheet.row} onClose={() => setSheet(null)}
+        save={async values => { if (sheet.row) await updateModuleDefinition(sheet.row.id, values); else await createModule(values); }} />}
+      {sheet?.kind === 'assign' && <AssignSheet modules={moduleDefinitions} departments={departments} onClose={() => setSheet(null)} save={instantiateModule} />}
     </div>
   );
 };
 
+const useSheetSave = (onClose: () => void) => {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async (action: () => Promise<any>) => {
+    setSaving(true); setError('');
+    try { await action(); onClose(); } catch (failure) { setError(failure instanceof Error ? failure.message : 'ذخیره انجام نشد.'); }
+    finally { setSaving(false); }
+  };
+  return { saving, error, setError, submit };
+};
+
+const DepartmentSheet: React.FC<{ row?: any; preset?: typeof PRESET_DEPARTMENTS[number]; people: any[]; onClose: () => void; save: (values: any) => Promise<any> }> = ({ row, preset, people, onClose, save }) => {
+  const source = row || preset;
+  const [name, setName] = useState(source?.name || '');
+  const [description, setDescription] = useState(source?.description || '');
+  const [icon, setIcon] = useState(source?.icon || 'Building2');
+  const [color, setColor] = useState(source?.color || TEAM_COLORS[0]);
+  const [leaderId, setLeaderId] = useState(row?.leaderId || '');
+  const { saving, error, setError, submit } = useSheetSave(onClose);
+  return (
+    <SideSheet title={row ? 'ویرایش دپارتمان' : 'دپارتمان جدید'} description="نام، نماد و مدیر دپارتمان را مشخص کنید." submitLabel={row ? 'ذخیرهٔ تغییرات' : 'ساخت دپارتمان'}
+      saving={saving} error={error} onClose={onClose}
+      onSubmit={event => { event.preventDefault(); if (!name.trim()) { setError('نام دپارتمان را وارد کنید.'); return; } void submit(() => save({ name: name.trim(), description: description.trim(), icon, color, leaderId })); }}>
+      {!row && (
+        <div className="space-y-2">
+          <span className={sheetLabel}>شروع سریع</span>
+          <div className="flex flex-wrap gap-1.5">
+            {PRESET_DEPARTMENTS.map(item => (
+              <button key={item.name} type="button" onClick={() => { setName(item.name); setDescription(item.description); setIcon(item.icon); setColor(item.color); }}
+                className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 cursor-pointer">
+                <Icon name={item.icon} size={12} />{item.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <label className="block space-y-1.5"><span className={sheetLabel}>نام دپارتمان</span><input autoFocus value={name} maxLength={200} onChange={event => setName(event.target.value)} placeholder="مثلاً دیجیتال مارکتینگ" className={sheetInput} /></label>
+      <label className="block space-y-1.5"><span className={sheetLabel}>توضیح</span><textarea value={description} rows={3} onChange={event => setDescription(event.target.value)} placeholder="این دپارتمان چه کارهایی انجام می‌دهد؟" className={`${sheetInput} h-auto py-2.5 leading-6`} /></label>
+      <div className="space-y-2"><span className={sheetLabel}>نماد</span><IconPicker icons={DEPARTMENT_ICONS} value={icon} color={color} onChange={setIcon} /></div>
+      <div className="space-y-2"><span className={sheetLabel}>رنگ</span><ColorPicker value={color} onChange={setColor} /></div>
+      <label className="block space-y-1.5">
+        <span className={sheetLabel}>مدیر دپارتمان</span>
+        <select value={leaderId} onChange={event => setLeaderId(event.target.value)} className={sheetInput}>
+          <option value="">تعیین نشده</option>
+          {people.map((person: any) => <option key={person.id} value={person.userId || person.id}>{person.name}</option>)}
+        </select>
+      </label>
+    </SideSheet>
+  );
+};
+
+const ModuleSheet: React.FC<{ row?: any; onClose: () => void; save: (values: any) => Promise<any> }> = ({ row, onClose, save }) => {
+  const [name, setName] = useState(row?.name || '');
+  const [description, setDescription] = useState(row?.description || '');
+  const [icon, setIcon] = useState(row?.icon || 'Box');
+  const [color, setColor] = useState(row?.color || TEAM_COLORS[2]);
+  const [fields, setFields] = useState<string[]>(row?.structure?.fields || ['عنوان', 'توضیحات', 'وضعیت']);
+  const [draft, setDraft] = useState('');
+  const { saving, error, setError, submit } = useSheetSave(onClose);
+  const addField = () => { const value = draft.trim(); if (value && !fields.includes(value)) setFields([...fields, value]); setDraft(''); };
+  return (
+    <SideSheet title={row ? 'ویرایش ماژول' : 'ماژول جدید'} description="ماژول فرمی است که دپارتمان‌ها برای ثبت کارهایشان استفاده می‌کنند." submitLabel={row ? 'ذخیرهٔ تغییرات' : 'ساخت ماژول'}
+      saving={saving} error={error} onClose={onClose}
+      onSubmit={event => {
+        event.preventDefault();
+        if (!name.trim()) { setError('نام ماژول را وارد کنید.'); return; }
+        if (!fields.length) { setError('دست‌کم یک فیلد وارد کنید.'); return; }
+        void submit(() => save({ name: name.trim(), description: description.trim(), icon, color, structure: { fields } }));
+      }}>
+      <label className="block space-y-1.5"><span className={sheetLabel}>نام ماژول</span><input autoFocus value={name} maxLength={200} onChange={event => setName(event.target.value)} placeholder="مثلاً پیگیری سئوی مشتری" className={sheetInput} /></label>
+      <label className="block space-y-1.5"><span className={sheetLabel}>توضیح</span><input value={description} onChange={event => setDescription(event.target.value)} placeholder="هدف این ماژول" className={sheetInput} /></label>
+      <div className="space-y-2"><span className={sheetLabel}>نماد</span><IconPicker icons={MODULE_ICONS} value={icon} color={color} onChange={setIcon} /></div>
+      <div className="space-y-2"><span className={sheetLabel}>رنگ</span><ColorPicker value={color} onChange={setColor} /></div>
+      <div className="space-y-2">
+        <span className={sheetLabel}>فیلدهای فرم</span>
+        <div className="flex flex-wrap gap-1.5">
+          {fields.map(field => (
+            <span key={field} className="inline-flex items-center gap-1 h-7 ps-2.5 pe-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-200">
+              {field}
+              <button type="button" onClick={() => setFields(fields.filter(item => item !== field))} aria-label={`حذف فیلد ${field}`} className="w-5 h-5 inline-flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 cursor-pointer"><X size={12} /></button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addField(); } }} placeholder="نام فیلد جدید" aria-label="نام فیلد جدید" className={sheetInput} />
+          <button type="button" onClick={addField} className={secondary}><Plus size={14} />افزودن</button>
+        </div>
+      </div>
+    </SideSheet>
+  );
+};
+
+const AssignSheet: React.FC<{ modules: any[]; departments: any[]; onClose: () => void; save: (values: any) => Promise<any> }> = ({ modules, departments, onClose, save }) => {
+  const [definitionId, setDefinitionId] = useState(modules[0]?.id || '');
+  const [departmentId, setDepartmentId] = useState(departments[0]?.id || '');
+  const [name, setName] = useState('');
+  const { saving, error, setError, submit } = useSheetSave(onClose);
+  return (
+    <SideSheet title="افزودن ماژول به دپارتمان" description="دپارتمان انتخاب‌شده از این ماژول برای ثبت کارهایش استفاده می‌کند." submitLabel="افزودن"
+      saving={saving} error={error} onClose={onClose}
+      onSubmit={event => { event.preventDefault(); if (!definitionId || !departmentId) { setError('ماژول و دپارتمان را انتخاب کنید.'); return; } void submit(() => save({ definitionId, departmentId, name: name.trim() || undefined })); }}>
+      <label className="block space-y-1.5">
+        <span className={sheetLabel}>ماژول</span>
+        <select value={definitionId} onChange={event => setDefinitionId(event.target.value)} className={sheetInput}>{modules.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
+      </label>
+      <label className="block space-y-1.5">
+        <span className={sheetLabel}>دپارتمان</span>
+        <select value={departmentId} onChange={event => setDepartmentId(event.target.value)} className={sheetInput}>{departments.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
+      </label>
+      <label className="block space-y-1.5">
+        <span className={sheetLabel}>نام نمایشی (اختیاری)</span>
+        <input value={name} maxLength={200} onChange={event => setName(event.target.value)} placeholder="پیش‌فرض: نام ماژول" className={sheetInput} />
+      </label>
+    </SideSheet>
+  );
+};

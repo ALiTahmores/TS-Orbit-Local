@@ -55,7 +55,7 @@ function validField(key: string, value: any): boolean {
   if (['assignees','subtasks'].includes(key)) return Array.isArray(value) && value.length <= 200 && value.every(item=>typeof item==='string'||!!item&&typeof item==='object'&&!Array.isArray(item));
   if (['links','initialComments'].includes(key)) return Array.isArray(value) && value.length<=100 && value.every(item=>typeof item==='string'&&item.length<=20_000);
   if (key==='name' && value && typeof value==='object' && !Array.isArray(value)) return Object.keys(value).every(key=>['fa','en'].includes(key)) && Object.values(value).every(item=>typeof item==='string'&&item.length<=200);
-  if (['metadata','config','credentials','metrics','projectSummary','taskSummary','custom','customFields','payload','data'].includes(key)) return value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (['metadata','config','credentials','metrics','projectSummary','taskSummary','custom','customFields','payload','data','roadmap'].includes(key)) return value !== null && typeof value === 'object' && !Array.isArray(value);
   if (key === 'structure') return value !== null && typeof value === 'object';
   if (['clientProjectsMatrix','departmentBreakdown','memberBottlenecks','bottlenecks','keyTakeaways','defaultModules'].includes(key)) return Array.isArray(value);
   if (key.endsWith('Id') && value === null) return true;
@@ -109,7 +109,9 @@ export function createPolicy(scoped: ScopedState, authenticateToken: any) {
       if (!isSystem && !['GET','HEAD'].includes(req.method) && !personalReadState) {
         const orgWriterOperation = /^\/api\/org\/module-instances\/[^/]+(?:\/records(?:\/[^/]+)?)?$/.test(req.path) && (req.method === 'PUT' || req.path.includes('/records')) || (req.method === 'POST' && (/^\/api\/org\/(?:reports(?:\/executive-summary)?|departments\/[^/]+\/reports)$/.test(req.path)));
         const feedbackCreation = req.method === 'POST' && /^\/api\/projects\/[^/]+\/feedbacks\/?$/.test(req.path);
-        const manageOperation = (req.path.startsWith('/api/org/') && !orgWriterOperation) || (req.path.startsWith('/api/projects') && !feedbackCreation) || req.path.startsWith('/api/teams') || req.path.startsWith('/api/organizations')
+        // Team members tick their project checklist; changing which checklists exist stays with managers.
+        const checklistTick = req.method === 'PUT' && /^\/api\/projects\/[^/]+\/checklists\/[^/]+\/steps\/[^/]+\/?$/.test(req.path);
+        const manageOperation = (req.path.startsWith('/api/org/') && !orgWriterOperation) || (req.path.startsWith('/api/projects') && !feedbackCreation && !checklistTick) || req.path.startsWith('/api/teams') || req.path.startsWith('/api/organizations')
           || req.path.startsWith('/api/sites/') || req.path.startsWith('/api/external-connections') || /\/portal(?:-token)?$/.test(req.path);
         if ((manageOperation && !manager(grant)) || (!manageOperation && !writer(grant))) return reject(res, 403, 'FORBIDDEN', 'مجوز انجام این عملیات را ندارید.');
       }

@@ -147,6 +147,17 @@ const navigationGroups = [
 
 const COMPACT_LAPTOP = '(min-width: 1024px) and (max-width: 1279px)';
 
+/** Scrolls the menu holding an opened group just enough to show its submenu, keeping the group's own row in view. */
+const revealMenuGroup = (group: HTMLElement) => {
+  if (!group.offsetParent) return;
+  let menu = group.parentElement;
+  while (menu && !/(auto|scroll)/.test(getComputedStyle(menu).overflowY)) menu = menu.parentElement;
+  if (!menu) return;
+  const box = group.getBoundingClientRect(), view = menu.getBoundingClientRect();
+  const hidden = box.bottom - view.bottom + 24;
+  if (hidden > 0) menu.scrollBy({ top: Math.min(hidden, box.top - view.top - 24), behavior: 'smooth' });
+};
+
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { 
     activeTab, 
@@ -703,6 +714,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     setExpandedSection(currentActiveGroup);
   }, [currentActiveGroup]);
 
+  // Once a group's submenu has opened, scroll the menu so its items are in view.
+  useEffect(() => {
+    if (!expandedSection) return;
+    const timer = window.setTimeout(() => document.querySelectorAll<HTMLElement>(`[data-menu-group="${CSS.escape(expandedSection)}"]`).forEach(revealMenuGroup), 320);
+    return () => window.clearTimeout(timer);
+  }, [expandedSection]);
+
   useEffect(() => {
     document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
     document.documentElement.lang = locale;
@@ -1047,6 +1065,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       return (
                         <div 
                           key={group.id} 
+                          data-menu-group={group.id}
                           className="relative"
                           onMouseEnter={() => { if (isMenuCollapsed) setHoveredGroupId(group.id); }}
                           onMouseLeave={() => { if (isMenuCollapsed) setHoveredGroupId(null); }}
@@ -1626,7 +1645,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               {/* SUB HEADER - Secondary pills list (Only appears when entering specific multi-tab sections except projects and tasks) */}
             {computedNavigationGroups.map(group => {
               const isGroupActive = currentActiveGroup === group.id;
-              if (!isGroupActive || group.tabs.length <= 1 || group.id === 'projects' || group.id === 'tasks' || group.id === 'dept_tech') return null;
+              // Settings draws its own underline tabs under the page title.
+              if (!isGroupActive || group.tabs.length <= 1 || group.id === 'projects' || group.id === 'tasks' || group.id === 'dept_tech' || group.id === 'settings') return null;
 
               return (
                 <div key={group.id} className="tab-scroller page-bleed items-center gap-1.5 pb-3 mb-4 border-b border-border-primary/50 animate-fade-in shrink-0">
@@ -1909,7 +1929,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                               const styles = getPrimaryItemStyles(group.id, isGroupActive);
 
                               return (
-                                <div key={group.id} className="space-y-1">
+                                <div key={group.id} data-menu-group={group.id} className="space-y-1">
                                   <button
                                     onClick={() => {
                                       if (hasChildren) {

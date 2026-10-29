@@ -58,7 +58,7 @@ import { INITIAL_USERS, INITIAL_WORKSPACES } from '../services/db';
 import { Locale, getTranslation } from '../lib/i18n';
 import { getLocale, setActiveLocale } from '../lib/locale';
 import { startDomTranslation, stopDomTranslation } from '../lib/domTranslation';
-import { roleLabel } from '../lib/roles';
+import { roleLabel, isManagerRole } from '../lib/roles';
 import { localAvatar } from '../lib/localAssets';
 export { INITIAL_USERS, INITIAL_WORKSPACES } from '../services/db';
 
@@ -116,6 +116,9 @@ interface ProjectContextType {
   resetDatabaseToZero: () => void;
   createProject: (title: string, description: string, budget?: string, deadline?: string, clientName?: string, websiteUrl?: string, teamLead?: string, isBudgetConfidential?: boolean, extraData?: { teamLeadId?: string; assignedMemberIds?: string[]; assignedTeamIds?: string[]; createdById?: string }) => Promise<void>;
   updateProject: (projectId: string, updates: Partial<Project>) => Promise<void>;
+  setChecklistStep: (projectId: string, checklistId: string, stepId: string, completed: boolean) => Promise<void>;
+  addProjectChecklist: (projectId: string, teamId: string) => Promise<void>;
+  removeProjectChecklist: (projectId: string, checklistId: string) => Promise<void>;
   createTask: (task: Omit<Task, 'id'>) => Promise<void>;
   updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<void>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<Task>;
@@ -244,6 +247,8 @@ interface ProjectContextType {
 
   // Theme & Language (i18n) Support
   locale: Locale;
+  /** Persian lays pages out right to left. */
+  isRtl: boolean;
   setLocale: (locale: Locale) => void;
   theme: 'light' | 'dark' | 'system';
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -1448,6 +1453,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTasks(savedTasks);
     if(projectSequence===projectFetchSequence.current){setProjects(savedProjects);setSelectedProjectState(previous => savedProjects.find((project:Project) => project.id===previous?.id) || previous);}
   };
+  // A tick shows at once; when the server refuses it, the server's copy replaces it.
+  const setChecklistStep = async (projectId: string, checklistId: string, stepId: string, completed: boolean) => {
+    const tick = (project: Project): Project => project.id !== projectId ? project : { ...project, teamChecklists: (project.teamChecklists || []).map(list => list.id !== checklistId ? list : { ...list, phases: list.phases.map(phase => ({ ...phase, steps: phase.steps.map(step => step.id !== stepId ? step
+      : { ...step, completed, completedById: completed ? currentUser?.id || null : null, completedByName: completed ? currentUser?.name || '' : '', completedAt: completed ? new Date().toISOString() : null }) })) }) };
+    setProjects(previous => previous.map(tick)); setSelectedProjectState(previous => previous ? tick(previous) : previous);
+    const path = `/api/projects/${encodeURIComponent(projectId)}/checklists/${encodeURIComponent(checklistId)}/steps/${encodeURIComponent(stepId)}`;
+    try { await apiFetch(path, { method: 'PUT', body: JSON.stringify({ completed }) }); }
+    catch (error) { await refreshTaskDomain().catch(() => {}); throw error; }
+  };
+  const addProjectChecklist = async (projectId: string, teamId: string) => {
+    await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/checklists`, { method: 'POST', body: JSON.stringify({ teamId }) }); await refreshTaskDomain();
+  };
+  const removeProjectChecklist = async (projectId: string, checklistId: string) => {
+    await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/checklists/${encodeURIComponent(checklistId)}`, { method: 'DELETE' }); await refreshTaskDomain();
+  };
   const taskMutation = async (path:string,method:string,body?:any) => {
     setIsLoading(true); setOperationStatus('loading');
     try {
@@ -2403,6 +2423,15 @@ triggerSuccessEvent(
     fetchProjects(); fetchTasks(); fetchWorkspaces(); fetchTeamMembers(); fetchNotifications(); fetchConversations(); fetchChatUsers(); fetchChatRequests(); fetchOrgData();
   }, [activeWorkspaceId,isAuthenticated]);
 
+  // A manager's first visit gives the workspace its default teams and their roadmaps;
+  // the server records it, so teams renamed or deleted later never come back.
+  const defaultTeamsRequested = useRef(new Set<string>());
+  useEffect(() => {
+    if (!isAuthenticated || !activeWorkspaceId || !isManagerRole(userRole) || defaultTeamsRequested.current.has(activeWorkspaceId)) return;
+    defaultTeamsRequested.current.add(activeWorkspaceId);
+    void apiFetch('/api/teams/defaults', { method: 'POST', body: '{}' }).then(response => response.json()).then(result => { if (result?.created?.length) void fetchOrgData(); }).catch(() => {});
+  }, [activeWorkspaceId, isAuthenticated, userRole]);
+
   const fetchTasks = async () => {
     try {
       const res = await apiFetch('/api/tasks', { headers: getAuthHeaders() });
@@ -3001,6 +3030,9 @@ triggerSuccessEvent(
       instantiateModule,
       createOrgTeam,
       updateOrgTeam,
+      setChecklistStep,
+      addProjectChecklist,
+      removeProjectChecklist,
       deleteOrgTeam,
       updateModuleDefinition,
       generateDepartmentReport,
@@ -3035,6 +3067,7 @@ triggerSuccessEvent(
       addTask,
 
       locale,
+      isRtl: locale !== 'en',
       setLocale,
       theme,
       setTheme,

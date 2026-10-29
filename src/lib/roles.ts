@@ -19,6 +19,11 @@ const ROLE_LABELS: Record<string, { fa: string; en: string }> = {
   USER: { fa: 'عضو فضای کاری', en: 'Member' },
 };
 
+/** Roles the server lets manage projects and teams (server/policy/scope.ts `manager`). */
+export const isManagerRole = (role: string | undefined | null) => ['OWNER', 'ADMIN', 'MANAGER', 'PROJECT_MANAGER'].includes(String(role || '').toUpperCase());
+/** Roles that can never change workspace data. */
+export const isReadOnlyRole = (role: string | undefined | null) => ['VIEWER', 'CLIENT', 'READ_ONLY', 'GUEST'].includes(String(role || '').toUpperCase());
+
 export function roleLabel(role: string | undefined | null, locale: 'fa' | 'en' = 'fa'): string {
   const known = ROLE_LABELS[String(role || '').trim().toUpperCase()];
   if (known) return known[locale];

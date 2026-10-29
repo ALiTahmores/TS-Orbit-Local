@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
 import { Repository, DomainError, identifier, now, recordActivity, type DomainContext } from './repository.ts';
 import { dto, text, numeric, strings, boolean, invalid, dateFields, taskStatus, projectStatus, priority } from './models.ts';
-import { manager, membership, activeMember } from '../policy/scope.ts';
+import { manager, membership, activeMember, writer } from '../policy/scope.ts';
+import { teamRoadmap } from '../../src/lib/teamRoadmaps.ts';
 import { FeedbackService } from '../portal/service.ts';
 const projectFields = ['title', 'name', 'description', 'budget', 'amount', 'currency', 'clientName', 'deadline', 'dueDate', 'startDate', 'websiteUrl', 'teamLead', 'teamLeadId', 'leadId', 'assignedMemberIds', 'assignedTeamIds', 'selectedTeams', 'department', 'departmentId', 'teamId', 'organizationId', 'category', 'priority', 'status', 'statusReason', 'isConfidential', 'isBudgetConfidential'];
 const taskFields = ['projectId', 'title', 'description', 'status', 'priority', 'assignedTo', 'assigneeId', 'assignedMemberIds', 'assignees', 'department', 'departmentId', 'teamId', 'clientVisible', 'deadline', 'dueDate', 'startDate', 'tags', 'dependencies', 'estimatedHours', 'loggedHours', 'subtasks', 'notes', 'category', 'attachments', 'initialComments', 'links'];
@@ -34,6 +35,52 @@ export class ProjectTaskService {
         return; row.statusHistory = [...(row.statusHistory || []), { previousStatus: row.status, newStatus: status, reason, timestamp: now(), userId: this.actor().id, username: this.actor().name }]; row.status = status; }
     emit(event: string, value: any) { this.context.broadcast(event === 'tasks_updated' ? 'app_tasks_updated' : event === 'projects_updated' ? 'app_projects_updated' : event, value); }
     change(action: string, row: any) { row.updatedAt = now(); recordActivity(this.context, action, row.id); }
+    /** A checklist copy of the team's roadmap, every step open. */
+    teamChecklist(team: any) {
+        return { id: identifier('checklist'), teamId: team.id, teamName: team.name || '', color: team.color || '', createdAt: now(),
+            phases: teamRoadmap(team).phases.filter(phase => phase.steps.length).map(phase => ({ ...phase, steps: phase.steps.map(step => ({ ...step, completed: false, completedById: null, completedByName: '', completedAt: null })) })) };
+    }
+    /** Each assigned team with a roadmap gets its checklist once; ticks are never reset. */
+    syncTeamChecklists(project: any) {
+        const lists = Array.isArray(project.teamChecklists) ? project.teamChecklists : [];
+        for (const teamId of Array.isArray(project.assignedTeamIds) ? project.assignedTeamIds : []) {
+            if (lists.some((row: any) => row.teamId === teamId)) continue;
+            const team = this.repo('teams').find(teamId);
+            if (team && teamRoadmap(team).phases.some(phase => phase.steps.length)) lists.push(this.teamChecklist(team));
+        }
+        project.teamChecklists = lists;
+    }
+    addTeamChecklist(projectId: string, body: any) {
+        this.manage(); dto(body, ['teamId']);
+        const project = this.repo('projects').require(projectId), team = this.repo('teams').require(text(body.teamId, 'تیم', true, 200));
+        const lists = Array.isArray(project.teamChecklists) ? project.teamChecklists : [];
+        if (lists.some((row: any) => row.teamId === team.id)) throw new DomainError(409, 'CHECKLIST_EXISTS', 'چک‌لیست این تیم برای پروژه ساخته شده است.');
+        const checklist = this.teamChecklist(team);
+        if (!checklist.phases.length) throw new DomainError(422, 'TEAM_ROADMAP_EMPTY', 'این تیم هنوز نقشهٔ راهی ندارد.');
+        project.teamChecklists = [...lists, checklist];
+        project.assignedTeamIds = [...new Set([...(Array.isArray(project.assignedTeamIds) ? project.assignedTeamIds : []), team.id])];
+        this.change('PROJECT_CHECKLIST_ADDED', project); this.emit('projects_updated', this.projects()); return checklist;
+    }
+    removeTeamChecklist(projectId: string, checklistId: string) {
+        this.manage(); const project = this.repo('projects').require(projectId);
+        const lists = Array.isArray(project.teamChecklists) ? project.teamChecklists : [];
+        if (!lists.some((row: any) => row.id === checklistId)) throw new DomainError(404, 'RESOURCE_NOT_FOUND', 'چک‌لیست یافت نشد.');
+        project.teamChecklists = lists.filter((row: any) => row.id !== checklistId);
+        this.change('PROJECT_CHECKLIST_REMOVED', project); this.emit('projects_updated', this.projects()); return { success: true, deletedId: checklistId };
+    }
+    setChecklistStep(projectId: string, checklistId: string, stepId: string, body: any) {
+        const scope = this.scope();
+        if (!writer(membership(this.context.scoped.raw, scope.user, scope.workspaceId))) throw new DomainError(403, 'FORBIDDEN', 'اجازهٔ ویرایش لازم است.');
+        dto(body, ['completed']); const completed = boolean(body.completed);
+        const project = this.repo('projects').require(projectId);
+        const checklist = (Array.isArray(project.teamChecklists) ? project.teamChecklists : []).find((row: any) => row.id === checklistId);
+        const step = checklist?.phases?.flatMap((phase: any) => phase.steps || []).find((row: any) => row.id === stepId);
+        if (!step) throw new DomainError(404, 'RESOURCE_NOT_FOUND', 'مرحلهٔ چک‌لیست یافت نشد.');
+        Object.assign(step, completed
+            ? { completed: true, completedById: this.actor().id, completedByName: this.actor().name || this.actor().username || '', completedAt: now() }
+            : { completed: false, completedById: null, completedByName: '', completedAt: null });
+        this.change('PROJECT_CHECKLIST_UPDATED', project); this.emit('projects_updated', this.projects()); return checklist;
+    }
     projectChanges(body: any, create = false) {
         dto(body, projectFields);
         const changes: any = {};
@@ -118,8 +165,9 @@ export class ProjectTaskService {
         }
         return changes;
     }
-    createProject(body: any) { this.manage(); body = this.createInput(body); const changes = this.projectChanges(body, true); const token = randomBytes(32).toString('hex'); const project = this.repo('projects').insert({ id: identifier('proj'), workspaceId: this.scope().workspaceId, createdById: this.actor().id, createdAt: now(), description: '', name: changes.title, deadline: '', budget: '', clientName: '', status: 'ACTIVE', assignedMemberIds: [], assignedTeamIds: [], totalTasks: 0, completedTasks: 0, progress: 0, loggedHours: 0, clientPortalEnabled: false, isPortalActive: false, clientPortalToken: token, portalToken: token, portalExpiresAt: new Date(Date.now() + 30 * 86400_000).toISOString(), portalRevokedAt: null, ...changes }); this.change('PROJECT_CREATED', project); this.emit('projects_updated', this.projects()); return project; }
-    updateProject(id: string, body: any) { this.manage(); const row = this.repo('projects').require(id), changes = this.projectChanges(body); const status = changes.status; delete changes.status; Object.assign(row, changes); if (status)
+    createProject(body: any) { this.manage(); body = this.createInput(body); const changes = this.projectChanges(body, true); const token = randomBytes(32).toString('hex'); const project = this.repo('projects').insert({ id: identifier('proj'), workspaceId: this.scope().workspaceId, createdById: this.actor().id, createdAt: now(), description: '', name: changes.title, deadline: '', budget: '', clientName: '', status: 'ACTIVE', assignedMemberIds: [], assignedTeamIds: [], totalTasks: 0, completedTasks: 0, progress: 0, loggedHours: 0, clientPortalEnabled: false, isPortalActive: false, clientPortalToken: token, portalToken: token, portalExpiresAt: new Date(Date.now() + 30 * 86400_000).toISOString(), portalRevokedAt: null, ...changes }); this.syncTeamChecklists(project); this.change('PROJECT_CREATED', project); this.emit('projects_updated', this.projects()); return project; }
+    updateProject(id: string, body: any) { this.manage(); const row = this.repo('projects').require(id), changes = this.projectChanges(body); const status = changes.status; delete changes.status; Object.assign(row, changes); if (changes.assignedTeamIds)
+        this.syncTeamChecklists(row); if (status)
         this.history(row, status, body.statusReason || ''); this.change('PROJECT_UPDATED', row); this.emit('projects_updated', this.projects()); return row; }
     activateProject(id: string) { this.manage(); const row = this.repo('projects').require(id); this.history(row, 'ACTIVE'); if (!row.startDate)
         Object.assign(row, dateFields(now(), 'startDate')); this.change('PROJECT_ACTIVATED', row); return row; }
@@ -506,6 +554,9 @@ export function createProjectTaskRouter(context: DomainContext) {
     router.put('/projects/:id', endpoint(req => ({ success: true, project: service.updateProject(req.params.id, req.body) })));
     router.delete('/projects/:id', endpoint(req => service.deleteProject(req.params.id)));
     router.put('/projects/:id/activate', endpoint(req => ({ success: true, project: service.activateProject(req.params.id) })));
+    router.post('/projects/:id/checklists', endpoint(req => service.addTeamChecklist(req.params.id, req.body), 201));
+    router.delete('/projects/:id/checklists/:checklistId', endpoint(req => service.removeTeamChecklist(req.params.id, req.params.checklistId)));
+    router.put('/projects/:id/checklists/:checklistId/steps/:stepId', endpoint(req => service.setChecklistStep(req.params.id, req.params.checklistId, req.params.stepId, req.body)));
     router.get('/projects/:projectId/milestones', endpoint(req => service.milestones(req.params.projectId)));
     router.post('/projects/:projectId/milestones', endpoint(req => service.milestone(req.params.projectId, undefined, req.body), 201));
     router.put('/milestones/:id', endpoint(req => service.milestone(undefined, req.params.id, req.body)));

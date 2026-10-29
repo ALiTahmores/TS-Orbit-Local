@@ -1,3 +1,5 @@
+import type { TeamChecklist } from './lib/teamRoadmaps';
+
 export type ProjectStatus = 'DRAFT' | 'ACTIVE' | 'IN_PROGRESS' | 'in_progress' | 'CONNECTED_TO_WORDPRESS' | 'COMPLETED' | 'active' | 'pending' | 'completed' | 'delayed';
 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -68,6 +70,8 @@ export interface Project {
   statusReason?: string;
   createdAt?: string;
   loggedHours?: number;
+  /** One checklist per assigned team, copied from that team's roadmap. */
+  teamChecklists?: TeamChecklist[];
 }
 
 export interface SubTask {

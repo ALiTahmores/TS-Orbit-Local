@@ -3,10 +3,12 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, FolderPlus, Sparkles, ChevronDown, Check, Lock, Unlock,
-  Globe, Building2, User2, Calendar, Shield, Users, FileText, Plus, Edit3
+  Globe, Building2, User2, Calendar, Shield, Users, FileText, Plus, Edit3, ListChecks
 } from 'lucide-react';
 import { useProjectContext } from '../../context/ProjectContext';
 import { cn } from '../../lib/utils';
+import { roadmapStepCount, teamRoadmap } from '../../lib/teamRoadmaps';
+import { TeamAvatar } from '../team/TeamAvatar';
 import { Project } from '../../types';
 import { calendarDay, deadlineEditPatch, projectLeadSelection } from '../../lib/formValues';
 
@@ -512,37 +514,49 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </div>
             </div>
 
-            {/* Subsection 2: Assigned Teams (6 Chips in 2 Rows x 3 Cols) */}
-            <div>
-              <div className="flex items-center gap-1 text-[11px] text-slate-400 mb-1.5 font-semibold">
-                <Shield className="w-3.5 h-3.5 text-slate-400"/>
-                <span>تیم‌های تخصیص‌یافته به پروژه</span>
+            {/* Subsection 2: Responsible teams; each one's roadmap becomes a project checklist. */}
+            <div className="space-y-2">
+              <div>
+                <div className="flex items-center gap-1 text-[11px] text-slate-700 dark:text-slate-300 font-bold">
+                  <ListChecks className="w-3.5 h-3.5 text-blue-600"/>
+                  <span>این پروژه برای کدام تیم است؟</span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5 leading-5">نقشهٔ راه هر تیم انتخاب‌شده به‌طور خودکار به‌عنوان چک‌لیست پروژه ساخته می‌شود.</p>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {teams.length === 0
+                ? <p className="text-[11px] text-slate-500 dark:text-slate-400 p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">هنوز تیمی تعریف نشده است؛ از بخش «دسته‌بندی و لیست تیم‌ها» تیم بسازید.</p>
+                : <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {teams.map(team => {
                   const isSelected = selectedTeams.includes(team.id);
+                  const steps = roadmapStepCount(teamRoadmap(team));
                   return (
                     <button
                       key={team.id}
                       type="button"
+                      aria-pressed={isSelected}
                       onClick={() => {
-                        setSelectedTeams(prev => 
+                        setSelectedTeams(prev =>
                           isSelected ? prev.filter(t => t !== team.id) : [...prev, team.id]
                         );
                       }}
                       className={cn(
-                        "p-2 rounded-xl text-[10px] font-bold border transition-all flex items-center justify-center gap-1 text-center cursor-pointer",
+                        "p-2.5 rounded-xl border transition-all flex items-center gap-2.5 text-start cursor-pointer",
                         isSelected
-                          ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 shadow-sm"
-                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600"
+                          ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/40 shadow-sm"
+                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600"
                       )}
                     >
-                      {isSelected && <Check className="w-3 h-3 text-emerald-600 shrink-0"/>}
-                      <span>{team.name}</span>
+                      {isSelected
+                        ? <span className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-white bg-blue-600"><Check className="w-3.5 h-3.5" strokeWidth={3}/></span>
+                        : <TeamAvatar team={team} className="w-7 h-7 rounded-lg text-[11px]" iconSize={14} />}
+                      <span className="min-w-0 flex-1">
+                        <span className={cn("block text-[11px] font-bold truncate", isSelected ? "text-blue-700 dark:text-blue-300" : "text-slate-700 dark:text-slate-200")}>{team.name}</span>
+                        <span className="block text-[10px] text-slate-400">{steps ? `چک‌لیست ${steps.toLocaleString('fa-IR')} مرحله‌ای` : 'بدون نقشهٔ راه'}</span>
+                      </span>
                     </button>
                   );
                 })}
-              </div>
+              </div>}
             </div>
           </div>
 

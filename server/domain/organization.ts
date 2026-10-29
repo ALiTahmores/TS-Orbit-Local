@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { activeMember, departmentAction, manager, membership, writer } from '../policy/scope.ts';
 import { DomainError, identifier, now, recordActivity, Repository, type DomainContext } from './repository.ts';
 import { boolean, dateFields, dto, invalid, numeric, priority, strings, text } from './models.ts';
+import { DEFAULT_TEAMS, ROADMAP_LIMITS } from '../../src/lib/teamRoadmaps.ts';
 
 const orgCollections = ['organizations', 'departments', 'departmentMembers', 'departmentPermissions', 'departmentModules', 'departmentReports', 'departmentSettings', 'departmentChats', 'departmentChannels', 'departmentRoles', 'departmentTemplates', 'navigationGroups', 'navigationItems', 'moduleDefinitions', 'moduleInstances', 'modulePermissions', 'teams', 'teamMembers'];
 const fields = {
   organization: ['name', 'slug', 'plan', 'billingCycle'],
   department: ['organizationId', 'name', 'icon', 'color', 'description', 'leaderId', 'order'],
-  team: ['name', 'departmentId', 'department', 'leaderId', 'memberIds', 'description', 'color', 'avatar', 'customFields'],
+  team: ['name', 'departmentId', 'department', 'leaderId', 'memberIds', 'description', 'color', 'avatar', 'customFields', 'roadmap'],
   module: ['name', 'icon', 'color', 'description', 'structure', 'isActive'],
   instance: ['name', 'definitionId', 'departmentId', 'organizationId', 'config'],
   checklist: ['projectId', 'name', 'category', 'ownerId', 'assigneeId', 'owner', 'assignedTo', 'dueDate', 'notes', 'priority', 'status', 'progress', 'metrics'],
@@ -36,6 +37,30 @@ function jsonValue(value: any, depth = 0): any {
   return result;
 }
 function object(value: any): any { if (!value || typeof value !== 'object' || Array.isArray(value)) invalid('شیء معتبر لازم است.'); return jsonValue(value); }
+// A team's roadmap: ordered phases of named steps. Identifiers stay unique so a
+// project's checklist copy can be ticked step by step.
+const roadmapIdentifier = (value: any, seen: Set<string>) => {
+  const id = text(value, 'شناسهٔ مرحله', true, 100);
+  if (!/^[A-Za-z0-9_-]+$/.test(id) || seen.has(id)) invalid('شناسهٔ مراحل نقشهٔ راه باید یکتا و معتبر باشد.');
+  seen.add(id); return id;
+};
+function roadmapInput(value: any) {
+  const input = dto(value, ['phases']);
+  if (!Array.isArray(input.phases) || input.phases.length > ROADMAP_LIMITS.phases) invalid('فازهای نقشهٔ راه معتبر نیستند.');
+  const seen = new Set<string>();
+  return { phases: input.phases.map((item: any) => {
+    const phase = dto(item, ['id', 'title', 'description', 'steps']);
+    if (!Array.isArray(phase.steps) || phase.steps.length > ROADMAP_LIMITS.steps) invalid('مراحل هر فاز معتبر نیستند.');
+    return {
+      id: roadmapIdentifier(phase.id, seen), title: text(phase.title, 'عنوان فاز', true, ROADMAP_LIMITS.title),
+      description: phase.description === undefined ? '' : text(phase.description, 'توضیح فاز', false, ROADMAP_LIMITS.description),
+      steps: phase.steps.map((entry: any) => {
+        const step = dto(entry, ['id', 'title', 'required']);
+        return { id: roadmapIdentifier(step.id, seen), title: text(step.title, 'عنوان مرحله', true, ROADMAP_LIMITS.stepTitle), required: step.required === undefined ? true : boolean(step.required) };
+      }),
+    };
+  }) };
+}
 function shape(value: any): any {
   const parsed = object(value);
   if (parsed.fields !== undefined) {
@@ -148,6 +173,7 @@ export function createOrganizationRouter(context: DomainContext) {
     if (input.departmentId !== undefined || input.department !== undefined) { parsed.departmentId = reference('departments', department); parsed.department = parsed.departmentId || ''; }
     for (const key of ['description', 'color', 'avatar']) if (input[key] !== undefined) parsed[key] = text(input[key], key, false, key === 'description' ? 10000 : 1000);
     if (input.customFields !== undefined) parsed.customFields = object(input.customFields);
+    if (input.roadmap !== undefined) parsed.roadmap = roadmapInput(input.roadmap);
     if (input.leaderId !== undefined) parsed.leaderId = member(input.leaderId, true)?.id || '';
     if (input.memberIds !== undefined) parsed.memberIds = strings(input.memberIds).map(id => member(id).id);
     return parsed;
@@ -187,9 +213,24 @@ export function createOrganizationRouter(context: DomainContext) {
     }
   };
   endpoint('get', '/teams', (_req, res) => res.json(repo('teams').all()), 'read');
-  const createTeam = (req: any, res: any) => { const parsed = teamInput(req.body, true); const ids = parsed.memberIds || []; delete parsed.memberIds; const team = repo('teams').insert({ ...base('team'), departmentId: null, leaderId: '', description: '', color: '#3B82F6', avatar: parsed.name[0], customFields: {}, ...parsed }); syncTeam(team, ids); changed('TEAM_CREATED_WITH_CHANNELS', team); broadcast('chat_rooms_updated', { teamId: team.id }); res.status(201).json(team); };
+  const createTeam = (req: any, res: any) => { const parsed = teamInput(req.body, true); const ids = parsed.memberIds || []; delete parsed.memberIds; const team = repo('teams').insert({ ...base('team'), departmentId: null, leaderId: '', description: '', color: '#3B82F6', avatar: parsed.name[0], customFields: {}, roadmap: { phases: [] }, ...parsed }); syncTeam(team, ids); changed('TEAM_CREATED_WITH_CHANNELS', team); broadcast('chat_rooms_updated', { teamId: team.id }); res.status(201).json(team); };
   const updateTeam = (req: any, res: any) => { const parsed = teamInput(req.body); const ids = parsed.memberIds; delete parsed.memberIds; const row = repo('teams').update(req.params.id, { ...parsed, updatedAt: now() }); syncTeam(row, ids); changed('TEAM_UPDATED', row); broadcast('chat_rooms_updated', { teamId: row.id }); res.json(row); };
   endpoint('post', '/teams', createTeam); endpoint('post', '/org/teams', createTeam);
+  // The default teams arrive once per workspace, on a manager's request; teams the
+  // workspace later renames or deletes are never added back.
+  endpoint('post', '/teams/defaults', (_req, res) => {
+    const workspace = scoped.raw.workspaces.find((row: any) => row.id === current().workspaceId);
+    if (!workspace || workspace.teamTemplatesSeededAt) { res.json({ created: [] }); return; }
+    const names = new Set(repo('teams').all().map(row => String(row.name || '').trim()));
+    const created = DEFAULT_TEAMS.filter(template => !names.has(template.name)).map(template => {
+      const team = repo('teams').insert({ ...base('team'), name: template.name, departmentId: null, department: '', leaderId: '', description: template.description,
+        color: template.color, avatar: template.name[0], customFields: { templateKey: template.key }, roadmap: structuredClone(template.roadmap) });
+      syncTeam(team, []); return team;
+    });
+    workspace.teamTemplatesSeededAt = now();
+    if (created.length) { changed('DEFAULT_TEAMS_CREATED', { id: workspace.id }); broadcast('chat_rooms_updated', {}); }
+    res.json({ created: created.map(row => row.id) });
+  });
   endpoint('put', '/teams/:id', updateTeam); endpoint('put', '/org/teams/:id', updateTeam);
   endpoint('put', '/org/teams/:id/members', (req, res) => { dto(req.body, ['memberIds', 'leaderId']); const team = repo('teams').require(req.params.id); const ids = strings(req.body.memberIds).map(id => member(id).id); const leaderId = req.body.leaderId === undefined ? team.leaderId : member(req.body.leaderId, true)?.id || ''; team.leaderId = leaderId; syncTeam(team, ids); changed('TEAM_MEMBERS_UPDATED', team); broadcast('chat_rooms_updated', { teamId: team.id }); res.json(team); });
 

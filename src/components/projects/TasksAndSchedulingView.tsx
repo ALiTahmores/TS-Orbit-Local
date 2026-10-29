@@ -238,15 +238,15 @@ export const TasksAndSchedulingView: React.FC = () => {
                 {t('هیچ پروژه‌ای در این بخش یافت نشد.')}
               </div>
             ) : (
-              <table className={`w-full border-collapse ${isRtl ? 'text-start' : 'text-left'}`}>
+              <table className="w-full border-collapse text-start">
                 <thead>
                   <tr className="bg-slate-50/60 dark:bg-slate-800/40 text-[11px] font-black text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase">
-                    <th className={`p-3.5 whitespace-nowrap ${isRtl ? 'ps-4 text-start' : 'pe-4 text-left'}`}>{t('عنوان پروژه')}</th>
-                    <th className="p-3.5 whitespace-nowrap hidden sm:table-cell">{t('اعضای تیم')}</th>
-                    <th className="p-3.5 whitespace-nowrap hidden xl:table-cell">{t('وضعیت')}</th>
-                    <th className="p-3.5 whitespace-nowrap hidden sm:table-cell">{t('پیشرفت')}</th>
-                    <th className="p-3.5 whitespace-nowrap hidden 2xl:table-cell">{t('زمان ثبت‌شده (کارکرد)')}</th>
-                    <th className={`p-3.5 whitespace-nowrap ${isRtl ? 'text-left pe-4' : 'text-start ps-4'}`}>{t('اقدامات وظیفه')}</th>
+                    <th className="p-3.5 ps-4 whitespace-nowrap text-start">{t('عنوان پروژه')}</th>
+                    <th className="p-3.5 whitespace-nowrap text-start hidden sm:table-cell">{t('اعضای تیم')}</th>
+                    <th className="p-3.5 whitespace-nowrap text-start hidden xl:table-cell">{t('وضعیت')}</th>
+                    <th className="p-3.5 whitespace-nowrap text-start hidden sm:table-cell">{t('پیشرفت')}</th>
+                    <th className="p-3.5 whitespace-nowrap text-start hidden 2xl:table-cell">{t('زمان ثبت‌شده (کارکرد)')}</th>
+                    <th className="p-3.5 pe-4 whitespace-nowrap text-end">{t('اقدامات وظیفه')}</th>
                   </tr>
                 </thead>
 
@@ -362,7 +362,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                             </div>
                           </td>
 
-                          <td className="p-3.5 text-left pe-4 whitespace-nowrap">
+                          <td className="p-3.5 pe-4 whitespace-nowrap text-end">
                             <button
                               type="button"
                               onClick={() => toggleExpandProject(project.id)}
@@ -419,7 +419,7 @@ export const TasksAndSchedulingView: React.FC = () => {
 
                                     <div className="space-y-2">
                                       {projectTaskList.length === 0 ? (
-                                        <p className="text-xs text-slate-400 py-2 font-bold">وظیفه‌ای برای این پروژه ثبت نشده است.</p>
+                                        <p className="text-xs text-start text-slate-400 py-2 font-bold">وظیفه‌ای برای این پروژه ثبت نشده است.</p>
                                       ) : (
                                         projectTaskList.map((t) => {
                                           const pBadge = getPriorityBadge(t.priority);
@@ -451,7 +451,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                                                 </button>
                                               </div>
 
-                                              <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+                                              <div className="flex flex-wrap items-center gap-3 shrink-0">
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${pBadge.style}`}>
                                                   {pBadge.label}
                                                 </span>
@@ -496,11 +496,11 @@ export const TasksAndSchedulingView: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 w-full font-sans relative ${isRtl ? 'text-start' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="space-y-6 w-full font-sans relative text-start" dir={isRtl ? 'rtl' : 'ltr'}>
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[10000] bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl font-black text-xs flex items-center gap-2.5 animate-in slide-in-from-top-4 duration-200">
+        <div className="fixed top-6 inset-x-0 mx-auto w-fit z-[10000] bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl font-black text-xs flex items-center gap-2.5 animate-in slide-in-from-top-4 duration-200">
           <ShieldCheck size={18} />
           <span>{toastMessage}</span>
         </div>

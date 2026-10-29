@@ -2,7 +2,7 @@ const definition = (method: string, path: string, fields: string[] = []) => ({ m
 const project = ['title','name','description','budget','amount','currency','clientName','deadline','dueDate','startDate','websiteUrl','teamLead','teamLeadId','leadId','assignedMemberIds','assignedTeamIds','selectedTeams','department','departmentId','teamId','organizationId','category','priority','status','statusReason','isBudgetConfidential','isConfidential'];
 const task = ['projectId','title','description','status','priority','assignedTo','assigneeId','assignedMemberIds','assignees','department','departmentId','teamId','deadline','dueDate','startDate','tags','dependencies','estimatedHours','estimate','loggedHours','subtasks','notes','category','attachments','links','clientVisible'];
 const organization = ['name','plan','billingCycle','slug'];
-const team = ['name','description','departmentId','organizationId','leaderId','memberIds','color','avatar','customFields'];
+const team = ['name','description','departmentId','organizationId','leaderId','memberIds','color','avatar','customFields','roadmap'];
 const department = ['name','icon','color','description','leaderId','order','organizationId'];
 const module = ['name','icon','color','description','structure','isActive'];
 const instance = ['definitionId','departmentId','organizationId','name','config'];
@@ -18,6 +18,8 @@ export const domainContracts = [
   definition('GET','/api/tasks/:taskId/comments'),definition('POST','/api/tasks/:taskId/comments',['content']),definition('PUT','/api/comments/:id',['content']),definition('DELETE','/api/comments/:id'),
   definition('GET','/api/projects/:projectId/milestones'),definition('POST','/api/projects/:projectId/milestones',['title','description','deadline','dueDate','status','completed']),definition('PUT','/api/milestones/:id',['title','description','deadline','dueDate','status','completed']),definition('DELETE','/api/milestones/:id'),
   ...['organizations','teams'].flatMap(collection => [definition('GET','/api/'+collection),definition('POST','/api/'+collection,collection==='teams'?team:organization),definition('PUT','/api/'+collection+'/:id',collection==='teams'?team:organization),definition('DELETE','/api/'+collection+'/:id')]),
+  definition('POST','/api/teams/defaults'),
+  definition('POST','/api/projects/:id/checklists',['teamId']),definition('DELETE','/api/projects/:id/checklists/:checklistId'),definition('PUT','/api/projects/:id/checklists/:checklistId/steps/:stepId',['completed']),
   definition('POST','/api/org/teams',team),definition('PUT','/api/org/teams/:id',team),definition('DELETE','/api/org/teams/:id'),definition('PUT','/api/org/teams/:id/members',['memberIds','leaderId']),
   definition('POST','/api/org/departments',department),definition('PUT','/api/org/departments/:id',department),definition('DELETE','/api/org/departments/:id'),definition('PUT','/api/org/departments/:id/members',['memberIds']),
   definition('POST','/api/org/modules',module),definition('PUT','/api/org/modules/:id',module),definition('DELETE','/api/org/modules/:id'),

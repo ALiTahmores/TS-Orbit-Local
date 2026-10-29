@@ -5,6 +5,7 @@ import { apiFetch } from '../../lib/api';
 import { useProject } from '../../context/ProjectContext';
 import { formatJalaliDate } from '../../lib/dates';
 import { JalaliDateInput } from '../common/JalaliDateInput';
+import { TeamChecklistPanel } from './TeamChecklistPanel';
 
 const boards = {
   'wordpress-checklist': {label:'چک‌لیست وردپرس',title:'name',statuses:['pending','inprogress','completed','blocked'],categories:['hosting','domain','dns','cloudflare','wp_install','security','performance','development','testing']},
@@ -27,10 +28,32 @@ const DONE=new Set(['completed','published','verified','approved','fixed']);
 const field='w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-500';
 const fieldLabel='block text-[11px] font-bold text-slate-500 dark:text-slate-400 space-y-1';
 
-/** All edits are committed through the API, including approval and QA transitions. */
+type Tab = 'team-roadmap' | Board;
+const TABS:[Tab,string][]=[['team-roadmap','نقشهٔ راه تیم'],...Object.entries(boards).map(([key,item]):[Tab,string]=>[key as Board,item.label])];
+
+/** The first tab is the project's team checklist, shared with the roadmap page; the others are workspace boards. */
 export const DeliveryBoards:React.FC = () => {
+  const [tab,setTab]=useState<Tab>('team-roadmap');
+  return <section className="space-y-4">
+    <nav className="tab-scroller gap-2" aria-label="بخش‌های تحویل">{TABS.map(([key,text])=><button type="button" key={key} aria-pressed={tab===key} onClick={()=>setTab(key)} className={`shrink-0 h-9 px-4 rounded-xl text-xs font-bold transition-colors cursor-pointer ${tab===key?'bg-blue-600 text-white':'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>{text}</button>)}</nav>
+    {tab==='team-roadmap'?<ProjectChecklist/>:<BoardView key={tab} board={tab}/>}
+  </section>;
+};
+
+const ProjectChecklist:React.FC = () => {
+  const { projects,selectedProject }=useProject();
+  const [projectId,setProjectId]=useState('');
+  const project=projects.find(row=>row.id===(projectId||selectedProject?.id))||projects[0];
+  if(!project)return <p className="text-xs text-slate-500 dark:text-slate-400 p-6 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">هنوز پروژه‌ای ثبت نشده است.</p>;
+  return <div className="space-y-4">
+    <label className={`${fieldLabel} w-full sm:w-64`}>پروژه<select aria-label="پروژهٔ چک‌لیست" value={project.id} onChange={event=>setProjectId(event.target.value)} className={field}>{projects.map(row=><option key={row.id} value={row.id}>{row.title}</option>)}</select></label>
+    <TeamChecklistPanel project={project}/>
+  </div>;
+};
+
+/** All edits are committed through the API, including approval and QA transitions. */
+const BoardView:React.FC<{board:Board}> = ({board}) => {
   const { projects,teamMembers,activeWorkspaceId }=useProject();
-  const [board,setBoard]=useState<Board>('wordpress-checklist');
   const [rows,setRows]=useState<any[]>([]);
   const [projectId,setProjectId]=useState('');
   const [editingId,setEditingId]=useState<string|null>(null);
@@ -82,8 +105,7 @@ export const DeliveryBoards:React.FC = () => {
   const visible=rows.filter(row=>!projectId || row.projectId===projectId);
   const done=visible.filter(row=>DONE.has(row.status)).length;
 
-  return <section className="space-y-4">
-    <nav className="flex flex-wrap gap-2" aria-label="بخش‌های تحویل">{Object.entries(boards).map(([key,item])=><button type="button" key={key} aria-pressed={board===key} onClick={()=>setBoard(key as Board)} className={`h-9 px-4 rounded-xl text-xs font-bold transition-colors cursor-pointer ${board===key?'bg-blue-600 text-white':'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>{item.label}</button>)}</nav>
+  return <div className="space-y-4">
     {error && <p role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold">{error}</p>}
 
     <div className="flex flex-wrap items-end justify-between gap-3">
@@ -131,5 +153,5 @@ export const DeliveryBoards:React.FC = () => {
         </article>;
       })}
     </div>
-  </section>;
+  </div>;
 };

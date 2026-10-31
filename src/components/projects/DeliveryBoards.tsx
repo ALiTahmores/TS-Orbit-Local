@@ -29,7 +29,7 @@ const field='w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-sla
 const fieldLabel='block text-[11px] font-bold text-slate-500 dark:text-slate-400 space-y-1';
 
 type Tab = 'team-roadmap' | Board;
-const TABS:[Tab,string][]=[['team-roadmap','نقشهٔ راه تیم'],...Object.entries(boards).map(([key,item]):[Tab,string]=>[key as Board,item.label])];
+const TABS:[Tab,string][]=[['team-roadmap','چک‌لیست تیم'],...Object.entries(boards).map(([key,item]):[Tab,string]=>[key as Board,item.label])];
 
 /** The first tab is the project's team checklist, shared with the roadmap page; the others are workspace boards. */
 export const DeliveryBoards:React.FC = () => {

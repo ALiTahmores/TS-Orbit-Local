@@ -375,3 +375,34 @@ html:not(.dark) .bento-card:hover {
   animation: flowLightBeam 0.7s linear infinite;
 }
 
+
+/* Loading indicator (StrandsLoader): bars rise and fall in turn. Only transform
+   and opacity change, so the compositor animates it without repainting. */
+.orbit-strands {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--orbit-strand-gap);
+  height: var(--orbit-strand-height);
+  --orbit-strand-height: 28px;
+  --orbit-strand-width: 5px;
+  --orbit-strand-gap: 5px;
+}
+.orbit-strands > span {
+  width: var(--orbit-strand-width);
+  height: 100%;
+  border-radius: 9999px;
+  transform: scaleY(0.35);
+  opacity: 0.6;
+  animation: orbit-strand 1.1s ease-in-out infinite both;
+}
+.orbit-strands-xs { --orbit-strand-height: 12px; --orbit-strand-width: 2.5px; --orbit-strand-gap: 2.5px; }
+.orbit-strands-sm { --orbit-strand-height: 16px; --orbit-strand-width: 3px; --orbit-strand-gap: 3px; }
+.orbit-strands-lg { --orbit-strand-height: 40px; --orbit-strand-width: 6px; --orbit-strand-gap: 6px; }
+@keyframes orbit-strand {
+  0%, 100% { transform: scaleY(0.35); opacity: 0.6; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orbit-strands > span { animation-duration: 2.4s !important; }
+}

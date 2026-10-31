@@ -50,22 +50,22 @@ export const SidebarScrollContainer: React.FC<SidebarScrollContainerProps> = ({ 
 
     el.addEventListener('scroll', handleScroll, { passive: true });
 
-    // Monitor resize events in case content expands or collapses
-    const resizeObserver = new ResizeObserver(() => {
-      checkScrollLimits();
-    });
+    // Resizes and content changes each ask for a check; measuring forces a
+    // layout, so one check per frame answers them all.
+    let frame = 0;
+    const scheduleCheck = () => {
+      if (!frame) frame = requestAnimationFrame(() => { frame = 0; checkScrollLimits(); });
+    };
+    const resizeObserver = new ResizeObserver(scheduleCheck);
     resizeObserver.observe(el);
-
-    // Monitor inside DOM mutations
-    const mutationObserver = new MutationObserver(() => {
-      checkScrollLimits();
-    });
+    const mutationObserver = new MutationObserver(scheduleCheck);
     mutationObserver.observe(el, { childList: true, subtree: true });
 
     // Short delayed check to capture animations/transitions
     const timer = setTimeout(checkScrollLimits, 200);
 
     return () => {
+      cancelAnimationFrame(frame);
       el.removeEventListener('scroll', handleScroll);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
@@ -74,7 +74,7 @@ export const SidebarScrollContainer: React.FC<SidebarScrollContainerProps> = ({ 
         clearTimeout(scrollTimeoutRef.current);
       }
     };
-  }, [children]);
+  }, []);
 
   return (
     <div className="relative flex-1 flex flex-col overflow-hidden min-h-0 w-full">

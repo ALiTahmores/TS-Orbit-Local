@@ -11,8 +11,7 @@ const vendorChunks: [RegExp, string][] = [
   [/[\\/]node_modules[\\/](socket\.io-client|socket\.io-parser|engine\.io-client|engine\.io-parser|@socket\.io[\\/]component-emitter|xmlhttprequest-ssl)[\\/]/, 'vendor-socket'],
 ];
 
-export default defineConfig(({mode}) => {
-  const isVercelBuild = mode === 'vercel';
+export default defineConfig(() => {
   return {
     base: '/',
     plugins: [react(), tailwindcss()],
@@ -25,17 +24,15 @@ export default defineConfig(({mode}) => {
       outDir: 'dist/client',
       emptyOutDir: true,
       rollupOptions: {
-        // Vercel serves this client from the serverless package. Keeping the
-        // release in one module prevents a successful sign-in from depending on
-        // a separately packaged lazy chunk. Local/standalone builds keep the
-        // smaller cache-friendly chunks.
-        output: isVercelBuild
-          ? { inlineDynamicImports: true }
-          : {
-              manualChunks(id) {
-                return vendorChunks.find(([pattern]) => pattern.test(id))?.[1];
-              },
-            },
+        // Every view is its own chunk, so a phone downloads and parses only the
+        // screens it opens. Each release is published whole and the HTML shell is
+        // revalidated by content, so a shell never points at another release's
+        // chunks; a tab left open across a release reloads once (src/lib/lazy.ts).
+        output: {
+          manualChunks(id) {
+            return vendorChunks.find(([pattern]) => pattern.test(id))?.[1];
+          },
+        },
       },
     },
     server: { host: '127.0.0.1' },

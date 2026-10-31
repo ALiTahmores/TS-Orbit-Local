@@ -5,7 +5,7 @@
 
 import React, { Suspense } from 'react';
 import {portalAddress} from './lib/portal';
-import { lazyNamed } from './lib/lazy';
+import { lazyNamed, preloadWhenIdle } from './lib/lazy';
 import { acceptPendingInvite, captureInviteFromUrl } from './lib/pendingInvite';
 import { ProjectProvider, useProject } from './context/ProjectContext';
 import { LoadingProvider } from './components/loading/LoadingProvider';
@@ -20,6 +20,12 @@ const Layout = lazyNamed(() => import('./components/Layout'), 'Layout');
 const DashboardView = lazyNamed(() => import('./components/DashboardView'), 'DashboardView');
 const AuthPortal = lazyNamed(() => import('./components/AuthPortal'), 'AuthPortal');
 const ClientPortalPage = lazyNamed(() => import('./components/ClientPortalPage'), 'ClientPortalPage');
+
+// A stored sign-in opens straight into the workspace: fetch its code while the
+// server confirms the session instead of after.
+try {
+  if (localStorage.getItem('token')) [Layout, DashboardView].forEach(view => void view.preload().catch(() => undefined));
+} catch { /* storage unavailable */ }
 
 const ScreenFallback = () => (
   <div className="min-h-screen w-full flex items-center justify-center bg-bg-app" role="status" aria-busy="true">
@@ -113,6 +119,8 @@ function AppContent() {
   const portalToken=portalAddress(address).token;
 
   const isClientPortal = viewMode === 'client' || urlParams.has('portalToken') || urlParams.has('token') || !!portalToken || addressURL.pathname.includes('/portal');
+  // While the visitor signs in, fetch the workspace so the dashboard opens at once.
+  React.useEffect(() => { if (!isClientPortal && !isAuthenticated) return preloadWhenIdle([Layout, DashboardView]); }, [isClientPortal, isAuthenticated]);
 
   if (isClientPortal) {
     return (

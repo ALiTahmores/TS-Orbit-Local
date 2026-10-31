@@ -183,7 +183,8 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
   }, [activeSegment, circularSegments]);
 
   const glassNoiseStyle = {
-    backgroundImage: `radial-gradient(at top left, rgba(255, 255, 255, 0.035), transparent), url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.012'/%3E%3C/svg%3E")`
+    // The SVG noise texture this card had (1.2% opacity) was invisible but costly to repaint on phones.
+    backgroundImage: `radial-gradient(at top left, rgba(255, 255, 255, 0.035), transparent)`
   };
 
   return (
@@ -439,7 +440,7 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                     strokeWidth={1.8}
                     fillOpacity={1} 
                     fill="url(#premiumBlueGradient)" 
-                    animationDuration={1500}
+                    animationDuration={600}
                     activeDot={{ 
                       r: 5, 
                       stroke: '#5B7CFF', 
@@ -462,7 +463,7 @@ export const PremiumAnalytics: React.FC<PremiumAnalyticsProps> = ({
                     strokeWidth={1.5}
                     fillOpacity={1}
                     fill="url(#premiumYellowGradient)"
-                    animationDuration={1800}
+                    animationDuration={700}
                     activeDot={{ 
                       r: 4.5, 
                       stroke: '#FFD66B', 

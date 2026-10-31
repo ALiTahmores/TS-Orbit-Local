@@ -28,13 +28,18 @@ test('the Vercel function loads one prebuilt server bundle and includes it with 
   assert.doesNotMatch(entry, /tsx/, 'cold starts must not transpile TypeScript at runtime');
 });
 
-test('the Vercel client is a clean atomic release without lazy runtime chunks', () => {
+test('the Vercel client is a clean atomic release whose views load on demand', () => {
   const buildScript = fs.readFileSync(new URL('../../scripts/build-vercel.mjs', import.meta.url), 'utf8');
   const viteConfig = fs.readFileSync(new URL('../../vite.config.ts', import.meta.url), 'utf8');
+  const lazy = fs.readFileSync(new URL('../../src/lib/lazy.ts', import.meta.url), 'utf8');
+  const main = fs.readFileSync(new URL('../../src/main.tsx', import.meta.url), 'utf8');
 
   assert.match(buildScript, /mode:\s*['"]vercel['"]/);
   assert.match(buildScript, /public['"],['"]assets/);
   assert.match(buildScript, /emptyOutDir:\s*false/);
-  assert.match(viteConfig, /mode\s*===\s*['"]vercel['"]/);
-  assert.match(viteConfig, /inlineDynamicImports:\s*true/);
+  // Phones download only the screens they open; a tab left open across a
+  // release recovers from a missing chunk by reloading once.
+  assert.doesNotMatch(viteConfig, /inlineDynamicImports/);
+  assert.match(lazy, /vite:preloadError/);
+  assert.match(main, /installChunkRecovery\(\)/);
 });

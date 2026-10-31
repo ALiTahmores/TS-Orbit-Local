@@ -121,8 +121,8 @@ export function getProfileSettings(profile: PerformanceProfile, dpr: number): Om
       };
 
     case 'LOW':
-    case 'VERY_LOW':
-      // Mobile profile: capped DPR to prevent fillrate bottlenecks on retina mobile screens
+      // Phone profile: the slow rotation looks the same at 30 frames a second and
+      // at screen resolution, for less than half the GPU work of 60 at retina.
       return {
         animationType: 'rotate',
         timeScale: 0.18,
@@ -133,11 +133,30 @@ export function getProfileSettings(profile: PerformanceProfile, dpr: number): Om
         colorFrequency: 0.65,
         noise: 0.01,
         glow: 0.65,
-        dprCap: Math.min(dpr, 1.25),
-        maxSteps: 55,
-        targetFps: 60,
+        dprCap: Math.min(dpr, 1.0),
+        maxSteps: 45,
+        targetFps: 30,
         isPaused: false,
         cardBackdropBlurClass: 'backdrop-blur-lg md:backdrop-blur-xl'
+      };
+
+    case 'VERY_LOW':
+      // A phone that still cannot keep up renders below screen resolution.
+      return {
+        animationType: 'rotate',
+        timeScale: 0.18,
+        height: 3.5,
+        baseWidth: 5.5,
+        scale: 3.6,
+        hueShift: 0,
+        colorFrequency: 0.65,
+        noise: 0,
+        glow: 0.65,
+        dprCap: Math.min(dpr, 0.75),
+        maxSteps: 32,
+        targetFps: 24,
+        isPaused: false,
+        cardBackdropBlurClass: 'backdrop-blur-md md:backdrop-blur-lg'
       };
 
     case 'STATIC':
@@ -218,6 +237,7 @@ export function useAdaptivePrismPerformance(options: UseAdaptivePrismPerformance
         let next: PerformanceProfile = current;
         if (current === 'HIGH') next = 'MEDIUM';
         else if (current === 'MEDIUM') next = 'LOW';
+        else if (current === 'LOW') next = 'VERY_LOW';
 
         if (next !== current) {
           lastProfileChangeRef.current = now;

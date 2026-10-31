@@ -345,7 +345,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           LAYER 2: LIQUID GLASS AUTHENTICATION CARD
          ======================================================== */}
       <div 
-        className="relative z-10 w-full max-w-[460px] p-8 md:p-10 rounded-[36px] bg-white/[0.05] dark:bg-black/[0.25] border border-white/20 dark:border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.3),inset_0_-1px_2px_rgba(0,0,0,0.5)] flex flex-col items-center text-center backdrop-blur-2xl md:backdrop-blur-3xl transition-all duration-300 my-auto text-neutral-100"
+        className="relative z-10 w-full max-w-[460px] p-8 md:p-10 rounded-[36px] bg-white/[0.05] dark:bg-black/[0.25] border border-white/20 dark:border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.3),inset_0_-1px_2px_rgba(0,0,0,0.5)] flex flex-col items-center text-center backdrop-blur-lg md:backdrop-blur-3xl transition-all duration-300 my-auto text-neutral-100"
       >
         
         {/* Feedback Alert Pill */}

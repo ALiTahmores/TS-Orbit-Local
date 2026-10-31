@@ -149,10 +149,17 @@ export function useCollaboration(userId: string, workspaceId: string, authentica
         if (!authenticated || !userId || !workspaceId)
             return;
         const socket = getSocket();
-        if (!socket)
+        if (!socket) {
+            void live.current.refreshAll();
             return;
+        }
+        // A connection that comes up right after a load has nothing new to fetch;
+        // only a reconnection can have missed updates.
+        let loadedAt = 0;
+        const load = () => { loadedAt = Date.now(); void live.current.refreshAll(); };
         const onConnect = () => { setRealtimeStatus('connected'); setTyping({}); if (selected.current?.id)
-            socket.emit('join', { conversationId: selected.current.id }); void live.current.refreshAll(); };
+            socket.emit('join', { conversationId: selected.current.id }); if (Date.now() - loadedAt > 5000)
+            load(); };
         const onDisconnect = () => { setRealtimeStatus('reconnecting'); setTyping({}); };
         const onError = () => setRealtimeStatus('offline');
         const onChat = (event: any) => { void live.current.fetchConversations(); if (selected.current?.id && (!event?.conversationId || event.conversationId === selected.current.id))
@@ -182,10 +189,10 @@ export function useCollaboration(userId: string, workspaceId: string, authentica
             onConnect();
         else {
             setRealtimeStatus('reconnecting');
-            void live.current.refreshAll();
+            load();
         }
         const timer = setInterval(() => { if (!socket.connected)
-            void live.current.refreshAll(); }, 15000);
+            load(); }, 15000);
         return () => { clearInterval(timer); for (const [event, handler] of Object.entries(events))
             socket.off(event, handler as any); requests.current.clear(); for (const timer of typingTimers.current.values())
             clearTimeout(timer); typingTimers.current.clear(); };

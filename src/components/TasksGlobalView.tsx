@@ -1,5 +1,5 @@
 import { formatJalaliDate } from '../lib/dates';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useProject } from '../context/ProjectContext';
 import { Task, TaskStatus, TaskPriority, DepartmentKey } from '../types';
@@ -71,6 +71,25 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 
+// Cards a column renders at first, and how many more each time its end scrolls into view.
+const COLUMN_BATCH = 30;
+
+/** Asks for more cards once the end of a column comes near its scrolled view. */
+const MoreCards: React.FC<{ onVisible: () => void }> = ({ onVisible }) => {
+  const sentinel = useRef<HTMLDivElement>(null);
+  const callback = useRef(onVisible);
+  callback.current = onVisible;
+  useEffect(() => {
+    const element = sentinel.current;
+    if (!element) return;
+    // The column scrolls itself; measuring against it lets the next cards arrive before its end.
+    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) callback.current(); }, { root: element.parentElement, rootMargin: '400px' });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return <div ref={sentinel} aria-hidden="true" className="h-8" />;
+};
+
 export const TasksGlobalView: React.FC = () => {
   const { 
     tasks, 
@@ -88,6 +107,8 @@ export const TasksGlobalView: React.FC = () => {
   
   // Search and Filter states
   const [searchQuery, setSearchQuery] = useState('');
+  // A long column renders in steps, so opening the board stays quick on phones.
+  const [columnLimits, setColumnLimits] = useState<Record<string, number>>({});
   const [deptFilter, setDeptFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
@@ -474,6 +495,7 @@ export const TasksGlobalView: React.FC = () => {
           
           {columns.map(col => {
             const colTasks = filteredTasks.filter(t => t.status === col.id);
+            const columnLimit = columnLimits[col.id] ?? COLUMN_BATCH;
             const isDraggingOver = draggingOverCol === col.id;
 
             return (
@@ -535,14 +557,14 @@ export const TasksGlobalView: React.FC = () => {
                         </div>
                       )
                     ) : (
-                      // Solid White Task Cards List
-                      colTasks.map(task => {
+                      // Solid White Task Cards List. Plain elements: a layout
+                      // animation would measure every card on every render.
+                      colTasks.slice(0, columnLimit).map(task => {
                         const projectTitle = projects.find(p => p.id === task.projectId)?.title || 'بدون پروژه';
 
                         return (
-                          <motion.div
+                          <div
                             key={task.id}
-                            layoutId={task.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, task.id)}
                             onClick={() => openEditModal(task)}
@@ -662,11 +684,14 @@ export const TasksGlobalView: React.FC = () => {
                               </div>
                             </div>
 
-                          </motion.div>
+                          </div>
                         );
                       })
                     )}
                   </AnimatePresence>
+                  {colTasks.length > columnLimit && (
+                    <MoreCards onVisible={() => setColumnLimits(limits => ({ ...limits, [col.id]: columnLimit + COLUMN_BATCH }))} />
+                  )}
                 </div>
 
               </div>

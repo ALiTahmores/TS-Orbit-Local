@@ -34,28 +34,28 @@ export const SubmenuScrollContainer: React.FC<SubmenuScrollContainerProps> = ({ 
     // Attach scroll event listener
     el.addEventListener('scroll', checkScrollLimits, { passive: true });
 
-    // Monitor resize events (e.g. content changing dynamically or section expanding)
-    const resizeObserver = new ResizeObserver(() => {
-      checkScrollLimits();
-    });
+    // Resizes and content changes each ask for a check; measuring forces a
+    // layout, so one check per frame answers them all.
+    let frame = 0;
+    const scheduleCheck = () => {
+      if (!frame) frame = requestAnimationFrame(() => { frame = 0; checkScrollLimits(); });
+    };
+    const resizeObserver = new ResizeObserver(scheduleCheck);
     resizeObserver.observe(el);
-
-    // Monitor DOM mutations inside the submenu to handle dynamic content additions
-    const mutationObserver = new MutationObserver(() => {
-      checkScrollLimits();
-    });
+    const mutationObserver = new MutationObserver(scheduleCheck);
     mutationObserver.observe(el, { childList: true, subtree: true });
 
     // Perform an additional check after a short delay to account for layout/framer transitions
     const timer = setTimeout(checkScrollLimits, 150);
 
     return () => {
+      cancelAnimationFrame(frame);
       el.removeEventListener('scroll', checkScrollLimits);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
       clearTimeout(timer);
     };
-  }, [children]);
+  }, []);
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl">

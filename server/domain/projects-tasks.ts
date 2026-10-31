@@ -171,9 +171,10 @@ export class ProjectTaskService {
         this.history(row, status, body.statusReason || ''); this.change('PROJECT_UPDATED', row); this.emit('projects_updated', this.projects()); return row; }
     activateProject(id: string) { this.manage(); const row = this.repo('projects').require(id); this.history(row, 'ACTIVE'); if (!row.startDate)
         Object.assign(row, dateFields(now(), 'startDate')); this.change('PROJECT_ACTIVATED', row); return row; }
-    tasks(projectId?: string) { if (projectId)
-        this.repo('projects').require(projectId); return this.repo('tasks').all().filter(task => !projectId || task.projectId === projectId).map(task => this.taskView(task)); }
-    projects() { const feedback = new FeedbackService(this.context.scoped.raw, this.context.scoped); return this.repo('projects').all().map(project => { const tasks = this.repo('tasks').all().filter(task => task.projectId === project.id); return { ...project, clientFeedbacks: feedback.privateList(project), totalTasks: tasks.length, completedTasks: tasks.filter(task => this.complete(task.status)).length, progress: tasks.length ? Math.round(tasks.reduce((sum, task) => sum + this.taskProgress(task), 0) / tasks.length) : 0, loggedHours: tasks.reduce((sum, task) => sum + this.hours(task.id), 0) }; }); }
+    // Summaries and task views only read, so each is built in one pass over the state.
+    tasks(projectId?: string) { return this.context.scoped.read(() => { if (projectId)
+        this.repo('projects').require(projectId); return this.repo('tasks').all().filter(task => !projectId || task.projectId === projectId).map(task => this.taskView(task)); }); }
+    projects() { return this.context.scoped.read(() => { const feedback = new FeedbackService(this.context.scoped.raw, this.context.scoped); return this.repo('projects').all().map(project => { const tasks = this.repo('tasks').all().filter(task => task.projectId === project.id); return { ...project, clientFeedbacks: feedback.privateList(project), totalTasks: tasks.length, completedTasks: tasks.filter(task => this.complete(task.status)).length, progress: tasks.length ? Math.round(tasks.reduce((sum, task) => sum + this.taskProgress(task), 0) / tasks.length) : 0, loggedHours: tasks.reduce((sum, task) => sum + this.hours(task.id), 0) }; }); }); }
     complete(status: string) { return ['completed', 'COMPLETED'].includes(status); }
     hours(taskId: string) { const entries = this.repo('timeEntries').all().filter(entry => entry.taskId === taskId); const legacy = Number(this.repo('tasks').find(taskId)?.loggedHours) || 0; return Math.round((entries.length ? entries.reduce((sum, entry) => sum + entry.hours, 0) : legacy) * 1000000) / 1000000; }
     preserveLegacyHours(taskId: string) { const entries = this.timeEntries(taskId); if (!entries.length) {
@@ -182,7 +183,8 @@ export class ProjectTaskService {
             this.repo('timeEntries').insert({ id: identifier('time'), taskId, projectId: this.repo('tasks').require(taskId).projectId, createdById: this.actor().id, hours: legacy, note: 'مجموع زمان موجود پیش از ثبت جزئیات', kind: 'legacy_baseline', createdAt: now() });
     } }
     taskProgress(task: any) { const subs = this.repo('subtasks').all().filter(sub => sub.taskId === task.id); return subs.length ? Math.round(100 * subs.filter(sub => sub.completed).length / subs.length) : this.complete(task.status) ? 100 : Math.max(0, Math.min(100, Number(task.progress) || 0)); }
-    taskView(task: any) {
+    taskView(task: any) { return this.context.scoped.read(() => this.buildTaskView(task)); }
+    private buildTaskView(task: any) {
         const comments = this.repo('comments').all().filter(comment => comment.taskId === task.id);
         const ids: string[] = Array.isArray(task.assignedMemberIds) ? task.assignedMemberIds : task.assigneeId ? [task.assigneeId] : (Array.isArray(task.assignees) ? task.assignees : []).map((user: any) => user.id);
         const assignees = [...new Set(ids)].map(id => this.repo('users').find(id)).filter(user => user && activeMember(user) && membership(this.context.scoped.raw, user, this.scope().workspaceId)).map(user => ({id: user.id, name: user.name, avatar: user.avatar || ''}));

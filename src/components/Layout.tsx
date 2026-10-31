@@ -505,35 +505,33 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const el = mainScrollRef.current;
     if (!el) return;
 
-    const onScroll = () => {
-      checkBottomScrollCue();
+    // Reading the scroll height forces a layout. Scrolling, resizing and every
+    // content change (a number counting up, a list loading) ask for a check; one
+    // check per frame answers them all.
+    let frame = 0;
+    const scheduleCheck = () => {
+      if (!frame) frame = requestAnimationFrame(() => { frame = 0; checkBottomScrollCue(); });
     };
 
-    el.addEventListener('scroll', onScroll, { passive: true });
+    el.addEventListener('scroll', scheduleCheck, { passive: true });
 
     // Initial check
     checkBottomScrollCue();
 
-    const resizeObserver = new ResizeObserver(() => {
-      checkBottomScrollCue();
-    });
+    const resizeObserver = new ResizeObserver(scheduleCheck);
     resizeObserver.observe(el);
 
-    const mutationObserver = new MutationObserver(() => {
-      checkBottomScrollCue();
-    });
+    const mutationObserver = new MutationObserver(scheduleCheck);
     mutationObserver.observe(el, { childList: true, subtree: true });
 
-    const onResize = () => {
-      checkBottomScrollCue();
-    };
-    window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener('resize', scheduleCheck, { passive: true });
 
     return () => {
-      el.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(frame);
+      el.removeEventListener('scroll', scheduleCheck);
       resizeObserver.disconnect();
       mutationObserver.disconnect();
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', scheduleCheck);
     };
   }, [checkBottomScrollCue]);
 
@@ -1680,15 +1678,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               message={pageMessage}
               variant="workspace"
             >
-              {/* Standalone Chat view */}
-              <AnimatePresence mode="wait">
+              {/* Standalone Chat view. A new page appears at once and fades in;
+                  it never waits for the previous page to animate out. */}
                 {activeTab === 'chat' || activeTab === 'messages' ? (
                   <motion.div
                     key="chat-portal"
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.15 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.12 }}
                     className="space-y-6 text-start"
                     style={{ direction: isRtl ? 'rtl' : 'ltr' }}
                   >
@@ -1700,10 +1697,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   /* Dynamic rendering of other views */
                   <motion.div
                     key={`${activeTab}-${activeSubTab}`}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.12, ease: "easeOut" }}
                     className="h-full"
                   >
                     <Suspense fallback={<StrandsLoader variant="workspace" />}>
@@ -1744,7 +1740,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </Suspense>
                   </motion.div>
                 )}
-              </AnimatePresence>
             </PageLoadingBoundary>
             </div>
 

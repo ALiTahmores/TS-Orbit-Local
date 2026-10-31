@@ -131,7 +131,9 @@ export function createAuth(options: AuthOptions) {
     return token;
   };
   // Compare unknown accounts against a real bcrypt hash too, reducing timing leakage.
-  const dummyHash = bcrypt.hashSync(randomBytes(32).toString('hex'), 12);
+  // It is a cost-12 hash of discarded random bytes, fixed so that a cold start does
+  // not spend ~300 ms computing one; a match still needs an existing account.
+  const dummyHash = '$2b$12$5OnBf6KtFVMYu9QD8HSK4u3sIdedsL1xdF69NjhBLV0uS2AZa6KZW';
   // bcrypt at cost 12 takes ~250 ms of CPU. Sign-in and registration do it here, before the
   // request joins the serialized storage queue and with the async implementation, so one
   // sign-in no longer stalls every other API request. The route reuses a result only for

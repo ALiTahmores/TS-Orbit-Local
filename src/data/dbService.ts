@@ -7,6 +7,7 @@ import { localAvatar } from '../lib/localAssets.ts';
 import { canUserAccessProject, canUserAccessNotification } from '../utils/helpers';
 import { SqliteStore, importLegacyFile, inspectState } from '../../server/db/store.ts';
 import { PostgresStore, type PgPool } from '../../server/cloud/postgres.ts';
+import { isDeepStrictEqual } from 'node:util';
 
 // Persistent application data lives outside the build output.
 const DB_PATH = config.sqlitePath;
@@ -152,6 +153,14 @@ const emptyDatabase = (): DatabaseSchema => ({
   settings: { theme: 'dark', require2FA: false }
 });
 
+/** True when a request left the state exactly as it began: there is nothing to
+ * validate or write, which is the case for every read. */
+function unchangedState(before: Record<string, any>, after: Record<string, any>): boolean {
+  const keys = Object.keys(after);
+  return keys.length === Object.keys(before).length
+    && keys.every(key => Object.prototype.hasOwnProperty.call(before, key) && isDeepStrictEqual(before[key], after[key]));
+}
+
 // Global DB helper class
 export class DbService {
   private static instance: DbService | null = null;
@@ -286,7 +295,7 @@ export class DbService {
   public commitTransaction() {
     if (this.isCloud) return this.commitCloudTransaction();
     if (!this.transactionSnapshot) throw new Error('No database request transaction active.');
-    this.store.saveState(this.getState());
+    if (!unchangedState(this.transactionSnapshot, this.getState())) this.store.saveState(this.getState());
     this.store.commit();
     this.transactionSnapshot = null;
   }
@@ -317,7 +326,7 @@ export class DbService {
 
   private async commitCloudTransaction(): Promise<void> {
     if (!this.transactionSnapshot || !this.remoteStore?.inTransaction) throw new Error('No database request transaction active.');
-    await this.remoteStore.saveState(this.getState());
+    if (!unchangedState(this.transactionSnapshot, this.getState())) await this.remoteStore.saveState(this.getState());
     if (this.cloudBeforeCommit) await this.cloudBeforeCommit();
     if(this.cloudEvents.length) await this.remoteStore.transactionQuery('INSERT INTO orbit_rt_events(event) SELECT value FROM jsonb_array_elements($1::jsonb)', [JSON.stringify(this.cloudEvents)]);
     await this.remoteStore.commit();

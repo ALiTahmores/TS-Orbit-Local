@@ -11,7 +11,6 @@ import {
   Check, 
   Shield, 
   AtSign, 
-  Loader2, 
   CheckCircle2, 
   AlertCircle, 
   Sparkles,
@@ -27,6 +26,7 @@ import {
   Lock
 } from 'lucide-react';
 import { WorkspaceRole } from '../../types';
+import { LoaderGooeyBlobs } from '../ui/loaders-gooey-blobs';
 
 interface AddMemberModalProps {
   isOpen: boolean;
@@ -235,7 +235,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                 disabled={isSearching || !searchQuery.trim()}
                 className="absolute end-2 h-8 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
-                {isSearching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                {isSearching ? <LoaderGooeyBlobs size={4} /> : <Search size={13} />}
                 <span>{isRtl ? 'جستجو' : 'Search'}</span>
               </button>
             </div>
@@ -380,7 +380,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({
                 className="w-full h-11 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/25 mt-2 active:scale-[0.98]"
               >
                 {isSubmitting ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <LoaderGooeyBlobs size={6} />
                 ) : (
                   <UserPlus size={16} />
                 )}

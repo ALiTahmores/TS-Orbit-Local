@@ -5,6 +5,7 @@ import { invitePath } from '../../lib/pendingInvite';
 import { LocalImage } from '../common/LocalImage';
 import { useProject } from '../../context/ProjectContext';
 import { formatJalaliDate } from '../../lib/dates';
+import { LoaderGooeyBlobs } from '../ui/loaders-gooey-blobs';
 
 const toPersianDigits = (n: string | number | undefined | null): string =>
   n === undefined || n === null ? '' : n.toString().replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[parseInt(d, 10)] || '۰');
@@ -114,7 +115,7 @@ export const ProfileResumeSubView: React.FC = () => {
                   {copied ? <CheckCheck size={16} /> : <Copy size={15} />} {copied ? 'کپی شد' : 'کپی لینک دعوت'}
                 </button>
                 <button type="button" onClick={regenerateInvite} disabled={regenerating} title="ساخت کد جدید و باطل کردن لینک قبلی" className="h-10 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer">
-                  <RefreshCw size={14} className={regenerating ? 'animate-spin' : ''} /> کد جدید
+                  {regenerating ? <LoaderGooeyBlobs size={4} /> : <RefreshCw size={14} />} کد جدید
                 </button>
               </div>
             </>

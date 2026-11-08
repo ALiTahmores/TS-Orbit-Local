@@ -13,6 +13,8 @@ import ClickSpark from './components/ui/ClickSpark';
 import { BrandLogo } from './components/common/BrandLogo';
 import { SmartRefreshNotifier } from './components/common/SmartRefreshNotifier';
 import { useSmartRefresh } from './hooks/useSmartRefresh';
+import { AppShellSkeleton } from './components/loading/PageSkeletons';
+import { LoaderGooeyBlobs } from './components/ui/loaders-gooey-blobs';
 
 // The sign-in page, the public client portal and the workspace shell are separate
 // entry points; visitors download only the one they open.
@@ -27,12 +29,19 @@ try {
   if (localStorage.getItem('token')) [Layout, DashboardView].forEach(view => void view.preload().catch(() => undefined));
 } catch { /* storage unavailable */ }
 
-const ScreenFallback = () => (
-  <div className="min-h-screen w-full flex items-center justify-center bg-bg-app" role="status" aria-busy="true">
-    <span className="h-8 w-8 rounded-full border-2 border-brand-accent/30 border-t-brand-accent animate-spin" />
-    <span className="sr-only">در حال بارگذاری…</span>
-  </div>
-);
+// A stored sign-in opens on the workspace frame and the skeleton of the page it
+// was on; a visitor without one waits on the sign-in screen's dark backdrop.
+const ScreenFallback = () => {
+  let signedIn = false;
+  try { signedIn = !!localStorage.getItem('token'); } catch { /* storage unavailable */ }
+  if (signedIn) return <AppShellSkeleton />;
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#090a0f] text-white/80" role="status" aria-busy="true">
+      <LoaderGooeyBlobs size={12} />
+      <span className="sr-only">در حال بارگذاری…</span>
+    </div>
+  );
+};
 
 class AppErrorBoundary extends React.Component<{ children?: React.ReactNode }, { failed: boolean }> {
   declare readonly props: { children?: React.ReactNode };

@@ -344,6 +344,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const workspaceLoadedAt=useRef(0);
   const teamMembersFetchSequence=useRef(0);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [tasksLoaded, setTasksLoaded] = useState<boolean>(false);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState<boolean>(false);
   const openNewProjectModal = () => setIsNewProjectModalOpen(true);
 
@@ -732,6 +733,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [userRole, setUserRoleState] = useState<string>('');
 
   const clearPrivateState = () => {
+    // Pages show their skeleton again until the next workspace's data arrives.
+    setIsLoaded(false); setTasksLoaded(false);
     setProjects([]); setTasks([]); setTeamMembers([]); setUsers([]); setClients([]);
     setWpChecklist([]); setSeoChecklist([]); setContentCenter([]); setQaBugs([]); setFiles([]);
     setDepartmentReports([]); setDepartments([]); setDepartmentMembers([]); setDepartmentPermissions([]);
@@ -2455,7 +2458,9 @@ triggerSuccessEvent(
           setTasks(list);
         }
       }
-    } catch { /* Request failures are reported centrally. Stale responses cannot restore this view. */ }
+    } catch { /* Request failures are reported centrally. Stale responses cannot restore this view. */ } finally {
+      setTasksLoaded(true);
+    }
   };
 
   const fetchTeamMembers = async () => {
@@ -2894,7 +2899,8 @@ triggerSuccessEvent(
       openNewProjectModal,
       
       isLoading,
-      isLoaded,
+      // The workspace's projects and tasks have both arrived at least once.
+      isLoaded: isLoaded && tasksLoaded,
       operationStatus,
       setOperationStatus,
       

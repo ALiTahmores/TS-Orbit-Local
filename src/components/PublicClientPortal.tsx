@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { CustomSelect } from './common/CustomSelect';
 import { ClientFeedback } from '../types';
-import StrandsLoader from './loading/StrandsLoader';
+import { PortalSkeleton } from './loading/PageSkeletons';
 import { 
   ShieldCheck, 
   Clock, 
@@ -237,14 +237,8 @@ const PublicClientPortalView: React.FC<PublicClientPortalProps> = ({
   // Render sleek loading spinner while hydration is in progress
   if (!portalLoaded) {
     return (
-      <div 
-        className={`${theme === 'dark' ? 'dark' : ''} min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 font-['Vazirmatn'] transition-colors`} 
-        dir={lang === 'fa' ? 'rtl' : 'ltr'} 
-        style={{ fontFeatureSettings: lang === 'fa' ? '"ss01" 1' : 'normal' }}
-      >
-        <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center shadow-xl backdrop-blur-xl flex flex-col items-center justify-center">
-          <StrandsLoader variant="page" message={txt.loading} />
-        </div>
+      <div className={theme === 'dark' ? 'dark' : ''} dir={lang === 'fa' ? 'rtl' : 'ltr'} aria-label={txt.loading}>
+        <PortalSkeleton />
       </div>
     );
   }

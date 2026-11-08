@@ -2,7 +2,7 @@ import { LocalImage } from './common/LocalImage';
 import React, { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { lazyNamed, preloadWhenIdle } from '../lib/lazy';
-import { StrandsLoader } from './loading/StrandsLoader';
+import { PageSkeleton } from './loading/PageSkeletons';
 import { SubmenuScrollContainer } from './SubmenuScrollContainer';
 import { SidebarScrollContainer } from './SidebarScrollContainer';
 import { cn } from '../lib/utils';
@@ -45,6 +45,8 @@ const CreateProjectModal = lazyNamed(() => import('./projects/CreateProjectModal
 const idleViews = [ProjectsView, TasksGlobalView, MessagesView, PersonalTasksView, NotificationsView, ReportsGlobalView,
   DepartmentTechnicalView, ProfileView, CreateProjectModal, ApprovalCenter, SystemSettingsView, OrgBuilder, OrgPermissions,
   TeamDashboardView, DepartmentReportsView, DynamicModuleView];
+// Pages built from the workspace's projects and tasks.
+const dataPages = new Set(['dashboard', 'dept_tech', 'projects', 'tasks', 'personal_tasks', 'reports']);
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -200,8 +202,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     departmentModules,
     teams,
     isNewProjectModalOpen,
-    setIsNewProjectModalOpen
+    setIsNewProjectModalOpen,
+    isLoaded,
+    activeWorkspaceId
   } = useProject();
+  // Until the workspace's projects and tasks first arrive, the pages built from
+  // them show their skeleton instead of an empty state.
+  const awaitingWorkspaceData = !isLoaded && !!activeWorkspaceId && (dataPages.has(activeTab) || activeTab.startsWith('dept_'));
 
   const { isPageLoading, pageMessage, isNavigating } = useLoading();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -1689,7 +1696,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     className="space-y-6 text-start"
                     style={{ direction: isRtl ? 'rtl' : 'ltr' }}
                   >
-                    <Suspense fallback={<StrandsLoader variant="workspace" />}>
+                    <Suspense fallback={<PageSkeleton tab="chat" />}>
                       <MessagesView />
                     </Suspense>
                   </motion.div>
@@ -1702,7 +1709,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     transition={{ duration: 0.12, ease: "easeOut" }}
                     className="h-full"
                   >
-                    <Suspense fallback={<StrandsLoader variant="workspace" />}>
+                    {awaitingWorkspaceData ? <PageSkeleton tab={activeTab} subTab={activeSubTab} /> : (
+                    <Suspense fallback={<PageSkeleton tab={activeTab} subTab={activeSubTab} />}>
                     {activeTab === 'dashboard' && children}
                     {activeTab === 'dept_tech' && <DepartmentTechnicalView />}
                     {activeTab === 'projects' && <ProjectsView />}
@@ -1738,6 +1746,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       />
                     )}
                     </Suspense>
+                    )}
                   </motion.div>
                 )}
             </PageLoadingBoundary>

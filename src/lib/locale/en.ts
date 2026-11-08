@@ -1022,6 +1022,7 @@ export const en: Record<string, string> = {
   'در حال اجرا': 'In progress',
   'در حال انجام': 'In progress',
   'در حال انجام (': 'In progress (',
+  'در حال انجام…': 'Working…',
   'در حال بارگذاری…': 'Loading…',
   'در حال بازبینی': 'Reviewing',
   'در حال بررسی': 'In review',

@@ -21,7 +21,7 @@ export function reportSnapshot(report:any) {
   };
 }
 export function taskTransport(input: Record<string, any>) {
-  const fields = ['projectId','title','description','department','departmentId','teamId','status','priority','startDate','deadline','dueDate','tags','dependencies','estimatedHours','subtasks','notes','category','clientVisible','links','initialComments'];
+  const fields = ['projectId','title','description','department','departmentId','teamId','status','priority','startDate','deadline','dueDate','tags','dependencies','estimatedHours','subtasks','notes','category','clientVisible','links','initialComments','storyPoints','type','epicId','epicColor'];
   const result = Object.fromEntries(Object.entries(input).filter(([key,value]) => fields.includes(key) && value !== undefined));
   if (input.status !== undefined) result.status = taskStatus(input.status);
   if (input.priority !== undefined) result.priority = taskPriority(input.priority);

@@ -25,6 +25,7 @@ import { useProjectContext } from '../../context/ProjectContext';
 import { Task, SubTask } from '../../types';
 import { cn } from '../../lib/utils';
 import { TaskKey } from '../common/TaskKey';
+import { EpicLozenge, TaskTypeIcon } from '../common/TaskType';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === undefined || n === null) return '';
@@ -156,7 +157,8 @@ export const TaskQuickDetailModal: React.FC<TaskQuickDetailModalProps> = ({
           {/* Project & Title */}
           <div>
             <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 mb-1 flex items-center gap-2">
-              {project ? (project.title || project.name) : 'پروژه عمومی'}<TaskKey value={task.key} />
+              {project ? (project.title || project.name) : 'پروژه عمومی'}<TaskTypeIcon type={task.type} size={16} /><TaskKey value={task.key} />
+              {(() => { const epic = task.epicId ? tasks.find(item => item.id === task.epicId) : null; return epic ? <EpicLozenge title={epic.title} color={epic.epicColor} /> : null; })()}
             </span>
             <h2 className="text-lg font-black text-slate-900 dark:text-slate-100">
               {task.title}

@@ -75,6 +75,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import { TaskKey } from './common/TaskKey';
+import { TaskTypeIcon } from './common/TaskType';
 
 // Cards a column renders at first, and how many more each time its end scrolls into view.
 const COLUMN_BATCH = 30;
@@ -595,6 +596,7 @@ export const TasksGlobalView: React.FC = () => {
                             <div className="flex justify-between items-center gap-2">
                               {/* Key and department */}
                               <span className="flex items-center gap-1.5 min-w-0">
+                                <TaskTypeIcon type={task.type} size={16} />
                                 <TaskKey value={task.key} />
                                 <span className="text-[9px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 px-2 py-0.5 rounded font-mono truncate">
                                   {(task.department || 'عمومی').toUpperCase()}

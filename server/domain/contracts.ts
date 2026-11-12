@@ -1,6 +1,6 @@
 const definition = (method: string, path: string, fields: string[] = []) => ({ method, path, fields });
 const project = ['title','name','description','budget','amount','currency','clientName','deadline','dueDate','startDate','websiteUrl','teamLead','teamLeadId','leadId','assignedMemberIds','assignedTeamIds','selectedTeams','department','departmentId','teamId','organizationId','category','priority','status','statusReason','isBudgetConfidential','isConfidential'];
-const task = ['projectId','title','description','status','priority','assignedTo','assigneeId','assignedMemberIds','assignees','department','departmentId','teamId','deadline','dueDate','startDate','tags','dependencies','estimatedHours','estimate','loggedHours','subtasks','notes','category','attachments','links','clientVisible','storyPoints'];
+const task = ['projectId','title','description','status','priority','assignedTo','assigneeId','assignedMemberIds','assignees','department','departmentId','teamId','deadline','dueDate','startDate','tags','dependencies','estimatedHours','estimate','loggedHours','subtasks','notes','category','attachments','links','clientVisible','storyPoints','type','epicId','epicColor'];
 const organization = ['name','plan','billingCycle','slug'];
 const team = ['name','description','departmentId','organizationId','leaderId','memberIds','color','avatar','customFields','roadmap'];
 const department = ['name','icon','color','description','leaderId','order','organizationId'];

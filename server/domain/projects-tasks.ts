@@ -6,7 +6,10 @@ import { manager, membership, activeMember, writer } from '../policy/scope.ts';
 import { teamRoadmap } from '../../src/lib/teamRoadmaps.ts';
 import { FeedbackService } from '../portal/service.ts';
 const projectFields = ['title', 'name', 'description', 'budget', 'amount', 'currency', 'clientName', 'deadline', 'dueDate', 'startDate', 'websiteUrl', 'teamLead', 'teamLeadId', 'leadId', 'assignedMemberIds', 'assignedTeamIds', 'selectedTeams', 'department', 'departmentId', 'teamId', 'organizationId', 'category', 'priority', 'status', 'statusReason', 'isConfidential', 'isBudgetConfidential'];
-const taskFields = ['projectId', 'title', 'description', 'status', 'priority', 'assignedTo', 'assigneeId', 'assignedMemberIds', 'assignees', 'department', 'departmentId', 'teamId', 'clientVisible', 'deadline', 'dueDate', 'startDate', 'tags', 'dependencies', 'estimatedHours', 'loggedHours', 'subtasks', 'notes', 'category', 'attachments', 'initialComments', 'links', 'storyPoints'];
+const taskFields = ['projectId', 'title', 'description', 'status', 'priority', 'assignedTo', 'assigneeId', 'assignedMemberIds', 'assignees', 'department', 'departmentId', 'teamId', 'clientVisible', 'deadline', 'dueDate', 'startDate', 'tags', 'dependencies', 'estimatedHours', 'loggedHours', 'subtasks', 'notes', 'category', 'attachments', 'initialComments', 'links', 'storyPoints', 'type', 'epicId', 'epicColor'];
+/** Issue types, as in Jira: an epic groups the stories, tasks and bugs of one project. */
+export const TASK_TYPES = ['task', 'story', 'bug', 'epic'];
+export const EPIC_COLORS = ['violet', 'blue', 'teal', 'green', 'amber', 'orange', 'rose', 'slate'];
 const identityCollections = new Set(['users', 'workspaces', 'userProfiles', 'userSettings', 'userSessions', 'loginHistory', 'userDevices', 'securityEvents', 'profileImages', 'userPreferences', 'userActivities', 'approvalRequests', 'approvalHistory', 'notificationQueue', 'emailQueue']);
 export class ProjectTaskService {
     constructor(readonly context: DomainContext) { }
@@ -31,6 +34,38 @@ export class ProjectTaskService {
         const sprint = (Array.isArray(project?.sprints) ? project.sprints : []).find((row: any) => row.id === task.sprintId && row.state === 'active');
         if (!sprint) return;
         sprint.events = [...(Array.isArray(sprint.events) ? sprint.events : []), { at: now(), kind, taskId: task.id, points: typeof task.storyPoints === 'number' ? task.storyPoints : 0 }].slice(-2000);
+    }
+    /**
+     * Issue-type rules for a create or update: a default type, a colour for new epics,
+     * and an epic link only to an epic of the same project (never epic inside epic).
+     * A link the caller sent is checked strictly; one left over from a move or a type
+     * change is dropped quietly.
+     */
+    shape(changes: any, task: any | undefined, body: any) {
+        const final = { ...(task || {}), ...changes };
+        final.type = final.type || 'task';
+        if (!task) changes.type = final.type;
+        const explicit = 'epicId' in body;
+        const epicId = this.epicFor(final, task?.id, explicit);
+        if (explicit || (task?.epicId && epicId !== task.epicId)) changes.epicId = epicId;
+        if (final.type === 'epic' && !final.epicColor) changes.epicColor = this.nextEpicColor(final.projectId);
+    }
+    epicFor(final: any, taskId: string | undefined, explicit: boolean): string | null {
+        if (!final.epicId) return null;
+        const reject = (message: string): null => { if (explicit) invalid(message); return null; };
+        if (final.type === 'epic') return reject('اپیک نمی‌تواند زیرمجموعهٔ اپیک دیگری باشد.');
+        if (final.epicId === taskId) return reject('کار نمی‌تواند اپیک خودش باشد.');
+        const epic = this.repo('tasks').find(final.epicId);
+        if (!epic || epic.type !== 'epic') return reject('اپیک انتخاب‌شده معتبر نیست.');
+        if (epic.projectId !== final.projectId) return reject('اپیک باید از همین پروژه باشد.');
+        return epic.id;
+    }
+    nextEpicColor(projectId: string): string {
+        return EPIC_COLORS[this.repo('tasks').all().filter(task => task.type === 'epic' && task.projectId === projectId).length % EPIC_COLORS.length];
+    }
+    /** The epic's tasks stay; only their link goes. */
+    unlinkEpic(epicId: string) {
+        for (const task of this.repo('tasks').all()) if (task.epicId === epicId) { delete task.epicId; task.updatedAt = now(); }
     }
     /** The next task number; tasks from before numbering are numbered once, oldest first. */
     nextTaskNumber(): number {
@@ -277,6 +312,17 @@ export class ProjectTaskService {
             changes.estimatedHours = numeric(body.estimatedHours, 'زمان برآورد', 100000);
         if ('storyPoints' in body)
             changes.storyPoints = body.storyPoints === null ? null : numeric(body.storyPoints, 'امتیاز تخمین', 1000);
+        if ('type' in body) {
+            const type = String(body.type || '').toLowerCase();
+            if (!TASK_TYPES.includes(type)) invalid('نوع کار معتبر نیست.');
+            changes.type = type;
+        }
+        if ('epicId' in body)
+            changes.epicId = body.epicId ? this.repo('tasks').require(text(body.epicId, 'اپیک', true, 200)).id : null;
+        if ('epicColor' in body) {
+            if (!EPIC_COLORS.includes(body.epicColor)) invalid('رنگ اپیک معتبر نیست.');
+            changes.epicColor = body.epicColor;
+        }
         if ('loggedHours' in body)
             numeric(body.loggedHours, 'زمان کار', 100000);
         if ('tags' in body)
@@ -388,14 +434,17 @@ export class ProjectTaskService {
         return; if ((task.dependencies || []).some((dependency: string) => !this.complete(this.repo('tasks').require(dependency).status)))
         throw new DomainError(409, 'DEPENDENCY_INCOMPLETE', 'ابتدا وظایف وابسته را تکمیل کنید.'); const subs = subtasks ?? this.repo('subtasks').all().filter(sub => sub.taskId === task.id); if (subs.some(sub => !sub.completed))
         throw new DomainError(409, 'SUBTASK_INCOMPLETE', 'زیرکار باز باقی مانده است.'); }
-    createTask(body: any) { body = this.createInput(body); const changes = this.taskChanges(body); this.assertCompletion({ ...changes }, body.subtasks || []); const task = this.repo('tasks').insert({ id: identifier('task'), number: this.nextTaskNumber(), createdById: this.actor().id, creatorId: this.actor().id, createdAt: now(), description: '', priority: 'medium', status: 'pending', deadline: '', tags: [], attachments: [], dependencies: [], assignedMemberIds: [], assignees: [], estimatedHours: 0, progress: 0, ...changes }); if (body.subtasks)
+    createTask(body: any) { body = this.createInput(body); const changes = this.taskChanges(body); this.shape(changes, undefined, body); this.assertCompletion({ ...changes }, body.subtasks || []); const task = this.repo('tasks').insert({ id: identifier('task'), number: this.nextTaskNumber(), createdById: this.actor().id, creatorId: this.actor().id, createdAt: now(), description: '', priority: 'medium', status: 'pending', deadline: '', tags: [], attachments: [], dependencies: [], assignedMemberIds: [], assignees: [], estimatedHours: 0, progress: 0, ...changes }); if (body.subtasks)
         this.replaceSubtasks(task.id, body.subtasks); if (body.loggedHours !== undefined)
         this.adjustHours(task.id, body.loggedHours); this.refreshTask(task, !!body.subtasks); for (const content of body.initialComments || [])
         this.comment(task.id, undefined, { content }); this.change('TASK_CREATED', task); this.notifyAssignments(task); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return this.taskView(task); }
-    updateTask(id: string, body: any) { const task = this.repo('tasks').require(id), oldAssigned=this.assignmentIds(task), oldProject = task.projectId, oldPoints = task.storyPoints, oldSprint = task.sprintId, changes = this.taskChanges(body, id); this.assertCompletion({ ...task, ...changes }, body.subtasks); const status = changes.status; delete changes.status; Object.assign(task, changes);
+    updateTask(id: string, body: any) { const task = this.repo('tasks').require(id), oldAssigned=this.assignmentIds(task), oldProject = task.projectId, oldPoints = task.storyPoints, oldSprint = task.sprintId, oldType = task.type || 'task', changes = this.taskChanges(body, id); this.shape(changes, task, body); this.assertCompletion({ ...task, ...changes }, body.subtasks); const status = changes.status; delete changes.status; Object.assign(task, changes);
         // A sprint belongs to one project: moving the task away takes it out of the sprint.
         if (oldProject !== task.projectId && oldSprint) { this.sprintEvent({ ...task, sprintId: oldSprint }, 'remove', oldProject); delete task.sprintId; delete task.backlogRank; }
         else if ('storyPoints' in changes && changes.storyPoints !== oldPoints) this.sprintEvent(task, 'estimate');
+        // An epic is not sprint work; a former epic, or one moved to another project, lets go of its tasks.
+        if (task.type === 'epic' && task.sprintId) { this.sprintEvent(task, 'remove'); delete task.sprintId; delete task.backlogRank; }
+        if (oldType === 'epic' && (task.type !== 'epic' || oldProject !== task.projectId)) this.unlinkEpic(id);
         if (status) {
         this.history(task, status);
         if (!this.subtasks(id).length)
@@ -466,7 +515,7 @@ export class ProjectTaskService {
             if (this.context.scoped.raw.projects.some((project: any) => project.id === projectId && this.context.scoped.scopeOf('projects', project) === this.scope().workspaceId))
                 this.counters(projectId);
     }
-    deleteTask(id: string) { const task = this.repo('tasks').require(id); const projectId = task.projectId; this.sprintEvent(task, 'remove'); this.cascade('task', id); this.counters(projectId); recordActivity(this.context, 'TASK_DELETED', id); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return { success: true, deletedId: id }; }
+    deleteTask(id: string) { const task = this.repo('tasks').require(id); const projectId = task.projectId; this.sprintEvent(task, 'remove'); if (task.type === 'epic') this.unlinkEpic(id); this.cascade('task', id); this.counters(projectId); recordActivity(this.context, 'TASK_DELETED', id); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return { success: true, deletedId: id }; }
     deleteProject(id: string) { this.manage(); this.cascade('project', id); recordActivity(this.context, 'PROJECT_DELETED', id); this.emit('projects_updated', this.projects()); this.emit('tasks_updated', this.tasks()); return { success: true, deletedId: id }; }
     milestones(projectId: string) { this.repo('projects').require(projectId); return this.repo('milestones').all().filter(row => row.projectId === projectId); }
     milestone(projectId: string | undefined, id: string | undefined, body: any) {

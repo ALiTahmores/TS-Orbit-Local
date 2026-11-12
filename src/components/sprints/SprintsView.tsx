@@ -13,8 +13,12 @@ import { clockQuery, isClosedStatus, sprintCall, STATUS_GROUP, useSprints, type 
 import { SprintBoard } from './SprintBoard';
 import { SprintReports } from './SprintReports';
 import { PriorityFlag, StatusPill, sprintDates, statusTone } from './parts';
+import { EpicLozenge, TASK_TYPES, TaskTypeIcon, epicTone } from '../common/TaskType';
+import { EpicsView } from './EpicsView';
+import { Zap } from 'lucide-react';
 
-type View = 'backlog' | 'board' | 'reports';
+type View = 'backlog' | 'board' | 'epics' | 'reports';
+type EpicMap = Map<string, { title: string; color: string }>;
 const READ_ONLY_ROLES = ['VIEWER', 'CLIENT', 'READ_ONLY', 'GUEST'];
 const addDays = (iso: string, days: number) => new Date(Date.parse(iso + 'T00:00:00Z') + days * 86_400_000).toISOString().slice(0, 10);
 const PointChips: React.FC<{ todo: number; progress: number; done: number }> = ({ todo, progress, done }) => (
@@ -38,6 +42,9 @@ export const SprintsView: React.FC = () => {
   const [view, setView] = useState<View>('backlog');
   const [query, setQuery] = useState('');
   const [mine, setMine] = useState(false);
+  const [epicFilter, setEpicFilter] = useState<string>('all');
+  useEffect(() => { setEpicFilter('all'); }, [projectId]);
+  const epicMap: EpicMap = useMemo(() => new Map((data?.epics || []).map(epic => [epic.id, { title: epic.title, color: epic.color }])), [data]);
   const [detail, setDetail] = useState<string | null>(null);
   const [sheet, setSheet] = useState<{ kind: 'start' | 'edit' | 'complete'; sprint: Sprint } | null>(null);
   const [reportSprint, setReportSprint] = useState<string | null>(null);
@@ -48,6 +55,7 @@ export const SprintsView: React.FC = () => {
     const text = query.trim().toLowerCase();
     return (data?.tasks || []).filter(row => (!text || row.title.toLowerCase().includes(text) || (row.key || '').toLowerCase().includes(text)) && (!mine || row.assignees.some(person => person.id === currentUser?.id)));
   }, [data, query, mine, currentUser]);
+  const planned = useMemo(() => epicFilter === 'all' ? visible : visible.filter(row => epicFilter === 'none' ? !row.epicId || !epicMap.has(row.epicId) : row.epicId === epicFilter), [visible, epicFilter, epicMap]);
   const detailTask = detail ? allTasks.find(task => task.id === detail) || null : null;
   const fail = (failure: unknown) => setNotice(failure instanceof Error ? failure.message : 'انجام نشد.');
 
@@ -77,9 +85,10 @@ export const SprintsView: React.FC = () => {
         <Segmented label="نمای اسپرینت" value={view} onChange={setView} options={[
           { value: 'backlog', label: <><ListTodo size={14} />بک‌لاگ</>, count: data ? data.tasks.filter(row => !row.sprintId).length : undefined },
           { value: 'board', label: <><Columns3 size={14} />اسپرینت فعال</> },
+          { value: 'epics', label: <><Zap size={14} />اپیک‌ها</>, count: data ? data.epics.length : undefined },
           { value: 'reports', label: <><BarChart3 size={14} />گزارش‌ها</> },
         ]} />
-        {view !== 'reports' && (
+        {(view === 'backlog' || view === 'board') && (
           <div className="flex items-center gap-2">
             <label className="relative flex-1 lg:w-72">
               <Search size={15} className="absolute top-1/2 -translate-y-1/2 start-3 text-slate-400" aria-hidden="true" />
@@ -102,12 +111,15 @@ export const SprintsView: React.FC = () => {
       )}
 
       {!data ? <PlannerSkeleton /> : view === 'backlog' ? (
-        <BacklogPlanner data={data} rows={visible} projectId={projectId} canWrite={canWrite} filtered={!!query.trim() || mine}
+        <BacklogPlanner data={data} rows={planned} projectId={projectId} canWrite={canWrite} filtered={!!query.trim() || mine || epicFilter !== 'all'}
+          epicMap={epicMap} epicFilter={epicFilter} onEpicFilter={setEpicFilter}
           onOpen={setDetail} onChanged={setData} reload={reload} onError={fail}
           onStart={sprint => setSheet({ kind: 'start', sprint })} onEdit={sprint => setSheet({ kind: 'edit', sprint })}
           onComplete={sprint => setSheet({ kind: 'complete', sprint })} onDelete={sprint => void removeSprint(sprint)} />
+      ) : view === 'epics' ? (
+        <EpicsView projectId={projectId} onOpen={setDetail} onError={fail} />
       ) : view === 'board' ? (
-        <SprintBoard sprint={active} rows={visible.filter(row => active && row.sprintId === active.id)} canWrite={canWrite} canManage={data.canManage}
+        <SprintBoard sprint={active} epics={epicMap} rows={visible.filter(row => active && row.sprintId === active.id)} canWrite={canWrite} canManage={data.canManage}
           onOpen={setDetail} onComplete={() => active && setSheet({ kind: 'complete', sprint: active })} onChanged={reload} onError={fail}
           onBacklog={() => setView('backlog')} onReport={() => { setReportSprint(active?.id || null); setView('reports'); }} />
       ) : (
@@ -140,12 +152,13 @@ const PlannerSkeleton: React.FC = () => (
 
 interface PlannerProps {
   data: SprintOverview; rows: SprintTask[]; projectId: string; canWrite: boolean; filtered: boolean;
+  epicMap: EpicMap; epicFilter: string; onEpicFilter: (value: string) => void;
   onOpen: (id: string) => void; onChanged: (value: SprintOverview) => void; reload: () => Promise<void>; onError: (failure: unknown) => void;
   onStart: (sprint: Sprint) => void; onEdit: (sprint: Sprint) => void; onComplete: (sprint: Sprint) => void; onDelete: (sprint: Sprint) => void;
 }
 
 /** Sprints first (the running one on top), then the backlog; tasks move by drag and drop or the "move to" menu. */
-const BacklogPlanner: React.FC<PlannerProps> = ({ data, rows, projectId, canWrite, filtered, onOpen, onChanged, reload, onError, onStart, onEdit, onComplete, onDelete }) => {
+const BacklogPlanner: React.FC<PlannerProps> = ({ data, rows, projectId, canWrite, filtered, epicMap, epicFilter, onEpicFilter, onOpen, onChanged, reload, onError, onStart, onEdit, onComplete, onDelete }) => {
   const [dragId, setDragId] = useState<string | null>(null);
   const [target, setTarget] = useState<{ lane: string | null; before: string | null } | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -171,6 +184,18 @@ const BacklogPlanner: React.FC<PlannerProps> = ({ data, rows, projectId, canWrit
 
   return (
     <div className="space-y-4">
+      {data.epics.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1" role="group" aria-label="فیلتر اپیک">
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0 inline-flex items-center gap-1"><Zap size={13} aria-hidden="true" />اپیک:</span>
+          {[{ id: 'all', title: 'همه' }, ...data.epics.map(epic => ({ id: epic.id, title: epic.title, color: epic.color })), { id: 'none', title: 'بدون اپیک' }].map(item => (
+            <button key={item.id} type="button" aria-pressed={epicFilter === item.id} onClick={() => onEpicFilter(item.id)}
+              className={cn('h-7 px-2.5 rounded-lg text-[11px] font-bold whitespace-nowrap shrink-0 cursor-pointer transition-colors inline-flex items-center gap-1.5',
+                epicFilter === item.id ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800')}>
+              {'color' in item && <span className={cn('w-2 h-2 rounded-sm', epicTone(item.color as string).swatch)} aria-hidden="true" />}{item.title}
+            </button>
+          ))}
+        </div>
+      )}
       {lanes.map(({ id: laneId, sprint }) => {
         const laneRows = rows.filter(row => row.sprintId === laneId);
         const all = data.tasks.filter(row => row.sprintId === laneId);
@@ -215,7 +240,7 @@ const BacklogPlanner: React.FC<PlannerProps> = ({ data, rows, projectId, canWrit
                 ) : (
                   <ul className="divide-y divide-slate-100 dark:divide-slate-800/70">
                     {laneRows.map(row => (
-                      <TaskRow key={row.id} row={row} lanes={lanes} canWrite={canWrite} dragging={dragId === row.id} indicator={!!dragId && target?.lane === laneId && target.before === row.id}
+                      <TaskRow key={row.id} row={row} epic={row.epicId ? epicMap.get(row.epicId) : undefined} onEpic={row.epicId ? () => onEpicFilter(row.epicId!) : undefined} lanes={lanes} canWrite={canWrite} dragging={dragId === row.id} indicator={!!dragId && target?.lane === laneId && target.before === row.id}
                         onOpen={onOpen} onMove={lane => void move([row.id], lane, null)} onError={onError}
                         onDragStart={() => setDragId(row.id)} onDragEnd={() => { setDragId(null); setTarget(null); }}
                         onDragOver={() => { if (dragId && (target?.lane !== laneId || target.before !== row.id)) setTarget({ lane: laneId, before: row.id }); }}
@@ -223,7 +248,7 @@ const BacklogPlanner: React.FC<PlannerProps> = ({ data, rows, projectId, canWrit
                     ))}
                   </ul>
                 )}
-                {canWrite && <QuickCreate projectId={projectId} lane={laneId} onCreated={async id => { if (laneId) await move([id], laneId, null); else await reload(); }} onError={onError} />}
+                {canWrite && <QuickCreate projectId={projectId} lane={laneId} epicId={epicFilter !== 'all' && epicFilter !== 'none' ? epicFilter : null} onCreated={async id => { if (laneId) await move([id], laneId, null); else await reload(); }} onError={onError} />}
               </div>
             )}
           </section>
@@ -239,10 +264,10 @@ const IconButton: React.FC<{ label: string; onClick: () => void; danger?: boolea
 );
 
 const TaskRow: React.FC<{
-  row: SprintTask; lanes: Array<{ id: string | null; sprint: Sprint | null }>; canWrite: boolean; dragging: boolean; indicator: boolean;
+  row: SprintTask; epic?: { title: string; color: string }; onEpic?: () => void; lanes: Array<{ id: string | null; sprint: Sprint | null }>; canWrite: boolean; dragging: boolean; indicator: boolean;
   onOpen: (id: string) => void; onMove: (lane: string | null) => void; onError: (failure: unknown) => void;
   onDragStart: () => void; onDragEnd: () => void; onDragOver: () => void; onDrop: () => void;
-}> = ({ row, lanes, canWrite, dragging, indicator, onOpen, onMove, onError, onDragStart, onDragEnd, onDragOver, onDrop }) => {
+}> = ({ row, epic, onEpic, lanes, canWrite, dragging, indicator, onOpen, onMove, onError, onDragStart, onDragEnd, onDragOver, onDrop }) => {
   const [points, setPoints] = useState(row.storyPoints === null ? '' : String(row.storyPoints));
   useEffect(() => { setPoints(row.storyPoints === null ? '' : String(row.storyPoints)); }, [row.storyPoints]);
   const savePoints = async () => {
@@ -257,9 +282,11 @@ const TaskRow: React.FC<{
       className={cn('relative flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-1.5 px-2 py-2.5 rounded-lg group', dragging && 'opacity-40', canWrite && 'hover:bg-slate-50 dark:hover:bg-slate-900/60')}>
       {indicator && <span className="absolute inset-x-2 -top-px h-0.5 rounded bg-blue-500" aria-hidden="true" />}
       {canWrite && <GripVertical size={15} className="text-slate-300 dark:text-slate-600 cursor-grab shrink-0 hidden sm:block" aria-hidden="true" />}
+      <TaskTypeIcon type={row.type} size={18} />
       <TaskKey value={row.key} />
       <button type="button" onClick={() => onOpen(row.id)} className={cn('min-w-0 flex-1 text-start text-[13px] font-semibold text-slate-800 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 truncate cursor-pointer', isClosedStatus(row.status) && 'line-through text-slate-400 dark:text-slate-500')}>{row.title}</button>
       <div className="flex items-center justify-end gap-2 shrink-0 ms-auto w-full sm:w-auto">
+        {epic && <EpicLozenge title={epic.title} color={epic.color} onClick={onEpic} className="hidden md:inline-flex" />}
         <PriorityFlag priority={row.priority} />
         <StatusPill status={row.status} />
         {person ? <span title={row.assignees.map(item => item.name).join('، ')}><Avatar name={person.name} size={24} /></span>
@@ -279,20 +306,26 @@ const TaskRow: React.FC<{
   );
 };
 
-const QuickCreate: React.FC<{ projectId: string; lane: string | null; onCreated: (id: string) => Promise<void>; onError: (failure: unknown) => void }> = ({ projectId, lane, onCreated, onError }) => {
+const QuickCreate: React.FC<{ projectId: string; lane: string | null; epicId: string | null; onCreated: (id: string) => Promise<void>; onError: (failure: unknown) => void }> = ({ projectId, lane, epicId, onCreated, onError }) => {
   const [title, setTitle] = useState('');
+  const [type, setType] = useState<'story' | 'task' | 'bug'>('story');
   const [busy, setBusy] = useState(false);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!title.trim() || busy) return;
     setBusy(true);
-    try { const task = await sprintCall<{ id: string }>('/api/tasks', 'POST', { projectId, title: title.trim() }); setTitle(''); await onCreated(task.id); }
+    try { const task = await sprintCall<{ id: string }>('/api/tasks', 'POST', { projectId, title: title.trim(), type, ...(epicId ? { epicId } : {}) }); setTitle(''); await onCreated(task.id); }
     catch (failure) { onError(failure); } finally { setBusy(false); }
   };
   return (
     <form onSubmit={submit} className="mt-1 px-2">
       <label className="flex items-center gap-2 h-10 px-2 rounded-lg text-slate-400 focus-within:bg-slate-50 dark:focus-within:bg-slate-900/60 focus-within:text-slate-700">
         <Plus size={15} aria-hidden="true" />
+        <TaskTypeIcon type={type} size={16} decorative />
+        <select value={type} onChange={event => setType(event.target.value as typeof type)} aria-label="نوع کار تازه" disabled={busy}
+          className="h-7 rounded-md bg-transparent text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {TASK_TYPES.filter(item => item.value !== 'epic').map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+        </select>
         <input value={title} onChange={event => setTitle(event.target.value)} disabled={busy} maxLength={500}
           placeholder={lane ? 'افزودن وظیفهٔ تازه به این اسپرینت…' : 'افزودن وظیفهٔ تازه به بک‌لاگ…'} aria-label={lane ? 'وظیفهٔ تازه در اسپرینت' : 'وظیفهٔ تازه در بک‌لاگ'}
           className="flex-1 bg-transparent text-[13px] text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none" />

@@ -7,7 +7,7 @@ export type SprintState = 'future' | 'active' | 'closed';
 export interface SprintPerson { id: string; name: string; avatar?: string }
 export interface SprintTask {
   id: string; key?: string; title: string; status: string; priority: string; storyPoints: number | null;
-  sprintId: string | null; dueDate: string; assignees: SprintPerson[];
+  sprintId: string | null; dueDate: string; assignees: SprintPerson[]; type: string; epicId: string | null;
 }
 export interface SprintStats { tasks: number; estimated: number; points: number; todoPoints: number; progressPoints: number; donePoints: number; doneTasks: number }
 export interface Sprint {
@@ -18,6 +18,7 @@ export interface Sprint {
 }
 export interface SprintOverview {
   projectId: string; canManage: boolean; sprints: Sprint[]; closed: Sprint[]; tasks: SprintTask[];
+  epics: Array<{ id: string; key?: string; title: string; color: string; status: string }>;
   velocity: { sprints: { id: string; name: string; committed: number; completed: number }[]; average: number };
 }
 export interface ReportItem { id: string; key?: string; title: string; status: string; storyPoints: number | null; added: boolean }

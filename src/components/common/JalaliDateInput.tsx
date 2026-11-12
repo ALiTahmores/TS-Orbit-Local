@@ -30,6 +30,14 @@ export const JalaliDateInput: React.FC<JalaliDateInputProps> = ({
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (open) setMonth(jalaliMonthOf(valid || today)); }, [open]);
+  // The calendar (18rem) opens from the field's start edge; in a narrow column it
+  // would run past the screen, so then it opens from the end edge instead.
+  const [flip, setFlip] = useState(false);
+  useEffect(() => {
+    if (!open || !rootRef.current) return;
+    const box = rootRef.current.getBoundingClientRect(), width = 288, rtl = getComputedStyle(rootRef.current).direction === 'rtl';
+    setFlip(rtl ? box.right - width < 8 : box.left + width > window.innerWidth - 8);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -72,7 +80,7 @@ export const JalaliDateInput: React.FC<JalaliDateInputProps> = ({
       </button>
 
       {open && (
-        <div role="dialog" aria-label="انتخاب تاریخ" className="absolute z-50 mt-1.5 start-0 w-72 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl">
+        <div role="dialog" aria-label="انتخاب تاریخ" className={`absolute z-50 mt-1.5 ${flip ? 'end-0' : 'start-0'} w-72 max-w-[calc(100vw-1rem)] p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl`}>
           <div className="flex items-center justify-between mb-2">
             <button type="button" onClick={() => setMonth(current => shiftJalaliMonth(current, -1))} aria-label="ماه قبل" className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
               <ChevronRight size={16} />

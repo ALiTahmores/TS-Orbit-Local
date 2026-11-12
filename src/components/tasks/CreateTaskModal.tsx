@@ -27,6 +27,7 @@ import { Task, SubTask, TaskPriority, TaskStatus } from '../../types';
 import { cn } from '../../lib/utils';
 import { priorityLabel, statusLabel } from '../../lib/taskLabels';
 import { JalaliDateInput } from '../common/JalaliDateInput';
+import { TypeAndEpicFields, type TaskType as TaskTypeValue } from '../common/TaskType';
 
 export interface CreateTaskModalProps {
   isOpen: boolean;
@@ -62,6 +63,8 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [type, setType] = useState<TaskTypeValue>('task');
+  const [epicId, setEpicId] = useState('');
   const [projectId, setProjectId] = useState(defaultProjectId || projects[0]?.id || '');
   const [status, setStatus] = useState<'TODO' | 'IN_PROGRESS' | 'UNDER_REVIEW' | 'COMPLETED' | 'BLOCKED' | 'CANCELLED'>(() => {
     if (defaultStatus === 'IN_PROGRESS' || defaultStatus === 'inprogress') return 'IN_PROGRESS';
@@ -104,7 +107,10 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
   const attachmentScope=useRef(0);
   useEffect(()=>{attachmentScope.current++;setDraftAssets([]);setUploading(false);setIsSubmitting(false);return()=>{attachmentScope.current++;};},[isOpen,projectId]);
   const [submitError, setSubmitError] = useState('');
-  useEffect(() => { if(isOpen) { setProjectId(defaultProjectId || projects[0]?.id || ''); setTitle(''); setDescription(''); setDueDate(''); setPriority('Medium'); setSections([]); setDraftAssets([]); setCommentsList([]); setSelectedTags([]); setSelectedAssigneeIds(currentUser?.id ? [currentUser.id] : []); setSubmitError(''); } },[isOpen,defaultProjectId]);
+  useEffect(() => { if(isOpen) { setProjectId(defaultProjectId || projects[0]?.id || ''); setTitle(''); setDescription(''); setDueDate(''); setPriority('Medium'); setSections([]); setDraftAssets([]); setCommentsList([]); setSelectedTags([]); setSelectedAssigneeIds(currentUser?.id ? [currentUser.id] : []); setSubmitError(''); setType('task'); } },[isOpen,defaultProjectId]);
+  // Epics of the chosen project; changing the project clears a chosen epic.
+  const projectEpics = useMemo(() => tasks.filter(task => task.type === 'epic' && task.projectId === projectId).map(task => ({ id: task.id, title: task.title, key: task.key })), [tasks, projectId]);
+  useEffect(() => { setEpicId(''); }, [projectId, isOpen]);
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -169,7 +175,7 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
     setIsSubmitting(true);
     setSubmitError('');
     const newTaskObj: Omit<Task,'id'> = {
-      projectId, title:title.trim(), description:description.trim(),
+      projectId, title:title.trim(), description:description.trim(), type, ...(type !== 'epic' && epicId ? { epicId } : {}),
       assignedMemberIds:selectedAssigneeIds, status:status==='IN_PROGRESS'?'inprogress':status==='UNDER_REVIEW'?'review':status==='COMPLETED'?'completed':status==='BLOCKED'?'blocked':status==='CANCELLED'?'cancelled':'pending',
       priority:priority==='Urgent'?'critical':priority==='High'?'high':priority==='Low'?'low':'medium',
       ...(dueDate ? {dueDate,deadline:dueDate} : {}), tags:selectedTags,
@@ -188,7 +194,6 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
       if(generation===attachmentScope.current)setIsSubmitting(false);
     }
   };
-
   const selectedMembers = teamMembers.filter(m => selectedAssigneeIds.includes((m as any).userId || m.id));
 
   return createPortal(
@@ -246,6 +251,9 @@ const CreateTaskModalView: React.FC<CreateTaskModalProps> = ({
               className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/80 text-slate-800 dark:text-slate-100 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
           </div>
+
+          {/* Issue type and epic */}
+          <TypeAndEpicFields type={type} onType={setType} epicId={epicId} onEpic={setEpicId} epics={projectEpics} />
 
           {/* Status Selector Pills */}
           <div>

@@ -68,7 +68,8 @@ export class InsightService {
     const scope = this.scope();
     return this.scoped.read(() => {
       const projects = this.scoped.rows('projects').filter((row: any) => !row.deletedAt);
-      const tasks = this.scoped.rows('tasks').filter((row: any) => !row.deletedAt);
+      // Epics only group work, so they are not counted as work themselves.
+      const tasks = this.scoped.rows('tasks').filter((row: any) => !row.deletedAt && row.type !== 'epic');
       const entries = this.scoped.rows('timeEntries');
       const workspace = this.scoped.raw.workspaces.find((row: any) => row.id === scope.workspaceId);
       const roles = new Map<string, string>((workspace?.members || []).map((row: any) => [row?.userId, String(row?.role || 'MEMBER')]));

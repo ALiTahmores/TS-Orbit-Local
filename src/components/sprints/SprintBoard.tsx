@@ -6,6 +6,7 @@ import { TaskKey } from '../common/TaskKey';
 import { Avatar, EmptyHint, PrimaryButton, ProgressBar, SecondaryButton, num } from '../ui/dashboard-kit';
 import { sprintCall, STATUS_LABEL, type Sprint, type SprintTask } from '../../hooks/useSprints';
 import { PriorityFlag, sprintDates } from './parts';
+import { EpicLozenge, TaskTypeIcon } from '../common/TaskType';
 
 const COLUMNS: Array<{ status: string; title: string; accent: string }> = [
   { status: 'pending', title: 'در انتظار', accent: 'bg-slate-400' },
@@ -17,13 +18,13 @@ const COLUMNS: Array<{ status: string; title: string; accent: string }> = [
 const columnOf = (status: string) => status === 'cancelled' ? 'completed' : COLUMNS.some(column => column.status === status) ? status : 'pending';
 
 interface Props {
-  sprint: Sprint | null; rows: SprintTask[]; canWrite: boolean; canManage: boolean;
+  sprint: Sprint | null; rows: SprintTask[]; canWrite: boolean; canManage: boolean; epics?: Map<string, { title: string; color: string }>;
   onOpen: (id: string) => void; onComplete: () => void; onChanged: () => Promise<void>; onError: (failure: unknown) => void;
   onBacklog: () => void; onReport: () => void;
 }
 
 /** The running sprint as a board: one column per status, cards move by drag and drop or their status menu. */
-export const SprintBoard: React.FC<Props> = ({ sprint, rows, canWrite, canManage, onOpen, onComplete, onChanged, onError, onBacklog, onReport }) => {
+export const SprintBoard: React.FC<Props> = ({ sprint, rows, canWrite, canManage, epics, onOpen, onComplete, onChanged, onError, onBacklog, onReport }) => {
   const [pending, setPending] = useState<Record<string, string>>({});
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -100,7 +101,9 @@ export const SprintBoard: React.FC<Props> = ({ sprint, rows, canWrite, canManage
                       <button type="button" onClick={() => onOpen(row.id)} className="text-start text-[13px] font-semibold leading-6 text-slate-800 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">{row.title}</button>
                       <PriorityFlag priority={row.priority} />
                     </div>
+                    {row.epicId && epics?.get(row.epicId) && <EpicLozenge title={epics.get(row.epicId)!.title} color={epics.get(row.epicId)!.color} />}
                     <div className="flex items-center gap-2">
+                      <TaskTypeIcon type={row.type} size={16} />
                       <TaskKey value={row.key} />
                       {row.status === 'cancelled' && <span className="text-[10px] font-bold text-slate-400">لغوشده</span>}
                       <span className="ms-auto flex items-center gap-1.5">

@@ -112,6 +112,12 @@ export interface Task {
   id: string;
   /** Workspace key such as "TS-12", set by the server. */
   key?: string;
+  /** Issue type; an epic groups the work linked to it by epicId. */
+  type?: 'task' | 'story' | 'bug' | 'epic';
+  epicId?: string | null;
+  epicColor?: string;
+  storyPoints?: number | null;
+  sprintId?: string | null;
   projectId: string;
   workspaceId?: string;
   title: string;

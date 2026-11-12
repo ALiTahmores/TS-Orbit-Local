@@ -58,6 +58,7 @@ export class SprintService {
     const ids: string[] = Array.isArray(task.assignedMemberIds) ? task.assignedMemberIds : task.assigneeId ? [task.assigneeId] : [];
     return {
       id: task.id, key: this.tasks.keyOf(task), title: task.title || '', status: task.status, priority: task.priority || 'medium', storyPoints: estimate(task),
+      type: task.type || 'task', epicId: task.epicId || null,
       sprintId: this.lane(task, project), dueDate: task.deadlineCanonical || task.dueDateCanonical || task.deadline || task.dueDate || '',
       assignees: [...new Set(ids)].map(id => users.find(id)).filter(Boolean).map((user: any) => ({ id: user.id, name: user.name || '', avatar: user.avatar || '' })),
     };
@@ -96,7 +97,9 @@ export class SprintService {
         projectId: project.id, canManage: this.canManage(),
         sprints: open.map(row => ({ ...this.view(row), stats: this.stats(tasks.filter(task => task.sprintId === row.id)) })),
         closed: history.slice(0, 20).map(row => this.view(row)),
-        tasks: this.ordered(tasks).map(task => this.row(task, project)).filter(row => row.sprintId || !closed(row.status)),
+        // Epics group work but are not planned in sprints themselves.
+        tasks: this.ordered(tasks.filter(task => task.type !== 'epic')).map(task => this.row(task, project)).filter(row => row.sprintId || !closed(row.status)),
+        epics: tasks.filter(task => task.type === 'epic').map(epic => ({ id: epic.id, key: this.tasks.keyOf(epic), title: epic.title || '', color: epic.epicColor || 'violet', status: epic.status })),
         velocity: { sprints: velocity, average: recent.length ? round(recent.reduce((total, row) => total + row.completed, 0) / recent.length) : 0 },
       };
     });
@@ -273,6 +276,7 @@ export class SprintService {
     const repo = this.tasks.repo('tasks');
     const moving = ids.map(taskId => repo.require(taskId));
     if (moving.some(task => task.projectId !== project.id)) invalid('همهٔ وظایف باید از همین پروژه باشند.');
+    if (moving.some(task => task.type === 'epic')) invalid('اپیک‌ها در اسپرینت برنامه‌ریزی نمی‌شوند؛ کارهای آن را منتقل کنید.');
     let target: string | null = null;
     if (body.sprintId !== undefined && body.sprintId !== null) {
       const sprint = this.sprints(project).find(row => row.id === body.sprintId);

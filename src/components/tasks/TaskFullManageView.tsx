@@ -30,6 +30,7 @@ import { cn } from '../../lib/utils';
 import { JalaliDateInput } from '../common/JalaliDateInput';
 import { dueDate as canonicalDueDate } from '../../lib/taskAnalytics';
 import { deadlineEditPatch } from '../../lib/formValues';
+import { TypeAndEpicFields, type TaskType as TaskTypeValue } from '../common/TaskType';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === undefined || n === null) return '';
@@ -63,6 +64,8 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
 
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');
+  const [type, setType] = useState<TaskTypeValue>((task?.type as TaskTypeValue) || 'task');
+  const [epicId, setEpicId] = useState(task?.epicId || '');
   const [status, setStatus] = useState<string>(taskStatus(task?.status || 'pending'));
   const [priority, setPriority] = useState<string>(taskPriority(task?.priority || 'medium'));
   const [dueDate, setDueDate] = useState(canonicalDueDate(task) || '');
@@ -76,7 +79,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
   const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    setTitle(task?.title || ''); setDescription(task?.description || '');
+    setTitle(task?.title || ''); setDescription(task?.description || ''); setType((task?.type as TaskTypeValue) || 'task'); setEpicId(task?.epicId || '');
     setStatus(taskStatus(task?.status || 'pending')); setPriority(taskPriority(task?.priority || 'medium'));
     setDueDate(canonicalDueDate(task) || ''); setDeadlineChanged(false); setEstimatedHours(String(task?.estimatedHours || 0));
     setSubtasks(task?.subtasks || []); setMemberIds(assignedIds(task)); setDependencies(task?.dependencies || []); setLinksText((task?.links || []).join('\n'));
@@ -109,7 +112,7 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
     if(saving) return;
     setSaving(true); setSaveError(''); setIsSaved(false);
     try {
-      const saved = await updateTask(task.id, {title,description,status,priority,
+      const saved = await updateTask(task.id, {title,description,status,priority,type,epicId:type === 'epic' ? null : (epicId || null),
         ...deadlineEditPatch(dueDate, deadlineChanged),
         estimatedHours:Number(estimatedHours),subtasks,assignedMemberIds:memberIds,dependencies,
         links:linksText.split('\n').map(link=>link.trim()).filter(Boolean)});
@@ -359,6 +362,9 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">
               {isRtl ? 'وضعیت و اولویت وظیفه' : 'Status & Priority'}
             </h3>
+
+            <TypeAndEpicFields type={type} onType={setType} epicId={epicId} onEpic={setEpicId} className="sm:grid-cols-1"
+              epics={tasks.filter(item => item.type === 'epic' && item.projectId === task.projectId && item.id !== task.id).map(item => ({ id: item.id, title: item.title, key: item.key }))} />
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">

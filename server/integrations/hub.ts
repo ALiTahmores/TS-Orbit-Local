@@ -12,7 +12,7 @@ import { DomainError, identifier, now } from '../domain/repository.ts';
  * signing key, shown once when it is created or rotated.
  */
 
-export const INTEGRATION_EVENTS = ['task.created', 'task.updated', 'task.status_changed', 'task.completed', 'task.assigned', 'task.deleted', 'comment.created', 'project.created', 'project.updated', 'project.deleted'] as const;
+export const INTEGRATION_EVENTS = ['task.created', 'task.updated', 'task.status_changed', 'task.completed', 'task.assigned', 'task.deleted', 'comment.created', 'project.created', 'project.updated', 'project.deleted', 'sprint.started', 'sprint.completed'] as const;
 type Event = typeof INTEGRATION_EVENTS[number];
 type Provider = 'slack' | 'teams' | 'discord' | 'telegram' | 'webhook' | 'incoming' | 'github';
 const PROVIDERS: Record<Provider, { direction: 'outgoing' | 'incoming'; fields: string[] }> = {
@@ -216,6 +216,7 @@ export class IntegrationHub {
     const map: Record<string, Event[]> = {
       TASK_CREATED: ['task.created'], TASK_UPDATED: ['task.updated'], TASK_DELETED: ['task.deleted'], COMMENT_CREATED: ['comment.created'],
       PROJECT_CREATED: ['project.created'], PROJECT_UPDATED: ['project.updated'], PROJECT_ACTIVATED: ['project.updated'], PROJECT_DELETED: ['project.deleted'], TASK_ASSIGNED: ['task.assigned'],
+      SPRINT_STARTED: ['sprint.started'], SPRINT_COMPLETED: ['sprint.completed'],
     };
     if (change.action === 'TASK_STATUS_CHANGED') return String(change.target?.status) === 'completed' ? ['task.status_changed', 'task.completed'] : ['task.status_changed'];
     return map[change.action] || [];
@@ -228,6 +229,15 @@ export class IntegrationHub {
     if (change.collection === 'tasks' || change.action.startsWith('TASK_')) {
       return { kind: 'task', id: change.targetId, key: target.number ? `${prefix}-${target.number}` : undefined, title: target.title || '', status: target.status, priority: target.priority,
         projectId: target.projectId || null, projectTitle: project(target.projectId)?.title || '', assignees: names(target.assignedMemberIds), dueDate: target.deadlineCanonical || target.deadline || null };
+    }
+    if (change.action.startsWith('SPRINT_')) {
+      // Sprint actions target their project; the sprint is the running one, or the one that just closed.
+      const sprints = Array.isArray(target.sprints) ? target.sprints : [];
+      const sprint = change.action === 'SPRINT_STARTED' ? sprints.find((row: any) => row.state === 'active')
+        : [...sprints].filter((row: any) => row.state === 'closed').sort((a: any, b: any) => String(b.completedAt || '').localeCompare(String(a.completedAt || '')))[0];
+      return { kind: 'sprint', id: sprint?.id || null, name: sprint?.name || '', goal: sprint?.goal || '', startDate: sprint?.startDate || null, endDate: sprint?.endDate || null,
+        projectId: change.targetId, projectTitle: target.title || '', committedPoints: sprint?.report?.committedPoints ?? null, completedPoints: sprint?.report?.completedPoints ?? null,
+        completedTasks: sprint?.report?.completedTasks ?? null, incompleteTasks: sprint?.report?.remainingTasks ?? null };
     }
     if (change.collection === 'comments') {
       const task = this.raw.tasks.find((row: any) => row.id === target.taskId);
@@ -249,6 +259,8 @@ export class IntegrationHub {
       case 'project.created': return `پروژهٔ تازه: «${data.title}»${who}`;
       case 'project.updated': return `پروژه به‌روز شد: «${data.title}»${who}`;
       case 'project.deleted': return `پروژه حذف شد${who}`;
+      case 'sprint.started': return `🏁 اسپرینت «${data.name}» در «${data.projectTitle}» شروع شد${data.goal ? ': ' + data.goal : ''}${who}`;
+      case 'sprint.completed': return `🏆 اسپرینت «${data.name}» در «${data.projectTitle}» بسته شد: ${data.completedTasks ?? 0} کار انجام شد، ${data.incompleteTasks ?? 0} کار باز ماند${who}`;
       default: return event;
     }
   }

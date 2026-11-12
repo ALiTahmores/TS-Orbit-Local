@@ -50,6 +50,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { TeamTaskMatrixView } from './TeamTaskMatrixView';
 import { TaskDeadlinesTimelineView } from './TaskDeadlinesTimelineView';
 import { CreateTaskModal } from './tasks/CreateTaskModal';
+import { SprintsSkeleton } from './loading/PageSkeletons';
+import { Rocket as SprintIcon } from 'lucide-react';
+// The sprint planner (charts, boards) loads only when its tab opens.
+const SprintsView = React.lazy(() => import('./sprints/SprintsView'));
 import { 
   Plus, 
   Search, 
@@ -399,6 +403,20 @@ export const TasksGlobalView: React.FC = () => {
             <Calendar size={16} />
             <span>تقویم و گانت سررسیدها</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('sprints')}
+            aria-current={activeSubTab === 'sprints' ? 'page' : undefined}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+              activeSubTab === 'sprints'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700/80'
+            }`}
+          >
+            <SprintIcon size={16} />
+            <span>بک‌لاگ و اسپرینت‌ها</span>
+          </button>
         </div>
 
         {/* Primary Action Button */}
@@ -417,7 +435,9 @@ export const TasksGlobalView: React.FC = () => {
       </div>
 
       {/* RENDER SUBVIEWS BASED ON ACTIVE SUBTAB */}
-      {(activeSubTab === 'team_matrix' || activeSubTab === 'list_view') ? (
+      {activeSubTab === 'sprints' ? (
+        <React.Suspense fallback={<SprintsSkeleton />}><SprintsView /></React.Suspense>
+      ) : (activeSubTab === 'team_matrix' || activeSubTab === 'list_view') ? (
         <TeamTaskMatrixView />
       ) : (activeSubTab === 'timeline' || activeSubTab === 'calendar') ? (
         <TaskDeadlinesTimelineView />

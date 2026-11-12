@@ -17,8 +17,8 @@ const resources: Record<string, string> = { projects: 'projects', tasks: 'tasks'
   'external-connections': 'externalApis', departments: 'departments', modules: 'moduleDefinitions', 'module-instances': 'moduleInstances', templates: 'departmentTemplates', reports: 'departmentReports',
   conversations: 'conversations', messages: 'messages', requests: 'conversationRequests', notifications: 'notifications', 'time-entries': 'timeEntries', 'navigation-groups': 'navigationGroups', 'navigation-items': 'navigationItems', versions: 'fileVersions', feedbacks: 'feedback' };
 const references: Record<string, string> = { projectId: 'projects', taskId: 'tasks', parentTaskId: 'tasks', departmentId: 'departments', teamId: 'teams', targetTeamId: 'teams', messageId: 'messages',
-  conversationId: 'conversations', definitionId: 'moduleDefinitions', moduleDefinitionId: 'moduleDefinitions', moduleInstanceId: 'moduleInstances', organizationId: 'organizations', recipientId: 'users', leaderId: 'users', teamLeadId: 'users', leadId: 'users', assigneeId: 'users', ownerId: 'users', writerId: 'users', reviewerId: 'users', groupId: 'navigationGroups', moduleId: 'moduleInstances' };
-const arrays: Record<string, string> = { assignedMemberIds: 'users', memberIds: 'users', userIds: 'users', assignedTeamIds: 'teams', dependencies: 'tasks', attachmentIds: 'files' };
+  conversationId: 'conversations', definitionId: 'moduleDefinitions', moduleDefinitionId: 'moduleDefinitions', moduleInstanceId: 'moduleInstances', organizationId: 'organizations', recipientId: 'users', leaderId: 'users', teamLeadId: 'users', leadId: 'users', assigneeId: 'users', ownerId: 'users', writerId: 'users', reviewerId: 'users', groupId: 'navigationGroups', moduleId: 'moduleInstances', beforeTaskId: 'tasks' };
+const arrays: Record<string, string> = { assignedMemberIds: 'users', memberIds: 'users', userIds: 'users', assignedTeamIds: 'teams', dependencies: 'tasks', attachmentIds: 'files', taskIds: 'tasks' };
 const projectFields = ['title','name','description','websiteUrl','clientName','teamLead','teamLeadId','leadId','assignedMemberIds','assignedTeamIds','selectedTeams','department','category','budget','currency','amount',
   'dueDate','deadline','startDate','priority','status','isConfidential','isBudgetConfidential'];
 const overrides: Record<string, string[]> = {
@@ -45,10 +45,12 @@ function safeJson(value: any, depth = 0): boolean {
   return value === null || typeof value === 'boolean' || value === undefined;
 }
 function validField(key: string, value: any): boolean {
+  // Story points: a non-negative estimate, or null for "not estimated".
+  if (key === 'storyPoints') return value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1000);
   const booleans = ['enabled','isAllowed','completed','pin','isGroup','isBudgetConfidential','isConfidential','isActive','clientVisible','approved','closed','muted'];
   if (booleans.includes(key)) return typeof value === 'boolean';
   if (['byteSize','order','progress','estimatedHours','estimate','amount','hours','loggedHours'].includes(key)) return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= (key === 'progress' ? 100 : 1e12);
-  if (['assignedMemberIds','assignedTeamIds','memberIds','userIds','attachmentIds','selectedTeams','dependencies','tags','ids','mutedTypes','events','projectIds'].includes(key)) return Array.isArray(value) && value.length <= 200 && value.every(item => typeof item === 'string' && item.length <= 200);
+  if (['assignedMemberIds','assignedTeamIds','memberIds','userIds','attachmentIds','selectedTeams','dependencies','tags','ids','mutedTypes','events','projectIds','taskIds'].includes(key)) return Array.isArray(value) && value.length <= 200 && value.every(item => typeof item === 'string' && item.length <= 200);
   if (key==='codeSnippet'&&value===null) return true;
   if (['codeSnippet','voiceNote'].includes(key)) return value !== null && typeof value === 'object' && !Array.isArray(value);
   if (['attachments','mentions'].includes(key)) return Array.isArray(value) && value.length <= 50 && value.every(item => (key === 'attachments' && typeof item === 'string' && item.length <= 2000) || !!item && typeof item === 'object' && !Array.isArray(item));

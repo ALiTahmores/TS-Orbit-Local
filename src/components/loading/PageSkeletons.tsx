@@ -501,10 +501,23 @@ const GenericSkeleton = () => (
 );
 
 /** The skeleton for the page a tab and sub-tab open. */
+/** Backlog and sprints: header, view switch, then sprint sections of task rows. */
+export const SprintsSkeleton: React.FC = () => (
+  <div className="space-y-5" aria-busy="true">
+    <KitHeader actions={[220, 130]} eyebrow={false} />
+    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3"><Bone width={330} height={40} borderRadius={12} /><div className="flex gap-2"><Bone width={260} height={40} borderRadius={12} /><Bone width={120} height={40} borderRadius={12} /></div></div>
+    {[4, 3, 5].map((rows, index) => (
+      <div key={index} className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0d121f] p-5 space-y-3">
+        <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><Bone width={28} height={28} borderRadius={8} /><div className="space-y-2"><Line w={160} h={14} /><Line w={220} h={10} /></div></div><div className="flex gap-1">{[0, 1, 2].map(cell => <Bone key={cell} width={28} height={24} borderRadius={6} />)}</div></div>
+        {Array.from({ length: rows }, (_, row) => <div key={row} className="flex items-center gap-3 py-1.5"><Bone width={44} height={20} borderRadius={6} /><Line w="45%" h={12} /><div className="ms-auto flex items-center gap-2"><Pill w={64} h={22} /><Bone width={24} height={24} borderRadius={9999} /><Bone width={44} height={28} borderRadius={6} /></div></div>)}
+      </div>
+    ))}
+  </div>
+);
 export const PageSkeleton: React.FC<{ tab: string; subTab?: string }> = ({ tab, subTab = '' }) => {
   if (tab === 'dashboard') return <DashboardSkeleton />;
   if (tab === 'projects') return subTab === 'team' ? <PeopleSkeleton /> : <ProjectsSkeleton subTab={subTab || 'overview'} />;
-  if (tab === 'tasks') return <TasksSkeleton subTab={subTab || 'kanban_board'} />;
+  if (tab === 'tasks') return subTab === 'sprints' ? <SprintsSkeleton /> : <TasksSkeleton subTab={subTab || 'kanban_board'} />;
   if (tab === 'personal_tasks') return <PersonalTasksSkeleton />;
   if (tab === 'dept_tech') return <ReportsSkeleton subTab={subTab} />;
   if (tab === 'reports') return <AnalyticsSkeleton />;

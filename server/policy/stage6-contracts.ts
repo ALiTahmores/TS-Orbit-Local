@@ -24,5 +24,9 @@ export const collaborationContracts = [
   definition('GET','/api/integrations'), definition('POST','/api/integrations',['provider','name','config','events','projectIds']),
   definition('PUT','/api/integrations/settings',['taskKeyPrefix']), definition('PUT','/api/integrations/:id',['name','config','events','projectIds','enabled']),
   definition('DELETE','/api/integrations/:id'), definition('POST','/api/integrations/:id/test'), definition('POST','/api/integrations/:id/rotate'),
+  definition('GET','/api/sprints'), definition('POST','/api/sprints',['projectId','name','goal']),
+  definition('PUT','/api/backlog/move',['projectId','taskIds','sprintId','beforeTaskId']), definition('GET','/api/sprints/:id/report'),
+  definition('PUT','/api/sprints/:id',['name','goal','startDate','endDate']), definition('POST','/api/sprints/:id/start',['name','goal','startDate','endDate']),
+  definition('POST','/api/sprints/:id/complete',['moveTo']), definition('DELETE','/api/sprints/:id'),
   definition('GET','/api/activity-logs'),
 ];

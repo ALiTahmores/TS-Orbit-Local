@@ -25,7 +25,7 @@ const providers: Record<Provider, { name: string; description: string; mark: Rea
 };
 const eventLabels: Record<string, string> = {
   'task.created': 'ساخت وظیفه', 'task.updated': 'ویرایش وظیفه', 'task.status_changed': 'تغییر وضعیت', 'task.completed': 'تکمیل وظیفه', 'task.assigned': 'واگذاری وظیفه',
-  'task.deleted': 'حذف وظیفه', 'comment.created': 'نظر تازه', 'project.created': 'ساخت پروژه', 'project.updated': 'به‌روزرسانی پروژه', 'project.deleted': 'حذف پروژه',
+  'task.deleted': 'حذف وظیفه', 'comment.created': 'نظر تازه', 'project.created': 'ساخت پروژه', 'project.updated': 'به‌روزرسانی پروژه', 'project.deleted': 'حذف پروژه', 'sprint.started': 'شروع اسپرینت', 'sprint.completed': 'پایان اسپرینت',
   'integration.test': 'پیام آزمایشی', 'task.create': 'ساخت وظیفه از بیرون',
 };
 const defaultEvents = ['task.created', 'task.completed', 'task.assigned', 'comment.created'];

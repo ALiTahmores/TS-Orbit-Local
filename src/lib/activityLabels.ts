@@ -5,6 +5,7 @@ const LABELS: Record<string, string> = {
   TASK_CREATED: 'ساخت وظیفه', TASK_UPDATED: 'ویرایش وظیفه', TASK_STATUS_CHANGED: 'تغییر وضعیت وظیفه', TASK_DELETED: 'حذف وظیفه',
   SUBTASK_CREATED: 'افزودن زیرکار', SUBTASK_UPDATED: 'ویرایش زیرکار', SUBTASK_DELETED: 'حذف زیرکار',
   TIME_ENTRY_CREATED: 'ثبت زمان کار', TIME_ENTRY_UPDATED: 'ویرایش زمان کار', TIME_ENTRY_DELETED: 'حذف زمان کار',
+  SPRINT_CREATED: 'ساخت اسپرینت', SPRINT_UPDATED: 'ویرایش اسپرینت', SPRINT_STARTED: 'شروع اسپرینت', SPRINT_COMPLETED: 'پایان اسپرینت', SPRINT_DELETED: 'حذف اسپرینت', BACKLOG_UPDATED: 'برنامه‌ریزی بک‌لاگ',
   MILESTONE_CREATED: 'افزودن نقطهٔ عطف', MILESTONE_UPDATED: 'ویرایش نقطهٔ عطف', MILESTONE_DELETED: 'حذف نقطهٔ عطف',
   PROJECT_CREATED: 'ساخت پروژه', PROJECT_UPDATED: 'ویرایش پروژه', PROJECT_ACTIVATED: 'فعال‌سازی پروژه', PROJECT_DELETED: 'حذف پروژه',
   COMMENT_CREATED: 'ثبت نظر', COMMENT_UPDATED: 'ویرایش نظر', COMMENT_DELETED: 'حذف نظر',
@@ -24,7 +25,7 @@ export const activityLabel = (action: string | undefined) => (action && LABELS[a
 
 export function activityCategory(action: string | undefined): ActivityCategory {
   const code = String(action || '');
-  if (/^(TASK|SUBTASK|TIME_ENTRY|MILESTONE)_/.test(code)) return 'task';
+  if (/^(TASK|SUBTASK|TIME_ENTRY|MILESTONE|SPRINT|BACKLOG)_/.test(code)) return 'task';
   if (/^PROJECT_/.test(code)) return 'project';
   if (/^COMMENT_|^feedback\.|message|chat/i.test(code)) return 'comment';
   return 'system';

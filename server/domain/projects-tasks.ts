@@ -6,7 +6,7 @@ import { manager, membership, activeMember, writer } from '../policy/scope.ts';
 import { teamRoadmap } from '../../src/lib/teamRoadmaps.ts';
 import { FeedbackService } from '../portal/service.ts';
 const projectFields = ['title', 'name', 'description', 'budget', 'amount', 'currency', 'clientName', 'deadline', 'dueDate', 'startDate', 'websiteUrl', 'teamLead', 'teamLeadId', 'leadId', 'assignedMemberIds', 'assignedTeamIds', 'selectedTeams', 'department', 'departmentId', 'teamId', 'organizationId', 'category', 'priority', 'status', 'statusReason', 'isConfidential', 'isBudgetConfidential'];
-const taskFields = ['projectId', 'title', 'description', 'status', 'priority', 'assignedTo', 'assigneeId', 'assignedMemberIds', 'assignees', 'department', 'departmentId', 'teamId', 'clientVisible', 'deadline', 'dueDate', 'startDate', 'tags', 'dependencies', 'estimatedHours', 'loggedHours', 'subtasks', 'notes', 'category', 'attachments', 'initialComments', 'links'];
+const taskFields = ['projectId', 'title', 'description', 'status', 'priority', 'assignedTo', 'assigneeId', 'assignedMemberIds', 'assignees', 'department', 'departmentId', 'teamId', 'clientVisible', 'deadline', 'dueDate', 'startDate', 'tags', 'dependencies', 'estimatedHours', 'loggedHours', 'subtasks', 'notes', 'category', 'attachments', 'initialComments', 'links', 'storyPoints'];
 const identityCollections = new Set(['users', 'workspaces', 'userProfiles', 'userSettings', 'userSessions', 'loginHistory', 'userDevices', 'securityEvents', 'profileImages', 'userPreferences', 'userActivities', 'approvalRequests', 'approvalHistory', 'notificationQueue', 'emailQueue']);
 export class ProjectTaskService {
     constructor(readonly context: DomainContext) { }
@@ -23,6 +23,14 @@ export class ProjectTaskService {
         const workspace = this.context.scoped.raw.workspaces.find((row: any) => row.id === this.scope().workspaceId);
         const prefix = typeof workspace?.taskKeyPrefix === 'string' && /^[A-Z][A-Z0-9]{1,9}$/.test(workspace.taskKeyPrefix) ? workspace.taskKeyPrefix : 'TS';
         return `${prefix}-${task.number}`;
+    }
+    /** Logs a scope change on the task's running sprint, so its burndown can be replayed. */
+    sprintEvent(task: any, kind: 'add' | 'remove' | 'estimate', projectId = task?.projectId) {
+        if (!task?.sprintId) return;
+        const project = this.repo('projects').find(projectId);
+        const sprint = (Array.isArray(project?.sprints) ? project.sprints : []).find((row: any) => row.id === task.sprintId && row.state === 'active');
+        if (!sprint) return;
+        sprint.events = [...(Array.isArray(sprint.events) ? sprint.events : []), { at: now(), kind, taskId: task.id, points: typeof task.storyPoints === 'number' ? task.storyPoints : 0 }].slice(-2000);
     }
     /** The next task number; tasks from before numbering are numbered once, oldest first. */
     nextTaskNumber(): number {
@@ -267,6 +275,8 @@ export class ProjectTaskService {
             Object.assign(changes, dateFields(body.dueDate, 'deadline'));
         if ('estimatedHours' in body)
             changes.estimatedHours = numeric(body.estimatedHours, 'زمان برآورد', 100000);
+        if ('storyPoints' in body)
+            changes.storyPoints = body.storyPoints === null ? null : numeric(body.storyPoints, 'امتیاز تخمین', 1000);
         if ('loggedHours' in body)
             numeric(body.loggedHours, 'زمان کار', 100000);
         if ('tags' in body)
@@ -382,7 +392,11 @@ export class ProjectTaskService {
         this.replaceSubtasks(task.id, body.subtasks); if (body.loggedHours !== undefined)
         this.adjustHours(task.id, body.loggedHours); this.refreshTask(task, !!body.subtasks); for (const content of body.initialComments || [])
         this.comment(task.id, undefined, { content }); this.change('TASK_CREATED', task); this.notifyAssignments(task); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return this.taskView(task); }
-    updateTask(id: string, body: any) { const task = this.repo('tasks').require(id), oldAssigned=this.assignmentIds(task), oldProject = task.projectId, changes = this.taskChanges(body, id); this.assertCompletion({ ...task, ...changes }, body.subtasks); const status = changes.status; delete changes.status; Object.assign(task, changes); if (status) {
+    updateTask(id: string, body: any) { const task = this.repo('tasks').require(id), oldAssigned=this.assignmentIds(task), oldProject = task.projectId, oldPoints = task.storyPoints, oldSprint = task.sprintId, changes = this.taskChanges(body, id); this.assertCompletion({ ...task, ...changes }, body.subtasks); const status = changes.status; delete changes.status; Object.assign(task, changes);
+        // A sprint belongs to one project: moving the task away takes it out of the sprint.
+        if (oldProject !== task.projectId && oldSprint) { this.sprintEvent({ ...task, sprintId: oldSprint }, 'remove', oldProject); delete task.sprintId; delete task.backlogRank; }
+        else if ('storyPoints' in changes && changes.storyPoints !== oldPoints) this.sprintEvent(task, 'estimate');
+        if (status) {
         this.history(task, status);
         if (!this.subtasks(id).length)
             task.progress = status === 'completed' ? 100 : 0;
@@ -452,7 +466,7 @@ export class ProjectTaskService {
             if (this.context.scoped.raw.projects.some((project: any) => project.id === projectId && this.context.scoped.scopeOf('projects', project) === this.scope().workspaceId))
                 this.counters(projectId);
     }
-    deleteTask(id: string) { const task = this.repo('tasks').require(id); const projectId = task.projectId; this.cascade('task', id); this.counters(projectId); recordActivity(this.context, 'TASK_DELETED', id); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return { success: true, deletedId: id }; }
+    deleteTask(id: string) { const task = this.repo('tasks').require(id); const projectId = task.projectId; this.sprintEvent(task, 'remove'); this.cascade('task', id); this.counters(projectId); recordActivity(this.context, 'TASK_DELETED', id); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return { success: true, deletedId: id }; }
     deleteProject(id: string) { this.manage(); this.cascade('project', id); recordActivity(this.context, 'PROJECT_DELETED', id); this.emit('projects_updated', this.projects()); this.emit('tasks_updated', this.tasks()); return { success: true, deletedId: id }; }
     milestones(projectId: string) { this.repo('projects').require(projectId); return this.repo('milestones').all().filter(row => row.projectId === projectId); }
     milestone(projectId: string | undefined, id: string | undefined, body: any) {

@@ -110,6 +110,8 @@ export interface TaskItem {
 
 export interface Task {
   id: string;
+  /** Workspace key such as "TS-12", set by the server. */
+  key?: string;
   projectId: string;
   workspaceId?: string;
   title: string;

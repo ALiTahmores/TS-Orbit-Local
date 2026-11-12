@@ -48,7 +48,7 @@ function validField(key: string, value: any): boolean {
   const booleans = ['enabled','isAllowed','completed','pin','isGroup','isBudgetConfidential','isConfidential','isActive','clientVisible','approved','closed','muted'];
   if (booleans.includes(key)) return typeof value === 'boolean';
   if (['byteSize','order','progress','estimatedHours','estimate','amount','hours','loggedHours'].includes(key)) return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= (key === 'progress' ? 100 : 1e12);
-  if (['assignedMemberIds','assignedTeamIds','memberIds','userIds','attachmentIds','selectedTeams','dependencies','tags','ids','mutedTypes'].includes(key)) return Array.isArray(value) && value.length <= 200 && value.every(item => typeof item === 'string' && item.length <= 200);
+  if (['assignedMemberIds','assignedTeamIds','memberIds','userIds','attachmentIds','selectedTeams','dependencies','tags','ids','mutedTypes','events','projectIds'].includes(key)) return Array.isArray(value) && value.length <= 200 && value.every(item => typeof item === 'string' && item.length <= 200);
   if (key==='codeSnippet'&&value===null) return true;
   if (['codeSnippet','voiceNote'].includes(key)) return value !== null && typeof value === 'object' && !Array.isArray(value);
   if (['attachments','mentions'].includes(key)) return Array.isArray(value) && value.length <= 50 && value.every(item => (key === 'attachments' && typeof item === 'string' && item.length <= 2000) || !!item && typeof item === 'object' && !Array.isArray(item));

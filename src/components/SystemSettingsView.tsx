@@ -5,6 +5,7 @@ import { useProject } from '../context/ProjectContext';
 import { TabManager } from './TabManager';
 import { AlertTriangle, CheckCircle2, Laptop, Lock, Moon, Sun } from 'lucide-react';
 import { ActiveSessions } from './settings/ActiveSessions';
+import { IntegrationsHub } from './settings/IntegrationsHub';
 import { changedAvatar } from '../lib/formValues';
 
 /** A square 256px WebP data URL cropped from the centre of the chosen image. */
@@ -25,7 +26,7 @@ const resizeAvatar = (file: File) => new Promise<string>((resolve, reject) => {
   image.src = url;
 });
 
-const SETTINGS_CATEGORY_IDS =new Set(['appearance', 'localization', 'notifications', 'profile', 'organization', 'security', 'modules']);
+const SETTINGS_CATEGORY_IDS = new Set(['appearance', 'localization', 'notifications', 'profile', 'organization', 'integrations', 'security', 'modules']);
 
 export const SystemSettingsView: React.FC = () => {
   const { 
@@ -289,6 +290,7 @@ export const SystemSettingsView: React.FC = () => {
     { id: 'notifications', label: 'اعلان‌ها', roles: [] as string[] },
     { id: 'profile', label: 'حساب کاربری', roles: [] as string[] },
     { id: 'organization', label: 'فضای کاری', roles: ['OWNER', 'ADMIN'] },
+    { id: 'integrations', label: 'یکپارچه‌سازی‌ها', roles: ['OWNER', 'ADMIN', 'MANAGER', 'PROJECT_MANAGER'] },
     { id: 'security', label: 'امنیت', roles: [] as string[] },
     { id: 'modules', label: 'ماژول‌ها', roles: ['OWNER'] },
   ];
@@ -550,6 +552,11 @@ export const SystemSettingsView: React.FC = () => {
               <ActiveSessions onNotice={triggerToast} />
             </SettingRow>
           </div>
+        </>}
+
+        {active.id === 'integrations' && <>
+          <SectionHeader title="یکپارچه‌سازی‌ها" description="TS Orbit را به Slack، Teams، Discord، Telegram، GitHub و هر ابزار دیگری با webhook وصل کنید." />
+          <div className="py-6"><IntegrationsHub /></div>
         </>}
 
         {active.id === 'modules' && <>

@@ -24,6 +24,7 @@ import {
 import { useProjectContext } from '../../context/ProjectContext';
 import { Task, SubTask } from '../../types';
 import { cn } from '../../lib/utils';
+import { TaskKey } from '../common/TaskKey';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === undefined || n === null) return '';
@@ -154,8 +155,8 @@ export const TaskQuickDetailModal: React.FC<TaskQuickDetailModalProps> = ({
           {error && <p role="alert" className="text-red-600">{error}</p>}
           {/* Project & Title */}
           <div>
-            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 mb-1 block">
-              {project ? (project.title || project.name) : 'پروژه عمومی'}
+            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 mb-1 flex items-center gap-2">
+              {project ? (project.title || project.name) : 'پروژه عمومی'}<TaskKey value={task.key} />
             </span>
             <h2 className="text-lg font-black text-slate-900 dark:text-slate-100">
               {task.title}

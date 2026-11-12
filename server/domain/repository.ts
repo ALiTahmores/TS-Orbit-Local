@@ -4,7 +4,9 @@ import type { ScopedState } from '../policy/scope.ts';
 export class DomainError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) { super(message); }
 }
-export interface DomainContext { scoped: ScopedState; broadcast: (event: string, payload: any) => void; notify?: (input:any)=>any; }
+export interface DomainContext { scoped: ScopedState; broadcast: (event: string, payload: any) => void; notify?: (input:any)=>any;
+  /** Hands every recorded change to the integrations hub, inside its transaction. */
+  integrations?: (change: { workspaceId: string; actor: any; action: string; collection?: string; target?: any; targetId: string }) => void; }
 export class Repository<T extends { id: string; [key: string]: any } = any> {
   constructor(readonly scoped: ScopedState, readonly collection: string) {}
   all(): T[] { return this.scoped.rows(this.collection); }
@@ -28,4 +30,5 @@ export function recordActivity(context: DomainContext, action: string, targetId:
   const label=target&&typeof (target.title??target.name)==='string'?String(target.title??target.name).slice(0,200):'';
   context.scoped.state.auditLogs.unshift({ id: identifier('audit'), workspaceId: scope.workspaceId, userId: scope.user.id, action, targetId, details, timestamp: now(),...(targetCollection?{targetCollection,accessSnapshot}:{}),...(label?{targetName:label}:{}) });
   context.broadcast('app_activity_updated',{type:'data_changed'});
+  context.integrations?.({ workspaceId: scope.workspaceId, actor: scope.user, action, collection: targetCollection, target, targetId });
 }

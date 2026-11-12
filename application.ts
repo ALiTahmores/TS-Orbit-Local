@@ -32,6 +32,8 @@ import { DbService } from './src/data/dbService.ts';
 import { PersistenceCoordinator } from './server/persistence.ts';
 import { localAvatar } from './src/lib/localAssets.ts';
 import { createInsightRouter } from './server/insights/service.ts';
+import { IntegrationHub, createIntegrationRouter, createInboundHookRouter } from './server/integrations/hub.ts';
+import { ProjectTaskService } from './server/domain/projects-tasks.ts';
 const app = express();
 app.enable('case sensitive routing');
 const backendPath = (path: string) => /^\/(?:api|socket\.io)(?:\/|$)/.test(path);
@@ -490,6 +492,18 @@ if(config.cloud) await persistence.mutateResult(()=>files.collectCloudDeleted())
 else files.collectDeleted();
 let lastCloudCleanup=Date.now();
 const notifications = createNotificationService({scoped,broadcast,broadcastWorkspace:realtime.broadcastWorkspace});
+// Project and task changes reach the integrations hub; inbound hooks act through the same service.
+let projectTasks: ProjectTaskService;
+const integrationHub = new IntegrationHub({
+    scoped, appOrigin: config.appOrigin,
+    afterCommit: operation => persistence.afterCommit(operation),
+    mutate: operation => persistence.mutate(operation),
+    createTask: (_scope, body) => projectTasks.createTask(body),
+    comment: (_scope, taskId, content) => projectTasks.comment(taskId, undefined, { content }),
+    setStatus: (_scope, taskId, status, reason) => projectTasks.setStatus(taskId, { status, reason }),
+});
+const domainContext = { scoped, broadcast, notify: (input: any) => notifications.notify(input), integrations: (change: any) => integrationHub.emit(change) };
+projectTasks = new ProjectTaskService(domainContext);
 chat = new ChatService({scoped,files,broadcast,broadcastRoom,presence:realtime.presence,notify: input => notifications.notify(input),recordActivity: input => notifications.recordActivity(input)});
 // Password hashing runs before the serialized storage queue (see prepareCredentials).
 if(!config.cloud) app.use('/api/auth', auth.prepareCredentials);
@@ -520,13 +534,15 @@ app.use((req, _res, next) => {
 });
 app.use('/api/auth', auth.router);
 app.use('/api/workspaces', createWorkspaceRouter({ state: RAW, authenticateToken }));
+app.use('/api/public/hooks', createInboundHookRouter(integrationHub));
 app.use('/api/public', createPublicRouter(RAW, scoped, {files, broadcastWorkspace: realtime.broadcastWorkspace}));
 app.use('/api', createSystemRouter({ state: RAW, auth }));
 app.use('/api/sites', createWordPressReceiver(RAW, scoped));
 app.get('/api/health', authenticateToken, (_req, res) => res.json({ status: 'ok' }));
 app.use(policy.middleware);
-app.use('/api', createProjectTaskRouter({ scoped, broadcast,notify: input=>notifications.notify(input) }));
-app.use('/api', createOrganizationRouter({ scoped, broadcast }));
+app.use('/api', createProjectTaskRouter(domainContext, projectTasks));
+app.use('/api', createIntegrationRouter(integrationHub));
+app.use('/api', createOrganizationRouter({ scoped, broadcast, integrations: change => integrationHub.emit(change) }));
 app.use('/api', createFileRouter(files));
 app.use('/api', createPortalRouter({scoped, broadcast, files, broadcastWorkspace: realtime.broadcastWorkspace}));
 app.use('/api', createChatRouter(chat));
@@ -809,8 +825,9 @@ app.post('/api/sites/webhook', (req, res) => {
 });
 // ====================================================
 // --- EXTERNAL PLUG & REGISTER API AGENTS ---
+// Integration hub rows share this collection and carry webhook targets; they are served by /api/integrations only.
 app.get('/api/external-connections', (req, res) => {
-    res.json(STATE.externalApis);
+    res.json(STATE.externalApis.filter((row: any) => row?.kind !== 'integration'));
 });
 app.post('/api/external-connections', (req, res) => {
     const { name, endpointUrl, apiType, authType, credentials } = req.body;
@@ -832,7 +849,7 @@ app.post('/api/external-connections', (req, res) => {
     res.status(201).json(newConn);
 });
 app.put('/api/external-connections/:id/toggle', (req, res) => {
-    const conn = STATE.externalApis.find(c => c.id === req.params.id);
+    const conn = STATE.externalApis.find(c => c.id === req.params.id && c.kind !== 'integration');
     if (!conn)
         return res.status(404).json({ error: "NOT_FOUND" });
     conn.status = conn.status === "active" ? "disabled" : "active";

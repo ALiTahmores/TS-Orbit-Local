@@ -21,5 +21,8 @@ export const collaborationContracts = [
   definition('PUT','/api/notifications/:id/read'), definition('POST','/api/notifications/clear'),
   definition('GET','/api/notifications/preferences'), definition('PUT','/api/notifications/preferences',['mutedTypes']),
   definition('GET','/api/insights/overview'), definition('GET','/api/insights/risks'), definition('GET','/api/insights/team'),
+  definition('GET','/api/integrations'), definition('POST','/api/integrations',['provider','name','config','events','projectIds']),
+  definition('PUT','/api/integrations/settings',['taskKeyPrefix']), definition('PUT','/api/integrations/:id',['name','config','events','projectIds','enabled']),
+  definition('DELETE','/api/integrations/:id'), definition('POST','/api/integrations/:id/test'), definition('POST','/api/integrations/:id/rotate'),
   definition('GET','/api/activity-logs'),
 ];

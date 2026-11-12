@@ -141,6 +141,7 @@ const navigationGroups = [
       { id: 'notifications', name: { fa: 'اعلان‌ها', en: 'Notifications' }, icon: 'Bell' },
       { id: 'profile', name: { fa: 'حساب کاربری', en: 'Account' }, icon: 'User' },
       { id: 'organization', name: { fa: 'فضای کاری', en: 'Workspace' }, icon: 'Building2' },
+      { id: 'integrations', name: { fa: 'یکپارچه‌سازی‌ها', en: 'Integrations' }, icon: 'Plug' },
       { id: 'security', name: { fa: 'امنیت', en: 'Security' }, icon: 'ShieldCheck' },
       { id: 'modules', name: { fa: 'ماژول‌ها', en: 'Modules' }, icon: 'Sliders' }
     ]
@@ -379,6 +380,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           { id: 'notifications', name: { fa: 'اعلان‌ها', en: 'Notifications' }, icon: 'Bell' },
           { id: 'profile', name: { fa: 'حساب کاربری', en: 'Account' }, icon: 'User' },
           ...(['OWNER', 'ADMIN'].includes(userRole) ? [{ id: 'organization', name: { fa: 'فضای کاری', en: 'Workspace' }, icon: 'Building2' }] : []),
+          ...(['OWNER', 'ADMIN', 'MANAGER', 'PROJECT_MANAGER'].includes(String(userRole).toUpperCase()) ? [{ id: 'integrations', name: { fa: 'یکپارچه‌سازی‌ها', en: 'Integrations' }, icon: 'Plug' }] : []),
           { id: 'security', name: { fa: 'امنیت', en: 'Security' }, icon: 'ShieldCheck' },
           ...(userRole === 'OWNER' ? [{ id: 'modules', name: { fa: 'ماژول‌ها', en: 'Modules' }, icon: 'Sliders' }] : [])
         ]

@@ -70,6 +70,7 @@ import {
   LayoutGrid,
   SlidersHorizontal
 } from 'lucide-react';
+import { TaskKey } from './common/TaskKey';
 
 // Cards a column renders at first, and how many more each time its end scrolls into view.
 const COLUMN_BATCH = 30;
@@ -220,7 +221,7 @@ export const TasksGlobalView: React.FC = () => {
 
   // Filter Tasks
   const filteredTasks = tasks.filter(t => {
-    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) || (t.key || '').toLowerCase().includes(searchQuery.trim().toLowerCase()) || 
                           t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (t.assignedTo || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDept = deptFilter === 'all' || t.department === deptFilter;
@@ -572,9 +573,12 @@ export const TasksGlobalView: React.FC = () => {
                           >
                             {/* Card Top Badges Row */}
                             <div className="flex justify-between items-center gap-2">
-                              {/* Department */}
-                              <span className="text-[9px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 px-2 py-0.5 rounded font-mono">
-                                {(task.department || 'عمومی').toUpperCase()}
+                              {/* Key and department */}
+                              <span className="flex items-center gap-1.5 min-w-0">
+                                <TaskKey value={task.key} />
+                                <span className="text-[9px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 px-2 py-0.5 rounded font-mono truncate">
+                                  {(task.department || 'عمومی').toUpperCase()}
+                                </span>
                               </span>
 
                               {/* Priority badge */}

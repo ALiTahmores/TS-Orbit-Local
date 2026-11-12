@@ -34,6 +34,7 @@ import { priorityKey, priorityLabel, statusLabel } from '../../lib/taskLabels';
 import { CreateTaskModal } from '../tasks/CreateTaskModal';
 import { TaskDetailModal } from '../tasks/TaskDetailModal';
 import { TaskFullDetailView } from '../tasks/TaskFullDetailView';
+import { TaskKey } from '../common/TaskKey';
 
 export const MyTasksView: React.FC = () => {
   const { 
@@ -362,7 +363,7 @@ export const MyTasksView: React.FC = () => {
                           {/* Card Header: Title + Options / Expand */}
                           <div className="flex items-start justify-between gap-2 mb-1.5">
                             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-500 transition-colors leading-snug">
-                              {task.title}
+                              <TaskKey value={task.key} className="me-1.5" />{task.title}
                             </h4>
                             <button 
                               type="button"
@@ -472,7 +473,7 @@ export const MyTasksView: React.FC = () => {
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-colors cursor-pointer"
                   >
                     <td className="p-4 px-5 font-bold text-slate-800 dark:text-slate-100">
-                      {task.title}
+                      <TaskKey value={task.key} className="me-2" />{task.title}
                     </td>
                     <td className="p-4">
                       <span className="px-2.5 py-1 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 font-bold text-[11px]">

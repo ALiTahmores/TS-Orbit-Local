@@ -13,9 +13,26 @@ export class ProjectTaskService {
     assignmentIds(task:any):string[]{return [...new Set<string>(Array.isArray(task.assignedMemberIds)?task.assignedMemberIds:task.assigneeId?[task.assigneeId]:(task.assignees||[]).map((row:any)=>row.id))];}
     notifyAssignments(task:any,previous:string[]=[]):void{
         const recipients=this.assignmentIds(task).filter(id=>id!==this.actor().id&&!previous.includes(id));
+        if(recipients.length)this.context.integrations?.({workspaceId:this.scope().workspaceId,actor:this.actor(),action:'TASK_ASSIGNED',collection:'tasks',target:task,targetId:task.id});
         if(recipients.length)this.context.notify?.({workspaceId:this.scope().workspaceId,recipientIds:recipients,title:'وظیفه به شما واگذار شد',description:task.title||'وظیفه',type:'task.assigned',link:'personal_tasks',taskId:task.id,...(task.projectId?{projectId:task.projectId}:{}),actorId:this.actor().id});
     }
     repo(collection: string): Repository { return new Repository(this.context.scoped, collection); }
+    /** Jira-style keys ("TS-12"): a workspace prefix and a number per task. */
+    keyOf(task: any): string | undefined {
+        if (!Number.isInteger(task?.number)) return undefined;
+        const workspace = this.context.scoped.raw.workspaces.find((row: any) => row.id === this.scope().workspaceId);
+        const prefix = typeof workspace?.taskKeyPrefix === 'string' && /^[A-Z][A-Z0-9]{1,9}$/.test(workspace.taskKeyPrefix) ? workspace.taskKeyPrefix : 'TS';
+        return `${prefix}-${task.number}`;
+    }
+    /** The next task number; tasks from before numbering are numbered once, oldest first. */
+    nextTaskNumber(): number {
+        const workspaceId = this.scope().workspaceId, scoped = this.context.scoped;
+        const own = scoped.read(() => scoped.raw.tasks.filter((task: any) => task && scoped.scopeOf('tasks', task) === workspaceId));
+        let next = own.reduce((max: number, task: any) => Number.isInteger(task.number) ? Math.max(max, task.number) : max, 0);
+        for (const task of own.filter((task: any) => !Number.isInteger(task.number)).sort((a: any, b: any) => String(a.createdAt || '').localeCompare(String(b.createdAt || ''))))
+            task.number = ++next;
+        return next + 1;
+    }
     scope() { const scope = this.context.scoped.current(); if (!scope || scope.kind !== 'workspace')
         throw new DomainError(403, 'WORKSPACE_FORBIDDEN', 'فضای کاری لازم است.'); return scope; }
     createInput(body: any) {
@@ -190,6 +207,7 @@ export class ProjectTaskService {
         const assignees = [...new Set(ids)].map(id => this.repo('users').find(id)).filter(user => user && activeMember(user) && membership(this.context.scoped.raw, user, this.scope().workspaceId)).map(user => ({id: user.id, name: user.name, avatar: user.avatar || ''}));
         return {
             ...task,
+            key: this.keyOf(task),
             assignees,
             subtasks: this.repo('subtasks').all().filter(sub => sub.taskId === task.id),
             comments,
@@ -360,7 +378,7 @@ export class ProjectTaskService {
         return; if ((task.dependencies || []).some((dependency: string) => !this.complete(this.repo('tasks').require(dependency).status)))
         throw new DomainError(409, 'DEPENDENCY_INCOMPLETE', 'ابتدا وظایف وابسته را تکمیل کنید.'); const subs = subtasks ?? this.repo('subtasks').all().filter(sub => sub.taskId === task.id); if (subs.some(sub => !sub.completed))
         throw new DomainError(409, 'SUBTASK_INCOMPLETE', 'زیرکار باز باقی مانده است.'); }
-    createTask(body: any) { body = this.createInput(body); const changes = this.taskChanges(body); this.assertCompletion({ ...changes }, body.subtasks || []); const task = this.repo('tasks').insert({ id: identifier('task'), createdById: this.actor().id, creatorId: this.actor().id, createdAt: now(), description: '', priority: 'medium', status: 'pending', deadline: '', tags: [], attachments: [], dependencies: [], assignedMemberIds: [], assignees: [], estimatedHours: 0, progress: 0, ...changes }); if (body.subtasks)
+    createTask(body: any) { body = this.createInput(body); const changes = this.taskChanges(body); this.assertCompletion({ ...changes }, body.subtasks || []); const task = this.repo('tasks').insert({ id: identifier('task'), number: this.nextTaskNumber(), createdById: this.actor().id, creatorId: this.actor().id, createdAt: now(), description: '', priority: 'medium', status: 'pending', deadline: '', tags: [], attachments: [], dependencies: [], assignedMemberIds: [], assignees: [], estimatedHours: 0, progress: 0, ...changes }); if (body.subtasks)
         this.replaceSubtasks(task.id, body.subtasks); if (body.loggedHours !== undefined)
         this.adjustHours(task.id, body.loggedHours); this.refreshTask(task, !!body.subtasks); for (const content of body.initialComments || [])
         this.comment(task.id, undefined, { content }); this.change('TASK_CREATED', task); this.notifyAssignments(task); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return this.taskView(task); }
@@ -542,8 +560,8 @@ export class ProjectTaskService {
         throw new DomainError(409, 'NEGATIVE_TOTAL_HOURS', 'ابتدا اصلاح مجموع زمان را بازبینی کنید.'); this.repo('timeEntries').remove(id); const task = this.repo('tasks').require(row.taskId); if (!this.timeEntries(task.id).length)
         task.loggedHours = 0; this.refreshTask(task, false); recordActivity(this.context, 'TIME_ENTRY_DELETED', id); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return { success: true, deletedId: id }; }
 }
-export function createProjectTaskRouter(context: DomainContext) {
-    const router = Router(), service = new ProjectTaskService(context);
+export function createProjectTaskRouter(context: DomainContext, service = new ProjectTaskService(context)) {
+    const router = Router();
     const endpoint = (fn: (req: any) => any, status = 200) => (req: any, res: any, next: any) => { try {
         res.status(status).json(fn(req));
     }

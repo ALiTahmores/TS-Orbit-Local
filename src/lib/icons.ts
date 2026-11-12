@@ -3,7 +3,7 @@ import {
   CheckSquare, Chrome, CircleDollarSign, Code, Compass, Cpu, Database, Delete, Download, Edit, Edit3, Eye, Figma, File,
   FileText, Files, Film, Folder, FolderGit, FolderGit2, FolderKanban, FolderOpen, GitBranch, GitMerge, Globe, Grid, History,
   Home, Kanban, Key, Layers, Layout, LayoutDashboard, LayoutGrid, LineChart, Lock, Megaphone, Menu, MessageSquare,
-  Network, Palette, PenTool, Phone, PieChart, Plus, PlusCircle, Rocket, Save, Search, Send, Server, Settings, Settings2,
+  Network, Palette, PenTool, Phone, PieChart, Plug, Plus, PlusCircle, Rocket, Save, Search, Send, Server, Settings, Settings2,
   Share2, Shield, ShieldCheck, ShoppingBag, Sliders, Smartphone, Sparkles, Sun, Tablet, Tags, Target, Terminal, Trash2,
   Trello, TrendingUp, Trophy, User, UserCheck, UserCheck2, UserPlus, Users, Video, Workflow, Zap,
   type LucideIcon,
@@ -18,7 +18,7 @@ const iconsByName: Record<string, LucideIcon> = {
   CheckSquare, Chrome, CircleDollarSign, Code, Compass, Cpu, Database, Delete, Download, Edit, Edit3, Eye, Figma, File,
   FileText, Files, Film, Folder, FolderGit, FolderGit2, FolderKanban, FolderOpen, GitBranch, GitMerge, Globe, Grid, History,
   Home, Kanban, Key, Layers, Layout, LayoutDashboard, LayoutGrid, LineChart, Lock, Megaphone, Menu, MessageSquare,
-  Network, Palette, PenTool, Phone, PieChart, Plus, PlusCircle, Rocket, Save, Search, Send, Server, Settings, Settings2,
+  Network, Palette, PenTool, Phone, PieChart, Plug, Plus, PlusCircle, Rocket, Save, Search, Send, Server, Settings, Settings2,
   Share2, Shield, ShieldCheck, ShoppingBag, Sliders, Smartphone, Sparkles, Sun, Tablet, Tags, Target, Terminal, Trash2,
   Trello, TrendingUp, Trophy, User, UserCheck, UserCheck2, UserPlus, Users, Video, Workflow, Zap,
 };

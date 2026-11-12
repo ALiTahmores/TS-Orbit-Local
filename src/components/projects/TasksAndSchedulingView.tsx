@@ -36,6 +36,7 @@ import {
   CheckCircle2,
   Clock3
 } from 'lucide-react';
+import { TaskKey } from '../common/TaskKey';
 
 const toPersianDigits = (n: string | number): string => {
   if (n === null || n === undefined) return '';
@@ -137,7 +138,7 @@ export const TasksAndSchedulingView: React.FC = () => {
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(t => {
-      const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) || (t.key || '').toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
                             (t.assignedTo || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
       return matchesSearch && matchesStatus;
@@ -447,7 +448,7 @@ export const TasksAndSchedulingView: React.FC = () => {
                                                   onClick={() => setDetailTask(t)}
                                                   className={`text-start hover:text-blue-600 hover:underline cursor-pointer ${isCompleted ? 'line-through text-slate-400' : ''}`}
                                                 >
-                                                  {t.title}
+                                                  <TaskKey value={t.key} className="me-1.5 no-underline" />{t.title}
                                                 </button>
                                               </div>
 

@@ -169,8 +169,8 @@ export const TaskFullManageView: React.FC<TaskFullManageViewProps> = ({
                 {project ? (project.title || project.name) : 'پروژه عمومی'}
               </span>
               <span className="text-slate-300 dark:text-slate-700">•</span>
-              <span className="text-xs font-mono text-slate-400 font-bold">
-                {task.id}
+              <span dir="ltr" translate="no" className="text-xs font-mono text-slate-400 font-bold">
+                {task.key || task.id}
               </span>
             </div>
             <h1 className="text-lg font-black text-slate-900 dark:text-slate-100 mt-0.5">

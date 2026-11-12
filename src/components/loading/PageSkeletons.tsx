@@ -103,56 +103,69 @@ const ListRows = ({ rows = 5, icon = 40 }: { rows?: number; icon?: number }) => 
   </div>
 );
 
+/** Page title and description with the page's own actions (dashboard kit layout). */
+const KitHeader = ({ actions = [120], eyebrow = true }: { actions?: number[]; eyebrow?: boolean }) => (
+  <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+    <div className="space-y-2.5 min-w-0">{eyebrow && <Line w={110} h={10} />}<Line w={220} h={24} /><Line w={420} h={12} /></div>
+    {actions.length > 0 && <div className="flex flex-wrap items-center gap-2">{actions.map((width, index) => <Bone key={index} width={width} height={40} borderRadius={12} />)}</div>}
+  </div>
+);
+/** The tinted figure tiles at the top of a page. */
+const TileRow = ({ count = 4 }: { count?: number }) => (
+  <div className={cn('grid grid-cols-2 gap-4', count === 5 ? 'lg:grid-cols-5' : 'xl:grid-cols-4')}>
+    {Array.from({ length: count }, (_, index) => (
+      <div key={index} className="rounded-2xl p-5 space-y-4 bg-slate-100/80 dark:bg-slate-800/40">
+        <div className="flex items-center justify-between"><Line w={90} h={12} /><Bone width={16} height={16} borderRadius={4} /></div>
+        <Line w={70} h={26} /><Line w={130} h={10} />
+      </div>
+    ))}
+  </div>
+);
+/** A panel of rows: a marker, two lines and a trailing value. */
+const PanelRows = ({ rows = 5, className, tabs = false }: { rows?: number; className?: string; tabs?: boolean }) => (
+  <div className={cn('rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0d121f] p-5 space-y-4', className)}>
+    <div className="flex items-center justify-between"><div className="space-y-2"><Line w={130} h={14} /><Line w={220} h={10} /></div><Bone width={70} height={14} borderRadius={6} /></div>
+    {tabs && <Bone width={320} height={40} borderRadius={12} />}
+    {Array.from({ length: rows }, (_, index) => (
+      <div key={index} className="flex items-center gap-3 py-1"><Circle size={8} /><div className="flex-1 min-w-0 space-y-2"><Line w="55%" h={12} /><Line w="35%" h={10} /></div><Line w={60} h={10} /></div>
+    ))}
+  </div>
+);
+
 // ---------------------------------------------------------------- Dashboard
 
 export const DashboardSkeleton: React.FC = () => {
   const direction = documentDirection();
   return (
     <SkeletonPage>
-      <PageHeader icon badge actions={[200, 150]} title={240} subtitle={380} />
-      <div className="border-t border-slate-200/70 dark:border-slate-800" />
+      <KitHeader actions={[110, 208, 120]} />
+      <TileRow />
       {/* The analytics row keeps the chart on the physical left, as the page does. */}
       <div className="grid grid-cols-12 gap-6" style={{ direction: 'ltr' }}>
         <Card className="col-span-12 lg:col-span-8 p-6 space-y-6" style={{ direction }}>
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-            <div className="space-y-2.5"><Line w={90} h={10} /><Line w={260} h={22} /><Line w={300} h={12} /><Line w={220} h={12} /></div>
-            <div className="flex items-center gap-2"><Bone width={230} height={38} borderRadius={14} /><Bone width={32} height={32} borderRadius={10} /><Bone width={32} height={32} borderRadius={10} /></div>
+            <div className="space-y-2.5"><Line w={90} h={10} /><Line w={260} h={22} /><Line w={300} h={12} /></div>
+            <div className="flex items-center gap-2"><Bone width={230} height={38} borderRadius={14} /><Bone width={32} height={32} borderRadius={10} /></div>
           </div>
           <Bone height={220} borderRadius={16} />
-          <div className="flex items-center gap-5"><Circle size={10} /><Line w={90} h={10} /><Circle size={10} /><Line w={90} h={10} /></div>
         </Card>
         <Card className="col-span-12 lg:col-span-4 p-6 flex flex-col gap-5" style={{ direction }}>
-          <div className="space-y-2.5"><Line w={90} h={10} /><Line w={160} h={20} /><Line w={200} h={12} /></div>
+          <div className="space-y-2.5"><Line w={90} h={10} /><Line w={160} h={20} /></div>
           <Circle size={170} className="mx-auto my-2" />
-          <div className="grid grid-cols-2 gap-3">{Array.from({ length: 6 }, (_, index) => <Bone key={index} height={34} borderRadius={12} />)}</div>
+          <div className="grid grid-cols-2 gap-3">{Array.from({ length: 4 }, (_, index) => <Bone key={index} height={34} borderRadius={12} />)}</div>
         </Card>
       </div>
-      <div className="flex items-center justify-between gap-4"><div className="space-y-2"><Line w={200} h={18} /><Line w={260} h={10} /></div><Bone width={110} height={34} borderRadius={12} /></div>
       <div className="grid grid-cols-12 gap-6">
-        <Card className="col-span-12 lg:col-span-4 p-5 space-y-4">
-          <div className="flex items-center justify-between"><Line w={150} h={14} /><Pill w={52} h={20} /></div>
-          <Bone height={90} borderRadius={16} /><Bone height={90} borderRadius={16} />
-          <Line w={140} h={10} />
-        </Card>
-        <Card className="col-span-12 lg:col-span-8 p-5 space-y-5">
-          <CardTitle title={140} subtitle={200} action={90} />
-          <Bone height={96} borderRadius={16} />
-        </Card>
-        <Card className="col-span-12 lg:col-span-8 p-5 space-y-4">
-          <CardTitle title={220} subtitle={160} action={110} />
-          {[0, 1, 2, 3].map(index => (
-            <div key={index} className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 dark:border-slate-800/70">
-              <Circle size={32} />
-              <div className="flex-1 min-w-0 space-y-2"><Line w="45%" h={12} /><Line w="30%" h={10} /></div>
-              <div className="hidden sm:flex items-center gap-2"><Bone width={96} height={30} borderRadius={10} /><Bone width={96} height={30} borderRadius={10} /></div>
-            </div>
-          ))}
-        </Card>
-        <Card className="col-span-12 lg:col-span-4 p-5 space-y-4">
-          <div className="flex items-center justify-between"><Line w={130} h={14} /><Pill w={70} h={20} /></div>
-          {[0, 1, 2].map(index => <Bone key={index} height={44} borderRadius={12} />)}
-          <Line w={160} h={10} />
-        </Card>
+        <PanelRows tabs rows={5} className="col-span-12 xl:col-span-7" />
+        <div className="col-span-12 xl:col-span-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0d121f] p-5 space-y-5">
+          <div className="space-y-2"><Line w={120} h={14} /><Line w={180} h={10} /></div>
+          {[0, 1, 2, 3].map(index => <div key={index} className="space-y-2.5"><div className="flex justify-between"><Line w={150} h={12} /><Pill w={70} h={22} /></div><Bone height={6} borderRadius={9999} /><Line w={200} h={10} /></div>)}
+        </div>
+      </div>
+      <div className="grid grid-cols-12 gap-6">
+        <PanelRows rows={5} className="col-span-12 lg:col-span-6 xl:col-span-4" />
+        <PanelRows rows={4} className="col-span-12 lg:col-span-6 xl:col-span-4" />
+        <PanelRows rows={4} className="col-span-12 xl:col-span-4" />
       </div>
     </SkeletonPage>
   );
@@ -207,15 +220,16 @@ const ProjectsSkeleton = ({ subTab }: { subTab: string }) => (
 /** Specialists and other people pages: a grid of member cards. */
 const PeopleSkeleton = () => (
   <SkeletonPage>
-    <PageHeader actions={[130]} />
-    <div className="flex flex-col sm:flex-row gap-3"><Bone height={40} borderRadius={12} className="sm:flex-1" /><Bone width={160} height={40} borderRadius={12} /></div>
-    <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+    <KitHeader eyebrow={false} actions={[110, 120]} />
+    <TileRow />
+    <div className="flex flex-col xl:flex-row gap-3"><Bone height={40} borderRadius={12} className="xl:flex-1" /><div className="flex gap-2"><Bone width={240} height={40} borderRadius={12} /><Bone width={144} height={40} borderRadius={12} /></div></div>
+    <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0d121f] overflow-hidden">
+      <div className="hidden lg:flex h-11 px-5 items-center gap-6 bg-slate-50 dark:bg-slate-900/50">{[120, 60, 60, 80, 50, 90, 70].map((width, index) => <Line key={index} w={width} h={10} />)}</div>
       {Array.from({ length: 6 }, (_, index) => (
-        <Card key={index} className="p-5 space-y-4">
-          <div className="flex items-center gap-3"><Circle size={48} /><div className="space-y-2 flex-1"><Line w="55%" h={14} /><Line w="35%" h={10} /></div></div>
-          <div className="grid grid-cols-3 gap-2">{[0, 1, 2].map(cell => <Bone key={cell} height={46} borderRadius={10} />)}</div>
-          <Bone height={6} borderRadius={9999} />
-        </Card>
+        <div key={index} className="px-5 py-4 flex items-center gap-4 border-t border-slate-100 dark:border-slate-800/70">
+          <Circle size={38} /><div className="w-40 space-y-2"><Line w={120} h={12} /><Line w={90} h={10} /></div>
+          <div className="hidden lg:flex flex-1 items-center justify-between gap-6">{[30, 30, 30, 40].map((width, cell) => <Line key={cell} w={width} h={14} />)}<div className="w-40 space-y-2"><Line w={80} h={10} /><Bone height={6} borderRadius={9999} /></div><Line w={60} h={10} /></div>
+        </div>
       ))}
     </div>
   </SkeletonPage>
@@ -325,7 +339,24 @@ const RoadmapSkeleton = () => (
 const ReportsSkeleton = ({ subTab }: { subTab: string }) => (
   <SkeletonPage>
     <SectionPills widths={[130, 140, 130, 140]} />
-    {subTab === 'roadmap' ? <RoadmapSkeleton /> : subTab === 'analytics' || !subTab ? (
+    {subTab === 'roadmap' ? <RoadmapSkeleton /> : subTab === 'bottlenecks' ? (
+      <>
+        <TileRow count={5} />
+        <div className="grid grid-cols-12 gap-6">
+          <PanelRows rows={6} className="col-span-12 xl:col-span-8" />
+          <div className="col-span-12 xl:col-span-4 space-y-6"><PanelRows rows={3} /><PanelRows rows={4} /></div>
+        </div>
+      </>
+    ) : subTab === 'timeline' ? (
+      <>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3"><div className="flex gap-2"><Bone width={180} height={40} borderRadius={12} /><Bone width={170} height={40} borderRadius={12} /></div><Bone width={256} height={40} borderRadius={12} /></div>
+        <Card className="p-5 space-y-4">
+          <div className="space-y-2"><Line w={160} h={14} /><Line w={360} h={10} /></div>
+          <div className="grid grid-cols-7 sm:grid-cols-14 gap-2">{Array.from({ length: 14 }, (_, index) => <div key={index} className="flex flex-col items-center gap-2 py-2"><Line w={14} h={10} /><Bone width={20} height={24 + (index * 7) % 40} borderRadius={6} /><Line w={14} h={10} /></div>)}</div>
+        </Card>
+        {[0, 1].map(group => <div key={group} className="space-y-2"><Line w={90} h={12} /><PanelRows rows={3} /></div>)}
+      </>
+    ) : (
       <>
         <Card className="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-3"><Pill w={210} h={24} /><Line w={290} h={26} /><Line w={440} h={12} /><Line w={360} h={12} /></div>
@@ -338,25 +369,20 @@ const ReportsSkeleton = ({ subTab }: { subTab: string }) => (
         </div>
         <Card className="p-2"><ListRows rows={4} /></Card>
       </>
-    ) : (
-      <>
-        <PageHeader actions={[130]} />
-        <Card className="p-5"><TableSkeleton columns={5} rows={6} /></Card>
-      </>
     )}
   </SkeletonPage>
 );
 
-/** Report pages built from figures and charts (weekly reports, team performance). */
+/** Report pages built from figures and charts (team performance). */
 const AnalyticsSkeleton = () => (
   <SkeletonPage>
-    <PageHeader actions={[140]} />
-    <KpiCards />
+    <KitHeader eyebrow={false} actions={[180]} />
+    <TileRow />
     <div className="grid grid-cols-12 gap-6">
-      <Card className="col-span-12 lg:col-span-8 p-6 space-y-5"><CardTitle title={180} subtitle={240} action={120} /><Bone height={240} borderRadius={16} /></Card>
-      <Card className="col-span-12 lg:col-span-4 p-6 space-y-5"><CardTitle title={140} subtitle={180} /><Circle size={160} className="mx-auto" /><div className="space-y-2">{[0, 1, 2].map(index => <Bone key={index} height={30} borderRadius={10} />)}</div></Card>
+      <PanelRows rows={6} className="col-span-12 xl:col-span-7" />
+      <div className="col-span-12 xl:col-span-5 space-y-6"><PanelRows rows={4} /><Card className="p-5"><Bone height={150} borderRadius={12} /></Card></div>
     </div>
-    <Card className="p-5"><TableSkeleton columns={5} rows={4} /></Card>
+    <Card className="p-5"><TableSkeleton columns={6} rows={4} /></Card>
   </SkeletonPage>
 );
 
@@ -413,12 +439,14 @@ const SettingsSkeleton = () => (
 
 const NotificationsSkeleton = () => (
   <SkeletonPage>
-    <Card className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <CardTitle icon={44} title={150} subtitle={300} />
-      <div className="flex items-center gap-3"><Line w={110} h={12} /><Bone width={230} height={40} borderRadius={12} /></div>
-    </Card>
-    <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Bone width={120} height={36} borderRadius={12} /><Bone width={100} height={36} borderRadius={12} /></div><Line w={80} h={10} /></div>
-    <Card className="p-2"><ListRows rows={5} /></Card>
+    <KitHeader eyebrow={false} actions={[110, 120]} />
+    <div className="grid grid-cols-12 gap-6">
+      <div className="col-span-12 xl:col-span-8 space-y-4">
+        <Bone width={480} height={40} borderRadius={12} />
+        {[0, 1].map(section => <div key={section} className="space-y-2"><Line w={60} h={12} /><Card className="p-2"><ListRows rows={3} icon={36} /></Card></div>)}
+      </div>
+      <PanelRows rows={5} className="col-span-12 xl:col-span-4" />
+    </div>
   </SkeletonPage>
 );
 

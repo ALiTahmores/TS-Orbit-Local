@@ -1,660 +1,231 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle, ArrowLeft, CalendarClock, CheckCircle2, ClipboardList, Clock, FolderKanban, History, Inbox, ListChecks, Plus, RotateCcw, ShieldCheck, Users
+} from 'lucide-react';
 import { apiFetch } from '../lib/api';
-import React, { useState, useMemo } from 'react';
 import { useProject } from '../context/ProjectContext';
+import { useInsights } from '../hooks/useInsights';
 import { CustomSelect } from './common/CustomSelect';
 import { PremiumAnalytics } from './widgets/PremiumAnalytics';
-import { ProjectBlockersReviewWidget } from './widgets/ProjectBlockersReviewWidget';
 import { TeamWorkloadBalanceWidget } from './widgets/TeamWorkloadBalanceWidget';
 import { WeeklyTimesheetWidget } from './widgets/WeeklyTimesheetWidget';
-import { priorityKey } from '../lib/taskLabels';
-import { tasksAssignedTo } from '../lib/taskAnalytics';
+import { activityLabel } from '../lib/activityLabels';
+import { formatJalaliDate, formatJalaliDayMonth } from '../lib/dates';
+import { statusLabel } from '../lib/taskLabels';
+import { isEnglish } from '../lib/locale';
 import {
-  Activity,
-  ArrowUpRight,
-  Plus,
-  Check,
-  Users,
-  Zap,
-  LineChart as LucideLineChart,
-  Sparkles,
-  GripVertical,
-  RotateCcw
-} from 'lucide-react';
+  AvatarStack, EmptyHint, HealthBadge, PageHeader, Panel, PrimaryButton, ProgressBar, SecondaryButton, Segmented, StatTile, num, percent, timeAgo, type Health
+} from './ui/dashboard-kit';
 
-// Reusable design system cards
-import {
-  ProjectCard,
-  TaskCard,
-  TeamCard
-} from './DesignSystem';
+interface TaskRef { id: string; title: string; projectId: string; projectTitle: string; status: string; priority: string; dueDate: string | null; daysOverdue: number; daysInStatus: number; assignees: { id: string; name: string }[] }
+interface ProjectRow { id: string; title: string; progress: number; health: Health; openTasks: number; overdueTasks: number; blockedTasks: number; daysLeft: number | null; dueDate: string | null; lead: { id: string; name: string } | null; memberIds: string[] }
+interface Overview {
+  today: string; range: number; canManage: boolean;
+  kpis: { activeProjects: number; totalProjects: number; openTasks: number; createdInRange: number; createdPrevRange: number; overdueTasks: number; dueThisWeek: number; completedInRange: number; completedPrevRange: number; onTimeRate: number | null; hoursInRange: number; hoursPrevRange: number };
+  myWork: { overdue: TaskRef[]; today: TaskRef[]; upcoming: TaskRef[]; review: TaskRef[]; unscheduled: number };
+  projects: ProjectRow[];
+}
 
-const toPersianDigits = (value: number | string) => String(value).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
+const priorityDot: Record<string, string> = { critical: 'bg-rose-500', urgent: 'bg-rose-500', high: 'bg-amber-500', medium: 'bg-blue-500', low: 'bg-slate-400' };
+
+const DueLabel: React.FC<{ task: TaskRef; today: string }> = ({ task, today }) => {
+  if (task.daysOverdue > 0) return <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">{`${num(task.daysOverdue)} روز تأخیر`}</span>;
+  if (task.dueDate === today) return <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">امروز</span>;
+  return <span className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">{task.dueDate ? formatJalaliDayMonth(task.dueDate) : '—'}</span>;
+};
+
+/** The member's own queue: late, due today, coming up this week, and work waiting for review. */
+const MyWork: React.FC<{ data: Overview; onOpen: () => void; onReview: (task: TaskRef, approve: boolean) => Promise<void> }> = ({ data, onOpen, onReview }) => {
+  const groups = data.myWork;
+  const initial = groups.overdue.length ? 'overdue' : groups.today.length ? 'today' : groups.upcoming.length ? 'upcoming' : groups.review.length ? 'review' : 'today';
+  const [tab, setTab] = useState<'overdue' | 'today' | 'upcoming' | 'review'>(initial);
+  const [busy, setBusy] = useState('');
+  const rows = groups[tab];
+  const review = async (task: TaskRef, approve: boolean) => { setBusy(task.id); try { await onReview(task, approve); } finally { setBusy(''); } };
+  const empty = {
+    overdue: 'هیچ کار عقب‌افتاده‌ای ندارید.', today: 'برای امروز کاری با سررسید ثبت نشده است.',
+    upcoming: 'تا هفت روز آینده کاری با سررسید ندارید.', review: data.canManage ? 'کاری منتظر تأیید شما نیست.' : 'کاری از شما در انتظار بررسی نیست.',
+  }[tab];
+  return (
+    <Panel title="کارهای من" description={groups.unscheduled ? `${num(groups.unscheduled)} کار باز شما سررسید ندارد.` : 'کارهایی که به شما سپرده شده یا منتظر تصمیم شماست.'} icon={ListChecks}
+      action={<button type="button" onClick={onOpen} className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">همهٔ کارها<ArrowLeft size={14} className="ltr:rotate-180" /></button>}
+      className="col-span-12 xl:col-span-7" bodyClassName="pt-4 space-y-3">
+      <Segmented label="دستهٔ کارها" value={tab} onChange={setTab} options={[
+        { value: 'overdue', label: 'عقب‌افتاده', count: groups.overdue.length },
+        { value: 'today', label: 'امروز', count: groups.today.length },
+        { value: 'upcoming', label: 'این هفته', count: groups.upcoming.length },
+        { value: 'review', label: data.canManage ? 'منتظر تأیید' : 'در بررسی', count: groups.review.length },
+      ]} />
+      {rows.length === 0 ? <EmptyHint icon={CheckCircle2} title={empty} /> : (
+        <ul className="divide-y divide-slate-100 dark:divide-slate-800/70">
+          {rows.map(task => (
+            <li key={task.id} className="py-3 flex items-center gap-3">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${priorityDot[task.priority] || priorityDot.medium}`} title={task.priority} />
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">{task.title}</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{task.projectTitle || 'بدون پروژه'} · {statusLabel(task.status, isEnglish() ? 'en' : 'fa')}</p>
+              </div>
+              {tab === 'review' && data.canManage ? (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button type="button" disabled={busy === task.id} onClick={() => void review(task, false)} className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"><RotateCcw size={13} />برگشت</button>
+                  <button type="button" disabled={busy === task.id} onClick={() => void review(task, true)} className="h-8 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"><CheckCircle2 size={13} />تأیید</button>
+                </div>
+              ) : <DueLabel task={task} today={data.today} />}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+};
+
+const ProjectHealth: React.FC<{ rows: ProjectRow[]; names: Map<string, string>; onOpen: (id: string) => void }> = ({ rows, names, onOpen }) => (
+  <Panel title="سلامت پروژه‌ها" description="پروژه‌های باز، از پرخطرترین." icon={FolderKanban} className="col-span-12 xl:col-span-5" bodyClassName="pt-3">
+    {rows.length === 0 ? <EmptyHint icon={FolderKanban} title="پروژهٔ بازی وجود ندارد." /> : (
+      <ul className="space-y-1">
+        {rows.map(row => (
+          <li key={row.id}>
+            <button type="button" onClick={() => onOpen(row.id)} className="w-full text-start p-3 -mx-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">{row.title}</span>
+                <HealthBadge health={row.health} />
+              </div>
+              <div className="flex items-center gap-3">
+                <ProgressBar value={row.progress} className="flex-1" tone={row.health === 'off_track' ? 'rose' : row.health === 'at_risk' ? 'amber' : 'blue'} />
+                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 tabular-nums w-10 text-end">{percent(row.progress)}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span>{`${num(row.openTasks)} کار باز`}</span>
+                  {row.overdueTasks > 0 && <span className="text-rose-600 dark:text-rose-400 font-bold">{`${num(row.overdueTasks)} عقب‌افتاده`}</span>}
+                  {row.blockedTasks > 0 && <span className="text-amber-600 dark:text-amber-400 font-bold">{`${num(row.blockedTasks)} مسدود`}</span>}
+                  {row.daysLeft !== null && <span>{row.daysLeft < 0 ? `${num(-row.daysLeft)} روز گذشته از موعد` : `${num(row.daysLeft)} روز تا موعد`}</span>}
+                </span>
+                <AvatarStack people={row.memberIds.map(id => ({ id, name: names.get(id) || '' })).filter(person => person.name)} size={22} max={3} />
+              </div>
+            </button>
+          </li>
+        ))}
+      </ul>
+    )}
+  </Panel>
+);
+
+const ActivityFeed: React.FC<{ rows: any[] }> = ({ rows }) => (
+  <Panel title="فعالیت‌های اخیر" description="آخرین تغییرات فضای کاری." icon={History} className="col-span-12 lg:col-span-6 xl:col-span-4" bodyClassName="pt-3">
+    {rows.length === 0 ? <EmptyHint icon={History} title="هنوز فعالیتی ثبت نشده است." /> : (
+      <ol className="relative space-y-4 before:absolute before:top-2 before:bottom-2 before:start-[7px] before:w-px before:bg-slate-200 dark:before:bg-slate-800">
+        {rows.slice(0, 7).map(row => (
+          <li key={row.id} className="relative ps-6">
+            <span className="absolute start-0 top-1.5 w-[15px] h-[15px] rounded-full bg-white dark:bg-[#0d121f] border-2 border-blue-500" />
+            <p className="text-xs text-slate-700 dark:text-slate-200 leading-5"><span className="font-bold">{row.user || 'سیستم'}</span> {activityLabel(row.action)}{row.targetName ? <span className="text-slate-500 dark:text-slate-400"> · {row.targetName}</span> : null}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">{timeAgo(row.timestamp)}</p>
+          </li>
+        ))}
+      </ol>
+    )}
+  </Panel>
+);
 
 export const DashboardView: React.FC = () => {
-  const { 
-    projects, 
-    tasks, 
-    teamMembers,
-    updateTaskStatus,
-    setSelectedProject,
-    setActiveTab,
-    selectedProject,
-    deleteProject,
-    setActiveSubTab,
-    locale,
-    currentUser,
-    getRoleLabel,
-    openNewProjectModal
-  } = useProject();
+  const { projects, tasks, teamMembers, selectedProject, setSelectedProject, deleteProject, setActiveTab, setActiveSubTab, currentUser, openNewProjectModal, updateTaskStatus, activityLogs, userRole } = useProject();
+  const [range, setRange] = useState<'7' | '30'>('7');
+  const { data } = useInsights<Overview>('overview', Number(range));
+  const [pendingApprovals, setPendingApprovals] = useState(0);
+  const canCreateProject = ['OWNER', 'ADMIN', 'MANAGER', 'PROJECT_MANAGER'].includes(String(userRole).toUpperCase());
 
-  const isRtl = locale === 'fa';
+  useEffect(() => {
+    if (currentUser?.systemRole !== 'ADMIN') return;
+    apiFetch('/api/owner/approval-stats').then(response => response.json()).then(stats => { if (typeof stats?.pendingCount === 'number') setPendingApprovals(stats.pendingCount); }).catch(() => undefined);
+  }, [currentUser?.systemRole]);
 
-  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
+  const names = useMemo(() => new Map<string, string>((teamMembers || []).map(member => [member.id, member.name])), [teamMembers]);
+  const go = (tab: string, sub: string) => { setActiveTab(tab); setActiveSubTab(sub); };
+  const openProject = (id: string) => { const project = projects.find(row => row.id === id); if (project) setSelectedProject(project); go('projects', 'overview'); };
+  const firstName = String(currentUser?.name || '').trim().split(/\s+/)[0] || '';
+  const today = new Date();
 
-  React.useEffect(() => {
-    if (currentUser?.systemRole === 'ADMIN') {
-      const token = localStorage.getItem('token');
-      if (token) {
-        apiFetch('/api/owner/approval-stats', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        .then(res => {
-          if (res.ok) return res.json();
-        })
-        .then(data => {
-          if (data && typeof data.pendingCount === 'number') {
-            setPendingApprovalsCount(data.pendingCount);
-          }
-        })
-        .catch(() => {
-          // Silently handle fetch failure
-        });
-      }
-    }
-  }, [currentUser]);
-  
-  // Drag-and-Drop state for bottom dashboard cards
-  const STORAGE_KEY = 'dashboard_card_order_v8';
-  const DEFAULT_CARD_ORDER = useMemo(() => [
-    'quick_projects',
-    'team_workload',
-    'blockers_review',
-    'tasks_priority',
-    'activity',
-    'realtime_sync',
-    'weekly_timesheet'
-  ], []);
-
-  const [cardOrder, setCardOrder] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === 7 && parsed[0] === 'quick_projects') {
-          return parsed;
-        }
-      }
-    } catch {
-      // Fallback to default
-    }
-    return [
-      'quick_projects',
-      'team_workload',
-      'blockers_review',
-      'tasks_priority',
-      'activity',
-      'realtime_sync',
-      'weekly_timesheet'
-    ];
-  });
-
-  const [isLayoutEditable, setIsLayoutEditable] = useState<boolean>(false);
-  const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
-  const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
-
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    e.dataTransfer.setData('text/plain', id);
-    e.dataTransfer.effectAllowed = 'move';
-    setDraggedCardId(id);
-  };
-
-  const handleDragOver = (e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (dragOverCardId !== id) {
-      setDragOverCardId(id);
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent, id: string) => {
-    if (dragOverCardId === id) {
-      setDragOverCardId(null);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    const sourceId = e.dataTransfer.getData('text/plain') || draggedCardId;
-    if (!sourceId || sourceId === targetId) {
-      setDraggedCardId(null);
-      setDragOverCardId(null);
-      return;
-    }
-
-    const newOrder = [...cardOrder];
-    const sourceIndex = newOrder.indexOf(sourceId);
-    const targetIndex = newOrder.indexOf(targetId);
-
-    if (sourceIndex !== -1 && targetIndex !== -1) {
-      newOrder.splice(sourceIndex, 1);
-      newOrder.splice(targetIndex, 0, sourceId);
-      setCardOrder(newOrder);
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newOrder));
-      } catch {
-        // Silently handle storage error
-      }
-    }
-
-    setDraggedCardId(null);
-    setDragOverCardId(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedCardId(null);
-    setDragOverCardId(null);
-  };
-
-  const handleResetCardOrder = () => {
-    setCardOrder(DEFAULT_CARD_ORDER);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem('dashboard_bottom_card_order');
-    } catch {
-      // Silently handle storage error
-    }
-  };
-
-  const safeProjects = projects || [];
-  const safeTasks = tasks || [];
-  const hasProjects = safeProjects.length > 0 && selectedProject?.id && selectedProject.id !== 'no_project';
-
-  // Stats calculations
-  const activeProjectsCount = safeProjects.filter(p => p && p.status === 'active').length;
-  const criticalTasksCount = safeTasks.filter(t => t && ['high', 'critical'].includes(priorityKey(t.priority)) && t.status !== 'completed').length;
-  const totalTasksCount = safeTasks.length;
-  const completedTasksCount = safeTasks.filter(t => t && t.status === 'completed').length;
-
-  const completionRate = totalTasksCount > 0
-    ? Math.round((completedTasksCount / totalTasksCount) * 100)
-    : 0;
-
-  // Map of all bottom reorderable dashboard cards
-  const cardsMap: Record<string, { colSpanClass: string; render: () => React.ReactNode }> = useMemo(() => {
-    const actCard = {
-      colSpanClass: "lg:col-span-1 col-span-1",
-      render: () => (
-        <>
-          <div className="flex justify-between items-start">
-            <h3 className="text-[11px] font-black text-text-secondary dark:text-slate-400 uppercase tracking-wider">
-              {isRtl ? 'پیشرفت وظایف فضای کاری' : 'Task completion'}
-            </h3>
-            <div className="flex items-center gap-1.5">
-              <div className="p-1.5 bg-brand-accent/10 text-brand-accent rounded-lg"><Activity size={13} /></div>
-              <div className={`p-1 transition-all duration-200 ${isLayoutEditable ? 'opacity-100 pointer-events-auto text-amber-500 dark:text-amber-400 cursor-grab active:cursor-grabbing hover:scale-110' : 'opacity-0 pointer-events-none text-text-secondary/40'}`} title={isRtl ? 'جابه‌جایی کارت' : 'Drag to reorder'}>
-                <GripVertical size={14} />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center justify-center py-2 relative">
-            <div className="relative w-28 h-28 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="var(--border-primary)" strokeWidth="8" fill="transparent" />
-                <circle cx="50" cy="50" r="40" stroke="var(--brand-accent)" strokeWidth="8" strokeDasharray={`${2 * Math.PI * 40}`} strokeDashoffset={`${2 * Math.PI * 40 * (1 - completionRate / 100)}`} strokeLinecap="round" fill="transparent" className="transition-all duration-700" />
-              </svg>
-              <div className="absolute flex flex-col items-center">
-                <span className="text-xl font-black text-text-primary dark:text-white">{isRtl ? `${toPersianDigits(completionRate)}٪` : `${completionRate}%`}</span>
-                <span className="text-[9px] font-bold text-text-secondary dark:text-slate-400">{isRtl ? 'انجام‌شده' : 'Done'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center text-[10px] font-bold text-text-secondary dark:text-slate-400 border-t border-border-primary/50 dark:border-white/5 pt-2">
-            <span>{isRtl ? 'کل وظایف:' : 'Total Tasks:'} <span className="text-text-primary dark:text-white">{isRtl ? toPersianDigits(totalTasksCount) : totalTasksCount}</span></span>
-            <span>{isRtl ? 'انجام شده:' : 'Done:'} <span className="text-brand-accent">{isRtl ? toPersianDigits(completedTasksCount) : completedTasksCount}</span></span>
-          </div>
-        </>
-      )
-    };
-
-    const teamWorkloadCard = {
-      colSpanClass: "lg:col-span-2 col-span-1",
-      render: () => (
-        <TeamWorkloadBalanceWidget 
-          borderless={true}
-        />
-      )
-    };
-
-    const projectsCard = {
-      colSpanClass: "lg:col-span-1 col-span-1",
-      render: () => (
-        <>
-          <div className="flex justify-between items-center">
-            <h3 className="text-[11px] font-black text-text-secondary dark:text-slate-400 uppercase tracking-wider">
-              {isRtl ? 'پروژه‌های فعال با دسترسی سریع' : 'Quick Projects List'}
-            </h3>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] bg-hover-overlay dark:bg-white/5 px-2.5 py-1 rounded-lg text-text-primary dark:text-white font-mono font-black">{isRtl ? `${toPersianDigits(projects.length)} پروژه` : `${projects.length} projects`}</span>
-              <div className={`p-1 transition-all duration-200 ${isLayoutEditable ? 'opacity-100 pointer-events-auto text-amber-500 dark:text-amber-400 cursor-grab active:cursor-grabbing hover:scale-110' : 'opacity-0 pointer-events-none text-text-secondary/40'}`} title={isRtl ? 'جابه‌جایی کارت' : 'Drag to reorder'}>
-                <GripVertical size={14} />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3 max-h-40 overflow-y-auto ps-1 scrollbar-thin">
-            {projects.slice(0, 3).map(p => {
-              const isCurrent = p.id === selectedProject.id;
-              const progressPct = p.progress || 0;
-              
-              return (
-                <ProjectCard 
-                  key={p.id}
-                  title={p.title}
-                  subtitle={p.description}
-                  progress={progressPct}
-                  isActive={isCurrent}
-                  onClick={() => setSelectedProject(p)}
-                />
-              );
-            })}
-          </div>
-
-          <div className="border-t border-border-primary/50 dark:border-white/5 pt-2 flex justify-between items-center text-[10px] font-bold text-text-secondary dark:text-slate-400">
-            <span>{isRtl ? 'جهت نمایش آمار روی پروژه کلیک کنید' : 'Click to select project'}</span>
-            <button onClick={() => setActiveTab('projects')} className="text-brand-accent hover:underline flex items-center gap-0.5">
-              <span>{isRtl ? 'مدیریت تمام پروژه‌ها' : 'Manage Projects'}</span>
-              <ArrowUpRight size={11} />
-            </button>
-          </div>
-        </>
-      )
-    };
-
-    const tasksCard = {
-      colSpanClass: "lg:col-span-1 col-span-1",
-      render: () => (
-        <>
-          <div className="flex justify-between items-center">
-            <h3 className="text-[11px] font-black text-text-secondary dark:text-slate-400 uppercase tracking-wider">
-              {isRtl ? 'وظایف باز این پروژه' : 'Open tasks in this project'}
-            </h3>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/15 px-2 py-0.5 rounded font-black font-mono">
-                {isRtl ? `${toPersianDigits(criticalTasksCount)} اولویت بالا` : `${criticalTasksCount} high priority`}
-              </span>
-              <div className={`p-1 transition-all duration-200 ${isLayoutEditable ? 'opacity-100 pointer-events-auto text-amber-500 dark:text-amber-400 cursor-grab active:cursor-grabbing hover:scale-110' : 'opacity-0 pointer-events-none text-text-secondary/40'}`} title={isRtl ? 'جابه‌جایی کارت' : 'Drag to reorder'}>
-                <GripVertical size={14} />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2.5 max-h-40 overflow-y-auto ps-1 scrollbar-thin">
-            {safeTasks.filter(t => t && t.projectId === selectedProject.id && t.status !== 'completed').slice(0, 3).map(task => (
-              <TaskCard 
-                key={task.id}
-                title={task.title}
-                priority={task.priority as any}
-                assignedTo={task.assignedTo}
-                onComplete={() => updateTaskStatus(task.id, 'completed')}
-              />
-            ))}
-
-            {safeTasks.filter(t => t && t.projectId === selectedProject.id && t.status !== 'completed').length === 0 && (
-              <div className="py-6 text-center text-xs text-text-secondary dark:text-slate-400">
-                {safeTasks.some(t => t && t.projectId === selectedProject.id)
-                  ? `🎉 ${isRtl ? 'همه وظایف باز این پروژه انجام شده است.' : 'All open tasks of this project are done.'}`
-                  : (isRtl ? 'هنوز وظیفه‌ای برای این پروژه ثبت نشده است.' : 'No tasks have been added to this project yet.')}
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-border-primary/50 dark:border-white/5 pt-2 flex justify-between items-center text-[10px] font-bold text-text-secondary dark:text-slate-400">
-            <span>{isRtl ? 'برای بستن کار، دکمه تیک را بزنید' : 'Toggle checkbox to complete tasks'}</span>
-            <button onClick={() => setActiveTab('tasks')} className="text-brand-accent hover:underline flex items-center gap-0.5">
-              <span>{isRtl ? 'برو به برد وظایف' : 'Task Board'}</span>
-              <ArrowUpRight size={11} />
-            </button>
-          </div>
-        </>
-      )
-    };
-
-    const syncCard = {
-      colSpanClass: "lg:col-span-1 col-span-1",
-      render: () => (
-        <>
-          <div className="flex justify-between items-center">
-            <h3 className="text-[11px] font-black text-text-secondary dark:text-slate-400 uppercase tracking-wider">
-              {isRtl ? 'اعضای تیم' : 'Team members'}
-            </h3>
-            <div className="flex items-center gap-1.5">
-              <div className={`p-1 transition-all duration-200 ${isLayoutEditable ? 'opacity-100 pointer-events-auto text-amber-500 dark:text-amber-400 cursor-grab active:cursor-grabbing hover:scale-110' : 'opacity-0 pointer-events-none text-text-secondary/40'}`} title={isRtl ? 'جابه‌جایی کارت' : 'Drag to reorder'}>
-                <GripVertical size={14} />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3 py-1">
-            {teamMembers.length === 0 && (
-              <p className="py-4 text-center text-xs text-text-secondary dark:text-slate-400">{isRtl ? 'هنوز عضوی به این فضای کاری اضافه نشده است.' : 'No members yet.'}</p>
-            )}
-            {teamMembers.slice(0, 3).map(m => (
-              <TeamCard
-                key={m.id}
-                name={m.name}
-                role={getRoleLabel(m.role)}
-                isOnline={m.status === 'online'}
-                taskCount={tasksAssignedTo(safeTasks, m.id).filter(t => t.status !== 'completed' && t.status !== 'cancelled').length}
-              />
-            ))}
-          </div>
-
-          <div className="border-t border-border-primary/50 dark:border-white/5 pt-2 flex justify-between items-center text-[10px] font-bold text-text-secondary dark:text-slate-400">
-            <span>{isRtl ? `${toPersianDigits(teamMembers.length)} عضو در فضای کاری` : `${teamMembers.length} members`}</span>
-            <button onClick={() => { setActiveTab('projects'); setActiveSubTab('team'); }} className="text-brand-accent hover:underline">
-              {isRtl ? 'همهٔ اعضا' : 'View Team'}
-            </button>
-          </div>
-        </>
-      )
-    };
-
-    const blockersReviewCard = {
-      colSpanClass: "lg:col-span-2 col-span-1",
-      render: () => (
-        <ProjectBlockersReviewWidget 
-          borderless={true}
-          onNavigateToTasks={() => {
-            setActiveTab('tasks');
-            setActiveSubTab('kanban');
-          }}
-        />
-      )
-    };
-
-    const timesheetCard = {
-      colSpanClass: "lg:col-span-1 col-span-1",
-      render: () => (
-        <WeeklyTimesheetWidget 
-          borderless={true}
-        />
-      )
-    };
-
-    return {
-      blockers_review: blockersReviewCard,
-      review_pipeline: blockersReviewCard,
-      activity: actCard,
-      productivity_score: actCard,
-      team_workload: teamWorkloadCard,
-      system_health: teamWorkloadCard,
-      wp_diagnostics: teamWorkloadCard,
-      quick_projects: projectsCard,
-      workspace_projects: projectsCard,
-      tasks_priority: tasksCard,
-      priority_checklist: tasksCard,
-      realtime_sync: syncCard,
-      active_specialists: syncCard,
-      weekly_timesheet: timesheetCard,
-      kpi_summary: timesheetCard,
-      operational_actions: timesheetCard,
-    };
-  }, [
-    completionRate, 
-    totalTasksCount, 
-    completedTasksCount, 
-    selectedProject, 
-    projects, 
-    tasks, 
-    criticalTasksCount, 
-    teamMembers,
-    getRoleLabel,
-    isRtl,
-    isLayoutEditable,
-    updateTaskStatus,
-    setSelectedProject,
-    setActiveTab,
-    setActiveSubTab
-  ]);
-
-  if (!hasProjects) {
+  if (!projects.length) {
     return (
-      <div className="space-y-6 text-start w-full" style={{ direction: isRtl ? 'rtl' : 'ltr' }}>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-border-primary/50">
-          <div>
-            <h2 className="text-xl font-black text-text-primary dark:text-white flex items-center gap-2">
-              <Zap className="text-brand-accent animate-pulse" size={20} />
-              {isRtl ? 'میز فرمان و داشبورد مدیریتی' : 'Operations Command & Executive Dashboard'}
-            </h2>
-            <p className="text-xs text-text-secondary dark:text-slate-400 mt-1">
-              {isRtl ? 'پایش زنده پیشرفت طرح‌ها، تخصیص استراتژیک وظایف و ارزیابی بهره‌وری دپارتمان‌های سازمانی' : 'Real-time monitoring of initiatives, strategic task allocation, and departmental productivity assessment'}
-            </p>
+      <div className="w-full space-y-6 text-start">
+        <PageHeader eyebrow={formatJalaliDate(today)} title={firstName ? `خوش آمدید، ${firstName}` : 'خوش آمدید'} description="این فضای کاری هنوز پروژه‌ای ندارد. با ساخت اولین پروژه، وظایف، تیم‌ها و گزارش‌ها از همین‌جا قابل پیگیری می‌شوند." />
+        <Panel className="max-w-2xl">
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              { icon: FolderKanban, title: 'پروژه بسازید', text: 'عنوان، موعد و تیم مسئول را مشخص کنید.' },
+              { icon: ClipboardList, title: 'وظایف را بچینید', text: 'کارها را به اعضا بسپارید و سررسید بگذارید.' },
+              { icon: ShieldCheck, title: 'پیشرفت را ببینید', text: 'عقب‌افتادگی‌ها و موانع خودکار اینجا می‌آیند.' },
+            ].map(step => (
+              <div key={step.title} className="space-y-2">
+                <span className="w-9 h-9 rounded-xl bg-[#E8F1FF] dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 inline-flex items-center justify-center"><step.icon size={18} /></span>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{step.title}</p>
+                <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">{step.text}</p>
+              </div>
+            ))}
           </div>
-          <button 
-            onClick={openNewProjectModal}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl border border-blue-400/20 shadow-xs hover:shadow-md hover:shadow-blue-500/15 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 text-sm cursor-pointer shrink-0"
-          >
-            <Plus size={16} />
-            <span>{isRtl ? '+ ثبت اولین پروژه' : '+ Register First Project'}</span>
-          </button>
-        </div>
-
-        <div className="py-16 bg-white dark:bg-[#111322] border border-gray-200/70 dark:border-[#1E2235] rounded-2xl shadow-sm dark:shadow-md flex flex-col items-center justify-center text-center p-8 max-w-lg mx-auto">
-          <div className="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-600 mb-4 animate-bounce">
-            <LucideLineChart size={28} />
-          </div>
-          <h3 className="text-sm font-black text-text-primary dark:text-white">
-            {isRtl ? 'هنوز پروژه‌ای در این فضای کاری تعریف نشده است' : 'No projects registered in this workspace yet'}
-          </h3>
-          <p className="text-xs text-text-secondary dark:text-slate-450 max-w-sm leading-relaxed mt-2">
-            {isRtl ? 'جهت برنامه‌ریزی هدفمند، زمان‌بندی وظایف بین اعضای تیم و دریافت گزارش‌های تحلیلی، اولین پروژه سازمانی خود را ثبت کنید.' : 'Create your first enterprise project to schedule tasks, assign teams, and monitor organizational performance.'}
-          </p>
-          <button
-            onClick={openNewProjectModal}
-            className="mt-5 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl border border-blue-400/20 shadow-xs hover:shadow-md hover:shadow-blue-500/15 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 text-sm cursor-pointer"
-          >
-            <Plus size={16} />
-            <span>{isRtl ? 'ثبت پروژه جدید' : 'New Project'}</span>
-          </button>
-        </div>
+          {canCreateProject && <PrimaryButton icon={Plus} onClick={openNewProjectModal} className="mt-6">ثبت اولین پروژه</PrimaryButton>}
+        </Panel>
       </div>
     );
   }
 
+  const k = data?.kpis;
+  const rangeLabel = range === '7' ? 'هفت روز' : 'سی روز';
   return (
-    <div className="space-y-6 text-start w-full" style={{ direction: isRtl ? 'rtl' : 'ltr' }}>
-      
-      {/* 1. TOP HEADER BRANDING & ACTION BLOCK */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-5 border-b border-border-primary/50 dark:border-white/5 shrink-0">
-        <div>
-          <div className="flex items-center gap-2 justify-start">
-            <h2 className="text-lg font-black text-text-primary dark:text-white tracking-tight flex items-center gap-2">
-              <Sparkles size={18} className="text-brand-accent" />
-              {isRtl ? 'میز فرمان و داشبورد مدیریتی' : 'Operations Command & Executive Dashboard'}
-            </h2>
-            <span className="text-[10px] font-black bg-brand-accent/15 text-brand-accent px-2.5 py-0.5 rounded-full border border-brand-accent/20">
-              {selectedProject.title}
-            </span>
+    <div className="w-full space-y-6 text-start">
+      <PageHeader eyebrow={formatJalaliDate(today)} title={firstName ? `سلام، ${firstName}` : 'میز کار'}
+        description={k ? `${num(k.openTasks)} کار باز در فضای کاری؛ ${num(k.overdueTasks)} مورد از موعد گذشته و ${num(k.dueThisWeek)} مورد سررسید این هفته است.` : 'خلاصهٔ وضعیت پروژه‌ها و کارهای شما.'}
+        actions={<>
+          <Segmented label="بازهٔ زمانی" value={range} onChange={setRange} options={[{ value: '7', label: '۷ روز' }, { value: '30', label: '۳۰ روز' }]} />
+          <div className="w-52">
+            <CustomSelect options={projects.map(project => ({ value: project.id, label: project.title }))} value={selectedProject?.id || ''}
+              onChange={value => { const project = projects.find(row => row.id === value); if (project) setSelectedProject(project); }}
+              onDeleteOption={canCreateProject ? (value => { const project = projects.find(row => row.id === value); if (project && window.confirm(`آیا از حذف پروژه "${project.title}" اطمینان دارید؟`)) deleteProject(value); }) : undefined}
+              deleteTooltip="حذف پروژه" buttonClassName="text-xs font-bold py-2" />
           </div>
-          <p className="text-xs text-text-secondary dark:text-slate-400 mt-1.5 leading-relaxed text-start">
-            {isRtl ? 'پایش زنده پیشرفت طرح‌ها، تخصیص استراتژیک وظایف و ارزیابی بهره‌وری دپارتمان‌های سازمانی' : 'Real-time monitoring of initiatives, strategic task allocation, and departmental productivity assessment'}
-          </p>
-        </div>
+          {canCreateProject && <PrimaryButton icon={Plus} onClick={openNewProjectModal}>پروژهٔ جدید</PrimaryButton>}
+        </>} />
 
-        <div className="flex items-center gap-2.5 self-stretch lg:self-auto justify-end w-full sm:w-auto">
-          <div className="flex-1 min-w-0 sm:flex-none sm:w-64">
-            <CustomSelect
-              options={projects.map(p => ({ value: p.id, label: p.title }))}
-              value={selectedProject.id}
-              onChange={(val) => {
-                const matched = projects.find(p => p.id === val);
-                if (matched) setSelectedProject(matched);
-              }}
-              onDeleteOption={(val, e) => {
-                const matched = projects.find(p => p.id === val);
-                const title = matched ? matched.title : '';
-                if (window.confirm(isRtl ? `آیا از حذف پروژه "${title}" اطمینان دارید؟` : `Are you sure you want to delete project "${title}"?`)) {
-                  deleteProject(val);
-                }
-              }}
-              deleteTooltip={isRtl ? "حذف پروژه" : "Delete project"}
-              buttonClassName="text-xs sm:text-sm font-extrabold shadow-xs py-2"
-            />
-          </div>
-
-          <button 
-            onClick={openNewProjectModal}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl border border-blue-400/20 shadow-xs hover:shadow-md hover:shadow-blue-500/15 transition-all duration-200 active:scale-[0.98] flex items-center justify-center gap-2 text-sm cursor-pointer shrink-0"
-          >
-            <Plus size={16} />
-            <span>{isRtl ? 'ثبت پروژه جدید' : 'New Project'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* SYSTEM OWNER PENDING REGISTRATIONS ALERT BANNER */}
-      {currentUser?.systemRole === 'ADMIN' && pendingApprovalsCount > 0 && (
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white p-5 rounded-[24px] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg border border-amber-500/30 animate-pulse text-start">
+      {currentUser?.systemRole === 'ADMIN' && pendingApprovals > 0 && (
+        <div role="status" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10">
           <div className="flex items-start gap-3">
-            <div className="p-3 bg-white/10 rounded-2xl">
-              <Users size={20} className="text-amber-100" />
-            </div>
+            <Users size={18} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <div>
-              <h4 className="font-black text-sm">درخواست‌های عضویت جدید در انتظار تایید صلاحیت</h4>
-              <p className="text-xs text-amber-100 mt-1">تعداد {pendingApprovalsCount} کاربر جدید ثبت‌نام کرده‌اند و در انتظار بررسی مدرک، تایید هویت و تخصیص نقش هستند.</p>
+              <p className="text-sm font-bold text-amber-900 dark:text-amber-200">{`${num(pendingApprovals)} درخواست عضویت منتظر بررسی است`}</p>
+              <p className="text-xs text-amber-800/80 dark:text-amber-200/70 mt-0.5">هویت و نقش اعضای جدید را پیش از دسترسی به فضای کاری تأیید کنید.</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setActiveTab('approvals');
-              setActiveSubTab('approval_queue');
-            }}
-            className="px-5 py-2.5 bg-white text-amber-900 font-black text-xs rounded-xl hover:bg-amber-50 transition-all cursor-pointer shadow-md shrink-0 dark:bg-slate-900"
-          >
-            ورود به مرکز تایید صلاحیت پرسنل
-          </button>
+          <SecondaryButton onClick={() => go('approvals', 'approval_queue')}>بررسی درخواست‌ها</SecondaryButton>
         </div>
       )}
 
-      {/* 2. TOP CHARTS ROW */}
-      <PremiumAnalytics 
-        tasks={tasks}
-        projects={projects}
-        selectedProject={selectedProject}
-        isRtl={isRtl}
-      />
-
-      {/* 3. BOTTOM METRIC CARDS SECTION (INTERACTIVE DRAGGABLE REORDERABLE GRID) */}
-      <div className="space-y-4 pt-2">
-        <div className="flex items-center justify-between w-full mb-4 pb-2 border-b border-slate-200/60 dark:border-slate-800 font-['Vazirmatn']">
-          
-          {/* RTL Right Side: Section Title */}
-          <h3 className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-100">
-            {isRtl ? 'کارت‌ها و ویجت‌های عملیاتی' : 'Operational Metrics & Widgets'}
-          </h3>
-
-          {/* RTL Left Side: Control Bar & Helper Text */}
-          <div className="flex items-center gap-3">
-            {/* Helper Guidance Badge */}
-            {!isLayoutEditable ? (
-              <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-                {isRtl ? 'جهت تغییر چیدمان دکمه ویرایش را بزنید' : 'Click edit to customize layout'}
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 text-xs font-semibold border border-amber-200/60 dark:border-amber-800/60 animate-pulse">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                {isRtl ? 'حالت جابه‌جایی فعال است (کارت‌ها را بکشید)' : 'Drag mode active (drag cards)'}
-              </span>
-            )}
-
-            {/* Primary Toggle Button */}
-            <button
-              type="button"
-              onClick={() => setIsLayoutEditable(!isLayoutEditable)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 shadow-2xs cursor-pointer ${
-                !isLayoutEditable
-                  ? 'bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20'
-              }`}
-            >
-              {!isLayoutEditable ? (
-                <>
-                  <GripVertical size={14} />
-                  <span>{isRtl ? 'تغییر چیدمان' : 'Edit Layout'}</span>
-                </>
-              ) : (
-                <>
-                  <Check size={14} />
-                  <span>{isRtl ? 'ذخیره چیدمان' : 'Save Layout'}</span>
-                </>
-              )}
-            </button>
-
-            {/* Reset Layout button */}
-            {JSON.stringify(cardOrder) !== JSON.stringify(DEFAULT_CARD_ORDER) && (
-              <button
-                type="button"
-                onClick={handleResetCardOrder}
-                className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition-colors bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 rounded-xl shadow-2xs cursor-pointer"
-                title={isRtl ? 'بازنشانی چیدمان ویجت‌ها' : 'Reset widget layout'}
-              >
-                <RotateCcw size={13} />
-                <span className="hidden sm:inline">{isRtl ? 'بازنشانی' : 'Reset'}</span>
-              </button>
-            )}
-          </div>
-
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-          {cardOrder.map((cardId) => {
-            const cardDef = cardsMap[cardId];
-            if (!cardDef) return null;
-
-            const isDragging = draggedCardId === cardId;
-            const isDropTarget = dragOverCardId === cardId && draggedCardId !== cardId;
-
-            return (
-              <div
-                key={cardId}
-                draggable={isLayoutEditable}
-                onDragStart={(e) => isLayoutEditable && handleDragStart(e, cardId)}
-                onDragOver={(e) => isLayoutEditable && handleDragOver(e, cardId)}
-                onDragLeave={(e) => isLayoutEditable && handleDragLeave(e, cardId)}
-                onDrop={(e) => isLayoutEditable && handleDrop(e, cardId)}
-                onDragEnd={handleDragEnd}
-                className={`${cardDef.colSpanClass} bg-surface-primary dark:bg-[#1A1A24] border border-slate-200/80 dark:border-slate-800/80 rounded-[22px] p-6 transition-all duration-300 shadow-sm flex flex-col justify-between space-y-4 group relative select-none font-['Vazirmatn'] ${
-                  isDragging ? 'opacity-40 scale-[0.98] shadow-2xl ring-2 ring-brand-accent/50 z-20' : ''
-                } ${
-                  isDropTarget ? 'ring-2 ring-dashed ring-amber-500 bg-amber-500/5 dark:bg-amber-500/10 scale-[1.01] z-10' : ''
-                } ${
-                  isLayoutEditable && !isDragging && !isDropTarget
-                    ? 'border-dashed border-amber-400/60 dark:border-amber-500/50 ring-1 ring-amber-400/20 dark:ring-amber-500/20 hover:border-amber-500 shadow-md cursor-grab active:cursor-grabbing'
-                    : !isDragging && !isDropTarget
-                    ? 'border-border-primary/85 dark:border-white/5 hover:border-brand-accent/25 hover:shadow-md'
-                    : ''
-                }`}
-              >
-                {cardDef.render()}
-              </div>
-            );
-          })}
-        </div>
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatTile tone="blue" icon={FolderKanban} label="پروژه‌های فعال" value={k ? num(k.activeProjects) : '…'} hint={k ? `از ${num(k.totalProjects)} پروژهٔ فضای کاری` : undefined} onClick={() => go('projects', 'overview')} />
+        <StatTile tone="slate" icon={Inbox} label="کارهای باز" value={k ? num(k.openTasks) : '…'} delta={k ? { current: k.createdInRange, previous: k.createdPrevRange, goodWhenUp: false } : null} hint={k ? `${num(k.createdInRange)} کار تازه در ${rangeLabel} اخیر` : undefined} onClick={() => go('tasks', 'kanban_board')} />
+        <StatTile tone="rose" icon={AlertTriangle} label="عقب‌افتاده" value={k ? num(k.overdueTasks) : '…'} hint={k ? `${num(k.dueThisWeek)} کار سررسید این هفته` : undefined} onClick={() => go('dept_tech', 'bottlenecks')} />
+        <StatTile tone="emerald" icon={CheckCircle2} label="تکمیل‌شده" value={k ? num(k.completedInRange) : '…'} delta={k ? { current: k.completedInRange, previous: k.completedPrevRange } : null} hint={k ? (k.onTimeRate === null ? `در ${rangeLabel} اخیر` : `${percent(k.onTimeRate)} به‌موقع در ${rangeLabel} اخیر`) : undefined} onClick={() => go('dept_tech', 'analytics')} />
       </div>
+
+      <PremiumAnalytics tasks={tasks} projects={projects} selectedProject={selectedProject} isRtl={!isEnglish()} />
+
+      {data && (
+        <div className="grid grid-cols-12 gap-6">
+          <MyWork data={data} onOpen={() => go('personal_tasks', 'my_tasks')} onReview={(task, approve) => updateTaskStatus(task.id, approve ? 'completed' : 'inprogress')} />
+          <ProjectHealth rows={data.projects} names={names} onOpen={openProject} />
+        </div>
+      )}
+
+      <div className="grid grid-cols-12 gap-6">
+        <ActivityFeed rows={activityLogs || []} />
+        <div className="col-span-12 lg:col-span-6 xl:col-span-4 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0d121f] p-5"><TeamWorkloadBalanceWidget borderless /></div>
+        <div className="col-span-12 xl:col-span-4 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0d121f] p-5"><WeeklyTimesheetWidget borderless /></div>
+      </div>
+
+      {k && (
+        <p className="flex items-center gap-1.5 text-[11px] text-slate-400"><Clock size={12} />{`${num(k.hoursInRange, 1)} ساعت کار در ${rangeLabel} اخیر ثبت شده است.`}<CalendarClock size={12} className="ms-2" />{`داده‌ها تا ${formatJalaliDate(today)}`}</p>
+      )}
     </div>
   );
 };
+
+export default DashboardView;

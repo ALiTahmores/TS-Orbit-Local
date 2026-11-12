@@ -1,281 +1,144 @@
-import { formatJalaliDateTime } from '../lib/dates';
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Bell, BellOff, CheckCheck, ClipboardList, FolderKanban, MessageSquare, MessagesSquare, Settings2, Trash2, UserPlus } from 'lucide-react';
 import { useProject } from '../context/ProjectContext';
-import { 
-  Bell, 
-  BellOff, 
-  CheckCheck, 
-  CheckCircle2, 
-  PlusCircle, 
-  Trash2, 
-  AlertTriangle, 
-  FileText, 
-  FolderGit, 
-  ShieldCheck, 
-  Info, 
-  Check 
-} from 'lucide-react';
-import { Tooltip } from './common/Tooltip';
-import { AppNotification } from '../types';
+import { apiFetch } from '../lib/api';
+import { formatJalaliDate, localISODate } from '../lib/dates';
+import { cn } from '../lib/utils';
+import { EmptyHint, PageHeader, Panel, SecondaryButton, Segmented, num, timeAgo } from './ui/dashboard-kit';
 
+type Category = 'task' | 'chat' | 'feedback' | 'system';
+// Kinds the server sends, grouped for the filter; older kinds keep their place.
+const categoryOf = (type: string): Category =>
+  /^task|deadline|approval/.test(type) ? 'task' : /^chat/.test(type) ? 'chat' : /feedback|project/.test(type) ? 'feedback' : 'system';
+const kinds: Record<string, { label: string; icon: React.ElementType; tone: string }> = {
+  'task.assigned': { label: 'واگذاری وظیفه', icon: ClipboardList, tone: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' },
+  'chat.message': { label: 'پیام گفتگو', icon: MessageSquare, tone: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' },
+  'chat.request': { label: 'درخواست ارتباط', icon: UserPlus, tone: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' },
+  'chat.request_response': { label: 'پاسخ درخواست ارتباط', icon: MessagesSquare, tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' },
+  client_feedback: { label: 'بازخورد کارفرما', icon: FolderKanban, tone: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' },
+};
+const kindOf = (type: string) => kinds[type] || kinds[{ task_assigned: 'task.assigned', project_updated: 'client_feedback' }[type] || ''] || { label: 'اعلان سیستم', icon: Bell, tone: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' };
+const DAY = 86_400_000;
+
+/** The member's inbox: what happened, where, and one click to go there. */
 export const NotificationsView: React.FC = () => {
-  const { 
-    notifications, 
-    markNotificationAsRead, 
-    markAllNotificationsAsRead, 
-    clearNotifications, collaborationError, locale 
-  } = useProject();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, clearNotifications, collaborationError, setActiveTab, setActiveSubTab } = useProject();
+  const [filter, setFilter] = useState<'all' | 'unread' | Category>('all');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [settings, setSettings] = useState<{ mutedTypes: string[]; types: string[] } | null>(null);
+  const [saving, setSaving] = useState('');
 
-  const isRtl = locale === 'fa';
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
-  const [error,setError]=useState(''),[busy,setBusy]=useState(false);
-  const act=async(action:()=>Promise<void>)=>{setBusy(true);setError('');try{await action();}catch(error){setError(error instanceof Error?error.message:'عملیات انجام نشد.');}finally{setBusy(false);}};
+  useEffect(() => { apiFetch('/api/notifications/preferences').then(response => response.json()).then(setSettings).catch(() => undefined); }, []);
 
-  const unreadCount = useMemo(() => {
-    return notifications.filter(n => !n.read).length;
-  }, [notifications]);
-
-  const filteredNotifications = useMemo(() => {
-    if (filter === 'unread') {
-      return notifications.filter(n => !n.read);
-    }
-    return notifications;
-  }, [notifications, filter]);
-
-  const getNotificationIcon = (type: AppNotification['type']) => {
-    switch (type) {
-      case 'task_assigned':
-        return <PlusCircle size={18} className="text-blue-600 dark:text-blue-400" />;
-      case 'task_completed':
-        return <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400" />;
-      case 'deadline_warning':
-        return <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400" />;
-      case 'approval_needed':
-        return <ShieldCheck size={18} className="text-indigo-600 dark:text-indigo-400" />;
-      case 'file_uploaded':
-        return <FileText size={18} className="text-cyan-600 dark:text-cyan-400" />;
-      case 'project_updated':
-        return <FolderGit size={18} className="text-purple-600 dark:text-purple-400" />;
-      default:
-        return <Bell size={18} className="text-slate-600 dark:text-slate-400" />;
-    }
+  const act = async (action: () => Promise<void>) => {
+    setBusy(true); setError('');
+    try { await action(); } catch (failure) { setError(failure instanceof Error ? failure.message : 'عملیات انجام نشد.'); } finally { setBusy(false); }
+  };
+  const toggleMute = async (type: string) => {
+    if (!settings) return;
+    const mutedTypes = settings.mutedTypes.includes(type) ? settings.mutedTypes.filter(item => item !== type) : [...settings.mutedTypes, type];
+    setSaving(type);
+    try {
+      const response = await apiFetch('/api/notifications/preferences', { method: 'PUT', body: JSON.stringify({ mutedTypes }) });
+      setSettings(await response.json());
+    } catch { /* The error toast reports it. */ } finally { setSaving(''); }
   };
 
-  const getNotificationBadgeClass = (type: AppNotification['type']) => {
-    switch (type) {
-      case 'task_assigned':
-        return 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200/60 dark:border-blue-900/40';
-      case 'task_completed':
-        return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-900/40';
-      case 'deadline_warning':
-        return 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200/60 dark:border-amber-900/40';
-      case 'approval_needed':
-        return 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-900/40';
-      case 'file_uploaded':
-        return 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-300 border-cyan-200/60 dark:border-cyan-900/40';
-      case 'project_updated':
-        return 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border-purple-200/60 dark:border-purple-900/40';
-      default:
-        return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
-    }
-  };
+  const rows = useMemo(() => [...notifications].sort((a: any, b: any) => String(b.timestamp || '').localeCompare(String(a.timestamp || ''))), [notifications]);
+  const counts = useMemo(() => {
+    const result = { all: rows.length, unread: 0, task: 0, chat: 0, feedback: 0, system: 0 };
+    for (const row of rows as any[]) { if (!row.read) result.unread++; result[categoryOf(String(row.type))]++; }
+    return result;
+  }, [rows]);
+  const visible = rows.filter((row: any) => filter === 'all' || (filter === 'unread' ? !row.read : categoryOf(String(row.type)) === filter));
 
-  const getNotificationLabel = (type: AppNotification['type']) => {
-    switch (type) {
-      case 'task_assigned': return isRtl ? 'وظیفه جدید' : 'Task Assigned';
-      case 'task_completed': return isRtl ? 'تکمیل وظیفه' : 'Task Completed';
-      case 'deadline_warning': return isRtl ? 'هشدار سررسید' : 'Deadline Warning';
-      case 'approval_needed': return isRtl ? 'نیازمند تایید' : 'Approval Needed';
-      case 'file_uploaded': return isRtl ? 'آپلود فایل' : 'File Uploaded';
-      case 'project_updated': return isRtl ? 'تغییر وضعیت پروژه' : 'Project Updated';
-      default: return isRtl ? 'اعلان عمومی' : 'General Alert';
+  // Today, yesterday, this week and earlier, by the viewer's calendar.
+  const sections = useMemo(() => {
+    const today = localISODate(), yesterday = localISODate(new Date(Date.now() - DAY)), weekAgo = localISODate(new Date(Date.now() - 6 * DAY));
+    const result: { key: string; title: string; rows: any[] }[] = [{ key: 'today', title: 'امروز', rows: [] }, { key: 'yesterday', title: 'دیروز', rows: [] }, { key: 'week', title: 'این هفته', rows: [] }, { key: 'older', title: 'قدیمی‌تر', rows: [] }];
+    for (const row of visible as any[]) {
+      const day = row.timestamp ? localISODate(new Date(row.timestamp)) : '';
+      result[day === today ? 0 : day === yesterday ? 1 : day >= weekAgo ? 2 : 3].rows.push(row);
     }
+    return result.filter(section => section.rows.length);
+  }, [visible]);
+
+  const open = async (row: any) => {
+    if (!row.read) await markNotificationAsRead(row.id).catch(() => undefined);
+    const link = String(row.link || '');
+    if (link === 'chat') { setActiveTab('chat'); setActiveSubTab('messenger'); }
+    else if (link === 'personal_tasks' || categoryOf(String(row.type)) === 'task') { setActiveTab('personal_tasks'); setActiveSubTab('my_tasks'); }
+    else if (categoryOf(String(row.type)) === 'feedback') { setActiveTab('projects'); setActiveSubTab('clients'); }
   };
 
   return (
-    <div className="w-full space-y-6 pb-12 font-vazirmatn text-start">
+    <div className="w-full space-y-6 text-start">
+      <PageHeader title="اعلان‌ها" description={counts.unread ? `${num(counts.unread)} اعلان خوانده‌نشده دارید.` : 'همهٔ اعلان‌ها را خوانده‌اید.'}
+        actions={<>
+          <SecondaryButton icon={CheckCheck} disabled={busy || !counts.unread} onClick={() => void act(markAllNotificationsAsRead)}>خواندن همه</SecondaryButton>
+          <SecondaryButton icon={Trash2} disabled={busy || !counts.all} onClick={() => { if (window.confirm('همهٔ اعلان‌ها از صندوق شما پاک شوند؟')) void act(clearNotifications); }}>پاک کردن صندوق</SecondaryButton>
+        </>} />
+      {(error || collaborationError) && <p role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold">{error || collaborationError}</p>}
 
-      {(error||collaborationError)&&<p role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold">{error||collaborationError}</p>}
-      {/* HEADER SECTION */}
-      <div className="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 md:p-6 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl shrink-0">
-            <Bell size={22} className="stroke-[2.5]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                {isRtl ? 'اعلان‌های سیستم' : 'System Notifications'}
-              </h1>
-              {unreadCount > 0 && (
-                <span className="px-2 py-0.5 bg-rose-500 text-white font-extrabold text-[11px] rounded-full font-mono animate-pulse">
-                  {unreadCount} {isRtl ? 'خوانده‌نشده' : 'unread'}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-              {isRtl ? 'مدیریت و پیگیری آنلاین رویدادها، هشدارها و تغییرات سامانه' : 'Manage and track online system events, alerts and updates'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => void act(clearNotifications)}
-            disabled={busy || !notifications.length}
-            className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-bold rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Trash2 size={15} />
-            <span>پاک کردن اعلان‌ها</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => void act(markAllNotificationsAsRead)}
-            disabled={busy || unreadCount === 0}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold rounded-2xl text-xs transition-all flex items-center gap-2 shadow-sm cursor-pointer"
-          >
-            <CheckCheck size={16} />
-            <span>{isRtl ? 'علامت‌گذاری همه به عنوان خوانده شده' : 'Mark all as read'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* FILTER TABS */}
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200/60 dark:border-slate-800 pb-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              filter === 'all'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            <span>{isRtl ? 'همه اعلان‌ها' : 'All Notifications'}</span>
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${
-              filter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
-            }`}>
-              {notifications.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setFilter('unread')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              filter === 'unread'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            <span>{isRtl ? 'خوانده نشده' : 'Unread'}</span>
-            {unreadCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-rose-500 text-white">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-        </div>
-
-        <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 hidden sm:block">
-          {isRtl ? `نمایش ${filteredNotifications.length} مورد` : `Showing ${filteredNotifications.length} items`}
-        </div>
-      </div>
-
-      {/* NOTIFICATIONS LIST */}
-      {filteredNotifications.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-12 text-center space-y-4 shadow-sm">
-          <div className="w-16 h-16 rounded-3xl bg-blue-50 dark:bg-blue-950/40 text-blue-500 flex items-center justify-center mx-auto shadow-inner">
-            <BellOff size={32} />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-base font-black text-slate-800 dark:text-slate-100">
-              {isRtl ? 'هیچ اعلانی برای نمایش وجود ندارد' : 'No notifications to display'}
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed font-medium">
-              {filter === 'unread'
-                ? (isRtl ? 'تمام اعلان‌های سیستم خوانده شده‌اند.' : 'All system notifications have been read.')
-                : (isRtl ? 'تمام رویدادها و پیام‌های سیستم به صورت اتوماتیک در این بخش نمایش داده می‌شوند.' : 'All system events and updates will automatically appear here.')
-              }
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {filteredNotifications.map((notification) => (
-            <div
-              key={notification.id}
-              onClick={() => {
-                if (!notification.read) {
-                  void act(()=>markNotificationAsRead(notification.id));
-                }
-              }}
-              className={`p-4 rounded-2xl border transition-all duration-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group cursor-pointer ${
-                notification.read
-                  ? 'bg-white dark:bg-slate-900/60 border-slate-200/70 dark:border-slate-800/80 opacity-85 hover:opacity-100'
-                  : 'bg-blue-50/50 dark:bg-blue-950/25 border-blue-200 dark:border-blue-900/60 shadow-xs hover:border-blue-400'
-              }`}
-            >
-              <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                <div className={`p-2.5 rounded-xl shrink-0 mt-0.5 ${
-                  notification.read ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : 'bg-blue-100/80 dark:bg-blue-900/50'
-                }`}>
-                  {getNotificationIcon(notification.type)}
-                </div>
-
-                <div className="space-y-1 min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {!notification.read && (
-                      <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0" />
-                    )}
-                    <h4 className={`text-xs sm:text-sm font-extrabold ${
-                      notification.read ? 'text-slate-700 dark:text-slate-200' : 'text-slate-900 dark:text-white'
-                    }`}>
-                      {notification.title}
-                    </h4>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${getNotificationBadgeClass(notification.type)}`}>
-                      {getNotificationLabel(notification.type)}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-                    {notification.description}
-                  </p>
-
-                  <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono pt-0.5">
-                    {formatJalaliDateTime(notification.timestamp) || notification.timestamp}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                {!notification.read ? (
-                  <Tooltip content={isRtl ? "علامت‌گذاری به عنوان خوانده شده" : "Mark as read"}>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void act(()=>markNotificationAsRead(notification.id));
-                      }}
-                      className="p-2 bg-blue-100 hover:bg-blue-600 hover:text-white dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl transition-all cursor-pointer text-xs font-extrabold flex items-center gap-1"
-                    >
-                      <Check size={14} />
-                      <span className="text-[10px]">{isRtl ? 'خواندن' : 'Read'}</span>
-                    </button>
-                  </Tooltip>
-                ) : (
-                  <span className="text-[10px] text-slate-400 dark:text-slate-600 font-bold px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800">
-                    {isRtl ? 'خوانده شده' : 'Read'}
-                  </span>
-                )}
-              </div>
-            </div>
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 xl:col-span-8 space-y-4">
+          <Segmented label="دستهٔ اعلان‌ها" value={filter} onChange={setFilter} options={[
+            { value: 'all', label: 'همه', count: counts.all }, { value: 'unread', label: 'خوانده‌نشده', count: counts.unread },
+            { value: 'task', label: 'وظایف', count: counts.task }, { value: 'chat', label: 'گفتگو', count: counts.chat },
+            { value: 'feedback', label: 'کارفرما', count: counts.feedback }, { value: 'system', label: 'سیستم', count: counts.system },
+          ]} />
+          {sections.length === 0 ? (
+            <Panel><EmptyHint icon={BellOff} title={counts.all ? 'اعلانی در این دسته نیست.' : 'صندوق اعلان‌های شما خالی است.'} text={counts.all ? undefined : 'واگذاری وظایف، پیام‌ها و بازخورد کارفرما اینجا نمایش داده می‌شوند.'} /></Panel>
+          ) : sections.map(section => (
+            <section key={section.key} aria-label={section.title} className="space-y-2">
+              <h2 className="px-1 text-xs font-black text-slate-500 dark:text-slate-400">{section.title}</h2>
+              <ul className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0d121f] divide-y divide-slate-100 dark:divide-slate-800/70 overflow-hidden">
+                {section.rows.map((row: any) => {
+                  const kind = kindOf(String(row.type)), Icon = kind.icon;
+                  return (
+                    <li key={row.id}>
+                      <button type="button" onClick={() => void open(row)} className={cn('w-full text-start px-4 py-3.5 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer', !row.read && 'bg-blue-50/40 dark:bg-blue-500/[0.04]')}>
+                        <span className={cn('w-9 h-9 rounded-xl inline-flex items-center justify-center shrink-0', kind.tone)}><Icon size={17} /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className={cn('text-[13px] truncate', row.read ? 'font-semibold text-slate-700 dark:text-slate-300' : 'font-black text-slate-900 dark:text-white')}>{row.title}</span>
+                            {!row.read && <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" aria-label="خوانده‌نشده" />}
+                          </span>
+                          {row.description && <span className="block text-xs leading-5 text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">{row.description}</span>}
+                          <span className="block text-[10px] text-slate-400 mt-1">{kind.label} · {section.key === 'older' ? formatJalaliDate(row.timestamp) : timeAgo(row.timestamp)}</span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
           ))}
         </div>
-      )}
 
+        <aside className="col-span-12 xl:col-span-4">
+          <Panel title="تنظیمات اعلان" description="نوع‌هایی را که نمی‌خواهید دریافت کنید خاموش کنید؛ این تنظیم فقط برای شماست." icon={Settings2} bodyClassName="pt-3">
+            {!settings ? <div className="h-24" aria-busy="true" /> : (
+              <ul className="space-y-1">
+                {settings.types.map(type => {
+                  const kind = kindOf(type), Icon = kind.icon, enabled = !settings.mutedTypes.includes(type);
+                  return (
+                    <li key={type} className="flex items-center gap-3 py-2">
+                      <span className={cn('w-8 h-8 rounded-lg inline-flex items-center justify-center shrink-0', kind.tone)}><Icon size={15} /></span>
+                      <span className="flex-1 text-xs font-bold text-slate-700 dark:text-slate-200">{kind.label}</span>
+                      <button type="button" role="switch" aria-checked={enabled} aria-label={kind.label} disabled={saving === type} onClick={() => void toggleMute(type)}
+                        className={cn('relative w-10 h-6 rounded-full transition-colors cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500', enabled ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700')}>
+                        <span className={cn('absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all', enabled ? 'start-5' : 'start-1')} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
+        </aside>
+      </div>
     </div>
   );
 };

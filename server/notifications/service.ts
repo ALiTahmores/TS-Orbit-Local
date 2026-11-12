@@ -44,6 +44,14 @@ const string = (value: any, maximum: number, required = true): string => {
 };
 const copied = (value: any) => JSON.parse(JSON.stringify(value));
 
+/** Notification kinds the server sends; a member may mute any of them. */
+export const NOTIFICATION_TYPES = ['task.assigned', 'chat.message', 'chat.request', 'chat.request_response', 'client_feedback'] as const;
+/** Whether the member has muted this kind of notification. */
+export function notificationMuted(state: any, userId: string, type: string): boolean {
+  const row = (state.userPreferences || []).find((item: any) => item?.userId === userId);
+  return Array.isArray(row?.notificationMutedTypes) && row.notificationMutedTypes.includes(type);
+}
+
 /** Server events and personal inbox state share the request's durable transaction.
  * There is deliberately no endpoint for accepting client-authored notifications. */
 export class NotificationService {
@@ -108,6 +116,22 @@ export class NotificationService {
     if (changed) this.emit(scope.workspaceId, 'app_notifications_updated');
     return { success: true, changed };
   }
+  /** The member's own notification settings. */
+  preferences(): { mutedTypes: string[]; types: readonly string[] } {
+    const scope = this.scope();
+    const row = this.scoped.state.userPreferences.find((item: any) => item.userId === scope.user.id);
+    return { mutedTypes: Array.isArray(row?.notificationMutedTypes) ? row.notificationMutedTypes.filter((type: any) => NOTIFICATION_TYPES.includes(type)) : [], types: NOTIFICATION_TYPES };
+  }
+  setPreferences(body: any): { mutedTypes: string[]; types: readonly string[] } {
+    const scope = this.scope();
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => key !== 'mutedTypes') || !Array.isArray(body.mutedTypes)
+      || body.mutedTypes.some((type: any) => !NOTIFICATION_TYPES.includes(type))) invalid('نوع اعلان معتبر نیست.');
+    const mutedTypes = [...new Set<string>(body.mutedTypes)];
+    const row = this.scoped.state.userPreferences.find((item: any) => item.userId === scope.user.id);
+    if (row) { row.notificationMutedTypes = mutedTypes; row.updatedAt = now(); }
+    else this.scoped.state.userPreferences.push({ id: identifier('pref'), userId: scope.user.id, notificationMutedTypes: mutedTypes, createdAt: now() });
+    return { mutedTypes, types: NOTIFICATION_TYPES };
+  }
   clear(): { success: true; changed: number } {
     const scope = this.scope(); let changed = 0;
     for (const row of this.state.notifications) if (this.visible(row, scope)) { row.dismissedAt = now(); changed++; }
@@ -147,7 +171,7 @@ export class NotificationService {
     for (const userId of new Set(input.recipientIds)) {
       if (userId === actorId) continue;
       const user = this.state.users.find((row: any) => row.id === userId);
-      if (!activeMember(user) || !membership(this.state, user, input.workspaceId)) continue;
+      if (!activeMember(user) || !membership(this.state, user, input.workspaceId) || notificationMuted(this.state, userId, type)) continue;
       const scope: Scope = { kind: 'workspace', user, workspaceId: input.workspaceId, path: '/api/notifications', method: 'GET' };
       const row = { id: identifier('notification'), workspaceId: input.workspaceId, userId, title, description, type, read: false, timestamp: now(), createdAt: now(), ...parents, ...(eventKey ? { eventKey } : {}), ...(link ? { link } : {}) };
       if (!this.visible(row, scope) || eventKey && this.state.notifications.some((item: any) => item.workspaceId === input.workspaceId && this.recipient(item) === userId && item.eventKey === eventKey)) continue;

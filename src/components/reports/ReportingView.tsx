@@ -7,17 +7,14 @@ import {
   TrendingUp,
   CheckCircle2,
   Clock,
-  ShieldAlert,
-  ChevronRight,
-  Layers
+  ChevronRight
 } from 'lucide-react';
 import { useProject } from '../../context/ProjectContext';
 import { DepartmentReportsView } from '../DepartmentReportsView';
 import { ProjectRoadmapPlan } from './roadmap/ProjectRoadmapPlan';
-import { assignedIds } from '../../lib/domain';
-import { deliveredOnTime, dueDate, isOverdue, todayISO } from '../../lib/taskAnalytics';
-import { statusLabel } from '../../lib/taskLabels';
-import { formatJalaliDate } from '../../lib/dates';
+import { RiskReview } from './RiskReview';
+import { ScheduleBoard } from './ScheduleBoard';
+import { deliveredOnTime, isOverdue, todayISO } from '../../lib/taskAnalytics';
 
 export type SubReportTab = 'analytics' | 'roadmap' | 'bottlenecks' | 'timeline';
 
@@ -27,13 +24,6 @@ interface ReportingViewProps {
 }
 
 const fa = (value: number | string) => String(value).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]);
-const DAY = 24 * 60 * 60 * 1000;
-const jalali = (iso?: string) => {
-  const date = iso ? new Date(`${iso.slice(0, 10)}T00:00:00`) : undefined;
-  return date && !Number.isNaN(date.getTime()) ? formatJalaliDate(date) : '';
-};
-const daysBetween = (fromISO: string, toISO: string) => Math.round((new Date(`${toISO}T00:00:00`).getTime() - new Date(`${fromISO}T00:00:00`).getTime()) / DAY);
-
 const TabButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ElementType; label: string; badge?: number }> = ({ active, onClick, icon: Icon, label, badge }) => (
   <button
     type="button"
@@ -57,7 +47,7 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
   initialSubTab = 'analytics',
   onSubTabChange
 }) => {
-  const { projects, selectedProject, tasks, teamMembers } = useProject();
+  const { projects, tasks } = useProject();
 
   const [currentSubTab, setCurrentSubTab] = useState<SubReportTab>(initialSubTab);
 
@@ -70,7 +60,6 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
     onSubTabChange?.(tab);
   };
 
-  const activeProj = selectedProject && selectedProject.id !== 'no_project' ? selectedProject : projects[0] || null;
   const today = todayISO();
 
   const metrics = useMemo(() => {
@@ -87,27 +76,10 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
     };
   }, [tasks, projects, today]);
 
-  const projectTitle = (id: string) => projects.find(p => p.id === id)?.title || '—';
-  const ownerName = (task: any) => {
-    const ids = assignedIds(task);
-    return teamMembers.filter(m => ids.includes(m.id)).map(m => m.name).join('، ') || task.assignedTo || 'بدون مسئول';
-  };
-
-  // Projects ranked by how many of their open tasks are blocked or overdue.
-  const projectsAtRisk = useMemo(() => projects.map(project => {
-    const own = tasks.filter(t => t.projectId === project.id);
-    return { project, blocked: own.filter(t => t.status === 'blocked').length, overdue: own.filter(t => isOverdue(t, today)).length };
-  }).filter(row => row.blocked + row.overdue > 0).sort((a, b) => (b.blocked + b.overdue) - (a.blocked + a.overdue)), [projects, tasks, today]);
-
   const issueRows = useMemo(() => {
     const seen = new Set<string>();
     return [...metrics.blocked, ...metrics.overdue].filter(task => !seen.has(task.id) && !!seen.add(task.id));
   }, [metrics]);
-
-  const timelineTasks = useMemo(() => activeProj
-    ? tasks.filter(t => t.projectId === activeProj.id).sort((a, b) => (dueDate(a) || '9999').localeCompare(dueDate(b) || '9999'))
-    : [], [tasks, activeProj]);
-  const projectDeadline = activeProj ? (activeProj.deadline || activeProj.dueDate || '').slice(0, 10) : '';
 
   const card = 'p-5 rounded-2xl bg-white dark:bg-[#0d121f] border border-slate-200/90 dark:border-slate-800 shadow-sm';
 
@@ -187,161 +159,9 @@ export const ReportingView: React.FC<ReportingViewProps> = ({
         </div>
       )}
 
-      {currentSubTab === 'bottlenecks' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-50 via-white to-slate-50 dark:from-rose-950/40 dark:via-[#0d1424] dark:to-[#070b14] border border-rose-200 dark:border-rose-800/40 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="p-3 rounded-2xl bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30"><ShieldAlert size={24} /></div>
-              <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">موانع و تأخیرها</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                  وظایفی که متوقف شده‌اند یا از سررسیدشان گذشته است، به همراه پروژه‌هایی که بیشترین مورد را دارند.
-                </p>
-              </div>
-            </div>
-            <span className="px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 text-xs font-black self-start md:self-auto">
-              {fa(issueRows.length)} مورد
-            </span>
-          </div>
+      {currentSubTab === 'bottlenecks' && <RiskReview />}
 
-          {projectsAtRisk.length > 0 && (
-            <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1424]/90 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-4">
-              <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <Layers size={16} className="text-amber-500" />
-                <span>پروژه‌های در معرض تأخیر</span>
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {projectsAtRisk.slice(0, 6).map(({ project, blocked, overdue }) => (
-                  <div key={project.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 space-y-2">
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-300 block truncate">{project.title}</span>
-                    <div className="flex items-center gap-3 text-[11px] font-bold">
-                      {blocked > 0 && <span className="text-rose-600 dark:text-rose-400">{fa(blocked)} متوقف</span>}
-                      {overdue > 0 && <span className="text-amber-600 dark:text-amber-400">{fa(overdue)} دارای تأخیر</span>}
-                      <span className="text-slate-400 ms-auto">پیشرفت {fa(project.progress || 0)}٪</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1424]/90 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-4">
-            <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <AlertTriangle size={16} className="text-rose-500" />
-              <span>فهرست وظایف متوقف یا دارای تأخیر</span>
-            </h4>
-            {issueRows.length === 0 ? (
-              <div className="py-8 flex flex-col items-center justify-center gap-2 text-center">
-                <CheckCircle2 size={28} className="text-emerald-500" />
-                <span className="font-bold text-sm text-slate-800 dark:text-slate-300">موردی ثبت نشده است.</span>
-                <span className="text-xs text-slate-500">هیچ وظیفه‌ای متوقف نیست و سررسید هیچ وظیفهٔ بازی نگذشته است.</span>
-              </div>
-            ) : (
-              <>
-              <ul className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
-                {issueRows.map(t => {
-                  const due = dueDate(t);
-                  const late = due && due < today ? daysBetween(due, today) : 0;
-                  return (
-                    <li key={t.id} className="py-3 space-y-1.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="font-bold text-sm text-slate-800 dark:text-slate-200 min-w-0">{t.title}</span>
-                        <span className={`shrink-0 px-2 py-0.5 rounded text-[10px] font-bold ${t.status === 'blocked' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{statusLabel(t.status)}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        <span>{projectTitle(t.projectId)}</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-300">{ownerName(t)}</span>
-                        <span className={late ? 'text-rose-600 dark:text-rose-400 font-bold' : ''}>{due ? jalali(due) : 'بدون سررسید'}{late ? ` (${fa(late)} روز تأخیر)` : ''}</span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-start text-xs min-w-[640px]">
-                  <thead>
-                    <tr className="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                      <th className="pb-3 font-bold">عنوان وظیفه</th>
-                      <th className="pb-3 font-bold">پروژه</th>
-                      <th className="pb-3 font-bold">مسئول</th>
-                      <th className="pb-3 font-bold">وضعیت</th>
-                      <th className="pb-3 font-bold">سررسید</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                    {issueRows.map(t => {
-                      const due = dueDate(t);
-                      const late = due && due < today ? daysBetween(due, today) : 0;
-                      return (
-                        <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
-                          <td className="py-3 font-bold text-slate-800 dark:text-slate-200">{t.title}</td>
-                          <td className="py-3 text-slate-500 dark:text-slate-400">{projectTitle(t.projectId)}</td>
-                          <td className="py-3 text-slate-700 dark:text-slate-300 font-medium">{ownerName(t)}</td>
-                          <td className="py-3"><span className={`px-2 py-0.5 rounded text-[10px] font-bold ${t.status === 'blocked' ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{statusLabel(t.status)}</span></td>
-                          <td className={`py-3 ${late ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-500'}`}>
-                            {due ? jalali(due) : 'بدون سررسید'}{late ? ` (${fa(late)} روز تأخیر)` : ''}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {currentSubTab === 'timeline' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1424]/90 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">زمان‌بندی وظایف</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {activeProj ? `وظایف پروژهٔ «${activeProj.title}» به ترتیب سررسید` : 'ابتدا یک پروژه بسازید.'}
-                </p>
-              </div>
-              {projectDeadline && (
-                <span className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 font-bold text-xs self-start sm:self-auto">
-                  پایان پروژه: {jalali(projectDeadline)}
-                  {projectDeadline >= today ? ` (${fa(daysBetween(today, projectDeadline))} روز مانده)` : ' (گذشته)'}
-                </span>
-              )}
-            </div>
-
-            {timelineTasks.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400 py-6 text-center">{activeProj ? 'هنوز وظیفه‌ای برای این پروژه ثبت نشده است.' : ''}</p>
-            ) : (
-              <ol className="space-y-3">
-                {timelineTasks.map(task => {
-                  const due = dueDate(task);
-                  const done = task.status === 'completed';
-                  const late = isOverdue(task, today);
-                  return (
-                    <li key={task.id} className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-3 ${late ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50' : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800'}`}>
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${done ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : late ? 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'}`}>
-                          {done ? <CheckCircle2 size={18} /> : <Clock size={18} />}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">{task.title}</h4>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{ownerName(task)}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs shrink-0">
-                        <span className={late ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-slate-500 dark:text-slate-400'}>{due ? jalali(due) : 'بدون سررسید'}</span>
-                        <span className="px-2.5 py-1 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold">{statusLabel(task.status)}</span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </div>
-        </div>
-      )}
+      {currentSubTab === 'timeline' && <ScheduleBoard />}
     </div>
   );
 };

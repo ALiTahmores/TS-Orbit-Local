@@ -19,5 +19,7 @@ export const collaborationContracts = [
   definition('DELETE','/api/chat/permissions/team/:teamId/user/:userId'),
   definition('GET','/api/notifications'), definition('PUT','/api/notifications/read-all'),
   definition('PUT','/api/notifications/:id/read'), definition('POST','/api/notifications/clear'),
+  definition('GET','/api/notifications/preferences'), definition('PUT','/api/notifications/preferences',['mutedTypes']),
+  definition('GET','/api/insights/overview'), definition('GET','/api/insights/risks'), definition('GET','/api/insights/team'),
   definition('GET','/api/activity-logs'),
 ];

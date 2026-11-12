@@ -3,6 +3,7 @@ import type { ScopedState } from '../policy/scope.ts';
 import { activeMember, manager, membership, writer } from '../policy/scope.ts';
 import { DomainError, identifier, now } from '../domain/repository.ts';
 import { dto, strings, text } from '../domain/models.ts';
+import { notificationMuted } from '../notifications/service.ts';
 
 export interface PortalFiles {
   listPublic(project: any): any[];
@@ -133,7 +134,7 @@ export class FeedbackService {
     const workspaceId = this.scoped.scopeOf('projects', project)!;
     const workspace = this.state.workspaces.find((item: any) => item.id === workspaceId);
     const owner = this.state.users.find((item: any) => item.id === workspace?.ownerId);
-    if (owner && owner.id !== actor?.id && activeMember(owner) && membership(this.state, owner, workspaceId)) this.state.notifications.unshift({ id: identifier('notification'), workspaceId, projectId: project.id, feedbackId: row.id, userId: owner.id, title: 'بازخورد جدید پروژه', description: 'بازخورد جدیدی برای پروژه ثبت شد.', type: 'client_feedback', read: false, timestamp: now(), createdAt: now() });
+    if (owner && owner.id !== actor?.id && activeMember(owner) && membership(this.state, owner, workspaceId) && !notificationMuted(this.state, owner.id, 'client_feedback')) this.state.notifications.unshift({ id: identifier('notification'), workspaceId, projectId: project.id, feedbackId: row.id, userId: owner.id, title: 'بازخورد جدید پروژه', description: 'بازخورد جدیدی برای پروژه ثبت شد.', type: 'client_feedback', read: false, timestamp: now(), createdAt: now() });
     this.publish(project);
   }
   createPublic(project: any, body: any): any {

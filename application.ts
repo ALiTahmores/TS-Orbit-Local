@@ -31,6 +31,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { DbService } from './src/data/dbService.ts';
 import { PersistenceCoordinator } from './server/persistence.ts';
 import { localAvatar } from './src/lib/localAssets.ts';
+import { createInsightRouter } from './server/insights/service.ts';
 const app = express();
 app.enable('case sensitive routing');
 const backendPath = (path: string) => /^\/(?:api|socket\.io)(?:\/|$)/.test(path);
@@ -530,6 +531,7 @@ app.use('/api', createFileRouter(files));
 app.use('/api', createPortalRouter({scoped, broadcast, files, broadcastWorkspace: realtime.broadcastWorkspace}));
 app.use('/api', createChatRouter(chat));
 app.use('/api', createNotificationRouter(notifications));
+app.use('/api', createInsightRouter({ scoped, presence: realtime.presence }));
 app.get('/api/users/lookup', (req: any, res) => {
     const q = typeof req.query.q === 'string' ? req.query.q.trim().toLowerCase().replace(/^@/, '') : '';
     if (q.length < 2 || q.length > 254)

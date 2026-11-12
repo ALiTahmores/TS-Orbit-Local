@@ -10,6 +10,8 @@ export function createNotificationRouter(service: NotificationService): Router {
   router.put('/notifications/read-all', endpoint(() => service.markAllRead()));
   router.put('/notifications/:id/read', endpoint(request => service.markRead(request.params.id)));
   router.post('/notifications/clear', endpoint(() => service.clear()));
+  router.get('/notifications/preferences', endpoint(() => service.preferences()));
+  router.put('/notifications/preferences', endpoint(request => service.setPreferences(request.body)));
   router.get('/activity-logs', endpoint(() => service.activity()));
   return router;
 }

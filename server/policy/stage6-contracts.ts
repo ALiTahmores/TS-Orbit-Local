@@ -29,5 +29,8 @@ export const collaborationContracts = [
   definition('PUT','/api/sprints/:id',['name','goal','startDate','endDate']), definition('POST','/api/sprints/:id/start',['name','goal','startDate','endDate']),
   definition('POST','/api/sprints/:id/complete',['moveTo']), definition('DELETE','/api/sprints/:id'),
   definition('GET','/api/epics'), definition('PUT','/api/epics/link',['projectId','epicId','taskIds']),
+  definition('GET','/api/search'), definition('PUT','/api/search/bulk',['taskIds','changes']),
+  definition('GET','/api/filters'), definition('POST','/api/filters',['name','query','shared','description']),
+  definition('PUT','/api/filters/:id',['name','query','shared','starred','description']), definition('DELETE','/api/filters/:id'),
   definition('GET','/api/activity-logs'),
 ];

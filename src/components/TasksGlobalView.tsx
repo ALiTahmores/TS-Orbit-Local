@@ -50,10 +50,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { TeamTaskMatrixView } from './TeamTaskMatrixView';
 import { TaskDeadlinesTimelineView } from './TaskDeadlinesTimelineView';
 import { CreateTaskModal } from './tasks/CreateTaskModal';
-import { SprintsSkeleton } from './loading/PageSkeletons';
-import { Rocket as SprintIcon } from 'lucide-react';
+import { SearchSkeleton, SprintsSkeleton } from './loading/PageSkeletons';
+import { Rocket as SprintIcon, Search as SearchTabIcon } from 'lucide-react';
 // The sprint planner (charts, boards) loads only when its tab opens.
 const SprintsView = React.lazy(() => import('./sprints/SprintsView'));
+const SearchView = React.lazy(() => import('./search/SearchView'));
 import { 
   Plus, 
   Search, 
@@ -418,6 +419,20 @@ export const TasksGlobalView: React.FC = () => {
             <SprintIcon size={16} />
             <span>بک‌لاگ و اسپرینت‌ها</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('search')}
+            aria-current={activeSubTab === 'search' ? 'page' : undefined}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+              activeSubTab === 'search'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700/80'
+            }`}
+          >
+            <SearchTabIcon size={16} />
+            <span>جستجو و فیلترها</span>
+          </button>
         </div>
 
         {/* Primary Action Button */}
@@ -438,6 +453,8 @@ export const TasksGlobalView: React.FC = () => {
       {/* RENDER SUBVIEWS BASED ON ACTIVE SUBTAB */}
       {activeSubTab === 'sprints' ? (
         <React.Suspense fallback={<SprintsSkeleton />}><SprintsView /></React.Suspense>
+      ) : activeSubTab === 'search' ? (
+        <React.Suspense fallback={<SearchSkeleton />}><SearchView /></React.Suspense>
       ) : (activeSubTab === 'team_matrix' || activeSubTab === 'list_view') ? (
         <TeamTaskMatrixView />
       ) : (activeSubTab === 'timeline' || activeSubTab === 'calendar') ? (

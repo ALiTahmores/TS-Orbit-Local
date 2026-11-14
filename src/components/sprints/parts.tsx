@@ -17,9 +17,10 @@ export const StatusPill: React.FC<{ status: string }> = ({ status }) => (
   <span className={cn('h-6 px-2 rounded-md text-[10px] font-bold inline-flex items-center whitespace-nowrap', status === 'blocked' ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300' : statusTone[STATUS_GROUP[status] || 'todo'])}>{STATUS_LABEL[status] || status}</span>
 );
 
-export const PriorityFlag: React.FC<{ priority: string }> = ({ priority }) => {
+/** `decorative` when the priority's name is shown beside the flag, so it is not read twice. */
+export const PriorityFlag: React.FC<{ priority: string; decorative?: boolean }> = ({ priority, decorative }) => {
   const value = String(priority).toLowerCase();
   if (!['high', 'urgent', 'critical'].includes(value)) return null;
   const label = value === 'high' ? 'اولویت بالا' : 'فوری';
-  return <span title={label} className="text-rose-500 shrink-0"><Flag size={14} aria-hidden="true" /><span className="sr-only">{label}</span></span>;
+  return <span title={decorative ? undefined : label} aria-hidden={decorative || undefined} className="text-rose-500 shrink-0"><Flag size={14} aria-hidden="true" />{!decorative && <span className="sr-only">{label}</span>}</span>;
 };

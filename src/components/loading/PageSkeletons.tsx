@@ -514,10 +514,23 @@ export const SprintsSkeleton: React.FC = () => (
     ))}
   </div>
 );
+/** Advanced search: header, filter list beside the query box and a results table. */
+export const SearchSkeleton: React.FC = () => (
+  <div className="space-y-5" aria-busy="true">
+    <KitHeader actions={[120, 130]} eyebrow={false} />
+    <div className="grid lg:grid-cols-[250px_minmax(0,1fr)] gap-5">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0d121f] p-4 space-y-3 hidden lg:block">{Array.from({ length: 9 }, (_, index) => <Line key={index} w={index % 4 === 0 ? 90 : '80%'} h={index % 4 === 0 ? 10 : 14} />)}</div>
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0d121f] p-4 space-y-3"><Bone width={160} height={36} borderRadius={10} /><Bone height={64} borderRadius={12} /></div>
+        <PanelRows rows={8} />
+      </div>
+    </div>
+  </div>
+);
 export const PageSkeleton: React.FC<{ tab: string; subTab?: string }> = ({ tab, subTab = '' }) => {
   if (tab === 'dashboard') return <DashboardSkeleton />;
   if (tab === 'projects') return subTab === 'team' ? <PeopleSkeleton /> : <ProjectsSkeleton subTab={subTab || 'overview'} />;
-  if (tab === 'tasks') return subTab === 'sprints' ? <SprintsSkeleton /> : <TasksSkeleton subTab={subTab || 'kanban_board'} />;
+  if (tab === 'tasks') return subTab === 'sprints' ? <SprintsSkeleton /> : subTab === 'search' ? <SearchSkeleton /> : <TasksSkeleton subTab={subTab || 'kanban_board'} />;
   if (tab === 'personal_tasks') return <PersonalTasksSkeleton />;
   if (tab === 'dept_tech') return <ReportsSkeleton subTab={subTab} />;
   if (tab === 'reports') return <AnalyticsSkeleton />;

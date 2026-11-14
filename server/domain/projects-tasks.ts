@@ -93,7 +93,24 @@ export class ProjectTaskService {
         invalid('عضو فعال این فضای کاری لازم است.'); return user; }
     history(row: any, status: string, reason = '') { if (row.status === status)
         return; row.statusHistory = [...(row.statusHistory || []), { previousStatus: row.status, newStatus: status, reason, timestamp: now(), userId: this.actor().id, username: this.actor().name }]; row.status = status; }
-    emit(event: string, value: any) { this.context.broadcast(event === 'tasks_updated' ? 'app_tasks_updated' : event === 'projects_updated' ? 'app_projects_updated' : event, value); }
+    /** Payloads are built only when sent, so a batch of changes sends each list once. */
+    emit(event: string, value: any) {
+        if (this.muted) { this.held.add(event); return; }
+        this.context.broadcast(event === 'tasks_updated' ? 'app_tasks_updated' : event === 'projects_updated' ? 'app_projects_updated' : event, typeof value === 'function' ? value() : value);
+    }
+    private muted = 0;
+    private held = new Set<string>();
+    /** Runs many changes and then announces each changed list once (bulk edit). */
+    batch<T>(work: () => T): T {
+        this.muted++;
+        try { return work(); }
+        finally {
+            if (--this.muted === 0) {
+                const events = [...this.held]; this.held.clear();
+                for (const event of events) this.emit(event, event === 'tasks_updated' ? () => this.tasks() : event === 'projects_updated' ? () => this.projects() : undefined);
+            }
+        }
+    }
     change(action: string, row: any) { row.updatedAt = now(); recordActivity(this.context, action, row.id); }
     /** A checklist copy of the team's roadmap, every step open. */
     teamChecklist(team: any) {
@@ -119,14 +136,14 @@ export class ProjectTaskService {
         if (!checklist.phases.length) throw new DomainError(422, 'TEAM_ROADMAP_EMPTY', 'این تیم هنوز نقشهٔ راهی ندارد.');
         project.teamChecklists = [...lists, checklist];
         project.assignedTeamIds = [...new Set([...(Array.isArray(project.assignedTeamIds) ? project.assignedTeamIds : []), team.id])];
-        this.change('PROJECT_CHECKLIST_ADDED', project); this.emit('projects_updated', this.projects()); return checklist;
+        this.change('PROJECT_CHECKLIST_ADDED', project); this.emit('projects_updated', () => this.projects()); return checklist;
     }
     removeTeamChecklist(projectId: string, checklistId: string) {
         this.manage(); const project = this.repo('projects').require(projectId);
         const lists = Array.isArray(project.teamChecklists) ? project.teamChecklists : [];
         if (!lists.some((row: any) => row.id === checklistId)) throw new DomainError(404, 'RESOURCE_NOT_FOUND', 'چک‌لیست یافت نشد.');
         project.teamChecklists = lists.filter((row: any) => row.id !== checklistId);
-        this.change('PROJECT_CHECKLIST_REMOVED', project); this.emit('projects_updated', this.projects()); return { success: true, deletedId: checklistId };
+        this.change('PROJECT_CHECKLIST_REMOVED', project); this.emit('projects_updated', () => this.projects()); return { success: true, deletedId: checklistId };
     }
     setChecklistStep(projectId: string, checklistId: string, stepId: string, body: any) {
         const scope = this.scope();
@@ -139,7 +156,7 @@ export class ProjectTaskService {
         Object.assign(step, completed
             ? { completed: true, completedById: this.actor().id, completedByName: this.actor().name || this.actor().username || '', completedAt: now() }
             : { completed: false, completedById: null, completedByName: '', completedAt: null });
-        this.change('PROJECT_CHECKLIST_UPDATED', project); this.emit('projects_updated', this.projects()); return checklist;
+        this.change('PROJECT_CHECKLIST_UPDATED', project); this.emit('projects_updated', () => this.projects()); return checklist;
     }
     projectChanges(body: any, create = false) {
         dto(body, projectFields);
@@ -225,10 +242,10 @@ export class ProjectTaskService {
         }
         return changes;
     }
-    createProject(body: any) { this.manage(); body = this.createInput(body); const changes = this.projectChanges(body, true); const token = randomBytes(32).toString('hex'); const project = this.repo('projects').insert({ id: identifier('proj'), workspaceId: this.scope().workspaceId, createdById: this.actor().id, createdAt: now(), description: '', name: changes.title, deadline: '', budget: '', clientName: '', status: 'ACTIVE', assignedMemberIds: [], assignedTeamIds: [], totalTasks: 0, completedTasks: 0, progress: 0, loggedHours: 0, clientPortalEnabled: false, isPortalActive: false, clientPortalToken: token, portalToken: token, portalExpiresAt: new Date(Date.now() + 30 * 86400_000).toISOString(), portalRevokedAt: null, ...changes }); this.syncTeamChecklists(project); this.change('PROJECT_CREATED', project); this.emit('projects_updated', this.projects()); return project; }
+    createProject(body: any) { this.manage(); body = this.createInput(body); const changes = this.projectChanges(body, true); const token = randomBytes(32).toString('hex'); const project = this.repo('projects').insert({ id: identifier('proj'), workspaceId: this.scope().workspaceId, createdById: this.actor().id, createdAt: now(), description: '', name: changes.title, deadline: '', budget: '', clientName: '', status: 'ACTIVE', assignedMemberIds: [], assignedTeamIds: [], totalTasks: 0, completedTasks: 0, progress: 0, loggedHours: 0, clientPortalEnabled: false, isPortalActive: false, clientPortalToken: token, portalToken: token, portalExpiresAt: new Date(Date.now() + 30 * 86400_000).toISOString(), portalRevokedAt: null, ...changes }); this.syncTeamChecklists(project); this.change('PROJECT_CREATED', project); this.emit('projects_updated', () => this.projects()); return project; }
     updateProject(id: string, body: any) { this.manage(); const row = this.repo('projects').require(id), changes = this.projectChanges(body); const status = changes.status; delete changes.status; Object.assign(row, changes); if (changes.assignedTeamIds)
         this.syncTeamChecklists(row); if (status)
-        this.history(row, status, body.statusReason || ''); this.change('PROJECT_UPDATED', row); this.emit('projects_updated', this.projects()); return row; }
+        this.history(row, status, body.statusReason || ''); this.change('PROJECT_UPDATED', row); this.emit('projects_updated', () => this.projects()); return row; }
     activateProject(id: string) { this.manage(); const row = this.repo('projects').require(id); this.history(row, 'ACTIVE'); if (!row.startDate)
         Object.assign(row, dateFields(now(), 'startDate')); this.change('PROJECT_ACTIVATED', row); return row; }
     // Summaries and task views only read, so each is built in one pass over the state.
@@ -437,7 +454,7 @@ export class ProjectTaskService {
     createTask(body: any) { body = this.createInput(body); const changes = this.taskChanges(body); this.shape(changes, undefined, body); this.assertCompletion({ ...changes }, body.subtasks || []); const task = this.repo('tasks').insert({ id: identifier('task'), number: this.nextTaskNumber(), createdById: this.actor().id, creatorId: this.actor().id, createdAt: now(), description: '', priority: 'medium', status: 'pending', deadline: '', tags: [], attachments: [], dependencies: [], assignedMemberIds: [], assignees: [], estimatedHours: 0, progress: 0, ...changes }); if (body.subtasks)
         this.replaceSubtasks(task.id, body.subtasks); if (body.loggedHours !== undefined)
         this.adjustHours(task.id, body.loggedHours); this.refreshTask(task, !!body.subtasks); for (const content of body.initialComments || [])
-        this.comment(task.id, undefined, { content }); this.change('TASK_CREATED', task); this.notifyAssignments(task); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return this.taskView(task); }
+        this.comment(task.id, undefined, { content }); this.change('TASK_CREATED', task); this.notifyAssignments(task); this.emit('tasks_updated', () => this.tasks()); this.emit('projects_updated', () => this.projects()); return this.taskView(task); }
     updateTask(id: string, body: any) { const task = this.repo('tasks').require(id), oldAssigned=this.assignmentIds(task), oldProject = task.projectId, oldPoints = task.storyPoints, oldSprint = task.sprintId, oldType = task.type || 'task', changes = this.taskChanges(body, id); this.shape(changes, task, body); this.assertCompletion({ ...task, ...changes }, body.subtasks); const status = changes.status; delete changes.status; Object.assign(task, changes);
         // A sprint belongs to one project: moving the task away takes it out of the sprint.
         if (oldProject !== task.projectId && oldSprint) { this.sprintEvent({ ...task, sprintId: oldSprint }, 'remove', oldProject); delete task.sprintId; delete task.backlogRank; }
@@ -458,7 +475,7 @@ export class ProjectTaskService {
                     if (child.taskId === id && child.projectId)
                         child.projectId = task.projectId;
         this.counters(oldProject);
-    } this.refreshTask(task, body.subtasks !== undefined); this.change('TASK_UPDATED', task); this.notifyAssignments(task,oldAssigned); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return this.taskView(task); }
+    } this.refreshTask(task, body.subtasks !== undefined); this.change('TASK_UPDATED', task); this.notifyAssignments(task,oldAssigned); this.emit('tasks_updated', () => this.tasks()); this.emit('projects_updated', () => this.projects()); return this.taskView(task); }
     refreshTask(task: any, subtaskChanged = true) { const subs = this.repo('subtasks').all().filter(sub => sub.taskId === task.id); if (subtaskChanged && subs.length) {
         const all = subs.every(sub => sub.completed);
         if (all && !this.complete(task.status) && (task.dependencies || []).every((id: string) => this.complete(this.repo('tasks').require(id).status)))
@@ -469,7 +486,7 @@ export class ProjectTaskService {
     setStatus(id: string, body: any) { dto(body, ['status', 'reason']); const task = this.repo('tasks').require(id); const status = taskStatus(body.status); const reason = body.reason === undefined ? '' : text(body.reason, 'علت', false, 2000); if (status === 'completed' && (task.dependencies || []).some((dependency: string) => !this.complete(this.repo('tasks').require(dependency).status)))
         throw new DomainError(409, 'DEPENDENCY_INCOMPLETE', 'ابتدا وظایف وابسته را تکمیل کنید.'); if (status === 'completed' && this.repo('subtasks').all().some(sub => sub.taskId === id && !sub.completed))
         throw new DomainError(409, 'SUBTASK_INCOMPLETE', 'زیرکار باز باقی مانده است.'); this.history(task, status, reason); if (!this.repo('subtasks').all().some(sub => sub.taskId === id))
-        task.progress = status === 'completed' ? 100 : 0; this.refreshTask(task, false); this.change('TASK_STATUS_CHANGED', task); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return this.taskView(task); }
+        task.progress = status === 'completed' ? 100 : 0; this.refreshTask(task, false); this.change('TASK_STATUS_CHANGED', task); this.emit('tasks_updated', () => this.tasks()); this.emit('projects_updated', () => this.projects()); return this.taskView(task); }
     cascade(kind: 'task' | 'project', id: string) {
         const removed = new Map<string, Set<string>>();
         const include = (collection: string, row: any) => { const set = removed.get(collection) || new Set(); set.add(row.id); removed.set(collection, set); };
@@ -515,8 +532,8 @@ export class ProjectTaskService {
             if (this.context.scoped.raw.projects.some((project: any) => project.id === projectId && this.context.scoped.scopeOf('projects', project) === this.scope().workspaceId))
                 this.counters(projectId);
     }
-    deleteTask(id: string) { const task = this.repo('tasks').require(id); const projectId = task.projectId; this.sprintEvent(task, 'remove'); if (task.type === 'epic') this.unlinkEpic(id); this.cascade('task', id); this.counters(projectId); recordActivity(this.context, 'TASK_DELETED', id); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return { success: true, deletedId: id }; }
-    deleteProject(id: string) { this.manage(); this.cascade('project', id); recordActivity(this.context, 'PROJECT_DELETED', id); this.emit('projects_updated', this.projects()); this.emit('tasks_updated', this.tasks()); return { success: true, deletedId: id }; }
+    deleteTask(id: string) { const task = this.repo('tasks').require(id); const projectId = task.projectId; this.sprintEvent(task, 'remove'); if (task.type === 'epic') this.unlinkEpic(id); this.cascade('task', id); this.counters(projectId); recordActivity(this.context, 'TASK_DELETED', id); this.emit('tasks_updated', () => this.tasks()); this.emit('projects_updated', () => this.projects()); return { success: true, deletedId: id }; }
+    deleteProject(id: string) { this.manage(); this.cascade('project', id); recordActivity(this.context, 'PROJECT_DELETED', id); this.emit('projects_updated', () => this.projects()); this.emit('tasks_updated', () => this.tasks()); return { success: true, deletedId: id }; }
     milestones(projectId: string) { this.repo('projects').require(projectId); return this.repo('milestones').all().filter(row => row.projectId === projectId); }
     milestone(projectId: string | undefined, id: string | undefined, body: any) {
         this.manage();
@@ -560,9 +577,9 @@ export class ProjectTaskService {
         row = this.repo('subtasks').insert({ id: identifier('sub'), taskId, createdById: this.actor().id, createdAt: now(), completed: false, ...changes });
     }
     else
-        Object.assign(row, changes); this.refreshTask(this.repo('tasks').require(row.taskId)); this.change(id ? 'SUBTASK_UPDATED' : 'SUBTASK_CREATED', row); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return row; }
+        Object.assign(row, changes); this.refreshTask(this.repo('tasks').require(row.taskId)); this.change(id ? 'SUBTASK_UPDATED' : 'SUBTASK_CREATED', row); this.emit('tasks_updated', () => this.tasks()); this.emit('projects_updated', () => this.projects()); return row; }
     deleteSubtask(id: string) { const row = this.repo('subtasks').require(id), task = this.repo('tasks').require(row.taskId); this.repo('subtasks').remove(id); if (!this.subtasks(task.id).length && !this.complete(task.status))
-        task.progress = 0; this.refreshTask(task); this.change('SUBTASK_DELETED', task); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return { success: true, deletedId: id }; }
+        task.progress = 0; this.refreshTask(task); this.change('SUBTASK_DELETED', task); this.emit('tasks_updated', () => this.tasks()); this.emit('projects_updated', () => this.projects()); return { success: true, deletedId: id }; }
     comments(taskId: string) { this.repo('tasks').require(taskId); return this.repo('comments').all().filter(row => row.taskId === taskId); }
     comment(taskId: string | undefined, id: string | undefined, body: any) { dto(body, ['content']); const content = text(body.content, 'نظر', true, 20000); let row = id ? this.repo('comments').require(id) : null; if (row) {
         this.own(row);
@@ -614,14 +631,14 @@ export class ProjectTaskService {
             Object.assign(row, changes);
         this.change(id ? 'TIME_ENTRY_UPDATED' : 'TIME_ENTRY_CREATED', row);
         this.refreshTask(this.repo('tasks').require(row.taskId), false);
-        this.emit('tasks_updated', this.tasks());
-        this.emit('projects_updated', this.projects());
+        this.emit('tasks_updated', () => this.tasks());
+        this.emit('projects_updated', () => this.projects());
         return row;
     }
     deleteTimeEntry(id: string) { const row = this.repo('timeEntries').require(id); this.own(row); if (row.kind !== 'work')
         throw new DomainError(409, 'ADJUSTMENT_IMMUTABLE', 'اصلاح زمان را از مجموع زمان وظیفه انجام دهید.'); if (this.hours(row.taskId) - row.hours < 0)
         throw new DomainError(409, 'NEGATIVE_TOTAL_HOURS', 'ابتدا اصلاح مجموع زمان را بازبینی کنید.'); this.repo('timeEntries').remove(id); const task = this.repo('tasks').require(row.taskId); if (!this.timeEntries(task.id).length)
-        task.loggedHours = 0; this.refreshTask(task, false); recordActivity(this.context, 'TIME_ENTRY_DELETED', id); this.emit('tasks_updated', this.tasks()); this.emit('projects_updated', this.projects()); return { success: true, deletedId: id }; }
+        task.loggedHours = 0; this.refreshTask(task, false); recordActivity(this.context, 'TIME_ENTRY_DELETED', id); this.emit('tasks_updated', () => this.tasks()); this.emit('projects_updated', () => this.projects()); return { success: true, deletedId: id }; }
 }
 export function createProjectTaskRouter(context: DomainContext, service = new ProjectTaskService(context)) {
     const router = Router();

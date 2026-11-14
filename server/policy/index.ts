@@ -47,7 +47,7 @@ function safeJson(value: any, depth = 0): boolean {
 function validField(key: string, value: any): boolean {
   // Story points: a non-negative estimate, or null for "not estimated".
   if (key === 'storyPoints') return value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1000);
-  const booleans = ['enabled','isAllowed','completed','pin','isGroup','isBudgetConfidential','isConfidential','isActive','clientVisible','approved','closed','muted'];
+  const booleans = ['enabled','isAllowed','completed','pin','isGroup','isBudgetConfidential','isConfidential','isActive','clientVisible','approved','closed','muted','shared','starred'];
   if (booleans.includes(key)) return typeof value === 'boolean';
   if (['byteSize','order','progress','estimatedHours','estimate','amount','hours','loggedHours'].includes(key)) return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= (key === 'progress' ? 100 : 1e12);
   if (['assignedMemberIds','assignedTeamIds','memberIds','userIds','attachmentIds','selectedTeams','dependencies','tags','ids','mutedTypes','events','projectIds','taskIds'].includes(key)) return Array.isArray(value) && value.length <= 200 && value.every(item => typeof item === 'string' && item.length <= 200);
@@ -57,13 +57,13 @@ function validField(key: string, value: any): boolean {
   if (['assignees','subtasks'].includes(key)) return Array.isArray(value) && value.length <= 200 && value.every(item=>typeof item==='string'||!!item&&typeof item==='object'&&!Array.isArray(item));
   if (['links','initialComments'].includes(key)) return Array.isArray(value) && value.length<=100 && value.every(item=>typeof item==='string'&&item.length<=20_000);
   if (key==='name' && value && typeof value==='object' && !Array.isArray(value)) return Object.keys(value).every(key=>['fa','en'].includes(key)) && Object.values(value).every(item=>typeof item==='string'&&item.length<=200);
-  if (['metadata','config','credentials','metrics','projectSummary','taskSummary','custom','customFields','payload','data','roadmap'].includes(key)) return value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (['metadata','config','credentials','changes','metrics','projectSummary','taskSummary','custom','customFields','payload','data','roadmap'].includes(key)) return value !== null && typeof value === 'object' && !Array.isArray(value);
   if (key === 'structure') return value !== null && typeof value === 'object';
   if (['clientProjectsMatrix','departmentBreakdown','memberBottlenecks','bottlenecks','keyTakeaways','defaultModules'].includes(key)) return Array.isArray(value);
   if (key.endsWith('Id') && value === null) return true;
   if (key === 'expiresAt' && value === null) return true;
   if (typeof value !== 'string') return false;
-  const maximum = ['content','contentBody','description','notes','feedbackContent','requestText','message','reply'].includes(key) ? 20_000 : key.endsWith('Id') ? 200 : 500;
+  const maximum = ['content','contentBody','description','notes','feedbackContent','requestText','message','reply','query'].includes(key) ? 20_000 : key.endsWith('Id') ? 200 : 500;
   if (value.length > maximum) return false;
   if (['title','name','pageName','content'].includes(key) && !value.trim()) return false;
   if (['websiteUrl','siteUrl','endpointUrl'].includes(key) && value) {
@@ -107,7 +107,8 @@ export function createPolicy(scoped: ScopedState, authenticateToken: any) {
       const grant = membership(scoped.raw, req.user, workspaceId);
       req.workspaceId = scope.workspaceId; req.workspaceMembership = grant;
       if (req.path.startsWith('/api/sites/') && req.path.endsWith('/key') && !manager(grant)) return reject(res, 403, 'FORBIDDEN', 'مجوز مدیریت فضای کاری لازم است.');
-      const personalReadState = (req.method === 'PUT' && (/^\/api\/notifications\/(?:read-all|preferences|[^/]+\/read)$/.test(req.path) || /^\/api\/chat\/conversations\/[^/]+\/preferences$/.test(req.path))) || (req.method === 'POST' && (req.path === '/api/notifications/clear' || /^\/api\/chat\/conversations\/[^/]+\/read$/.test(req.path)));
+      // Saved search filters are the member's own (sharing is checked by the search service), so readers may keep them too.
+      const personalReadState = /^\/api\/filters(?:\/[^/]+)?$/.test(req.path) || (req.method === 'PUT' && (/^\/api\/notifications\/(?:read-all|preferences|[^/]+\/read)$/.test(req.path) || /^\/api\/chat\/conversations\/[^/]+\/preferences$/.test(req.path))) || (req.method === 'POST' && (req.path === '/api/notifications/clear' || /^\/api\/chat\/conversations\/[^/]+\/read$/.test(req.path)));
       if (!isSystem && !['GET','HEAD'].includes(req.method) && !personalReadState) {
         const orgWriterOperation = /^\/api\/org\/module-instances\/[^/]+(?:\/records(?:\/[^/]+)?)?$/.test(req.path) && (req.method === 'PUT' || req.path.includes('/records')) || (req.method === 'POST' && (/^\/api\/org\/(?:reports(?:\/executive-summary)?|departments\/[^/]+\/reports)$/.test(req.path)));
         const feedbackCreation = req.method === 'POST' && /^\/api\/projects\/[^/]+\/feedbacks\/?$/.test(req.path);

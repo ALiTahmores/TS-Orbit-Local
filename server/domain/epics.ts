@@ -81,7 +81,7 @@ export class EpicService {
     if (rows.some(task => task.type === 'epic')) invalid('اپیک نمی‌تواند زیرمجموعهٔ اپیک دیگری باشد.');
     for (const task of rows) { if (epic) task.epicId = epic.id; else delete task.epicId; task.updatedAt = now(); }
     recordActivity(this.context, epic ? 'EPIC_LINKED' : 'EPIC_UNLINKED', epic?.id || project.id);
-    this.tasks.emit('tasks_updated', this.tasks.tasks());
+    this.tasks.emit('tasks_updated', () => this.tasks.tasks());
     return this.overview({ projectId: project.id });
   }
 }

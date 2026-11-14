@@ -92,7 +92,8 @@ const navigationGroups = [
       { id: 'kanban_board', name: { fa: 'برد کانبان وظایف', en: 'Task Kanban board' }, icon: 'Trello' },
       { id: 'team_matrix', name: { fa: 'دسته‌بندی و لیست تیم‌ها', en: 'Teams and lists' }, icon: 'LayoutGrid' },
       { id: 'timeline', name: { fa: 'تقویم و گانت سررسیدها', en: 'Due date calendar' }, icon: 'Calendar' },
-      { id: 'sprints', name: { fa: 'بک‌لاگ و اسپرینت‌ها', en: 'Backlog and sprints' }, icon: 'Rocket' }
+      { id: 'sprints', name: { fa: 'بک‌لاگ و اسپرینت‌ها', en: 'Backlog and sprints' }, icon: 'Rocket' },
+      { id: 'search', name: { fa: 'جستجو و فیلترها', en: 'Search and filters' }, icon: 'Search' }
     ]
   },
   {
@@ -311,7 +312,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           { id: 'kanban_board', name: { fa: 'برد کانبان وظایف', en: 'Task Kanban board' }, icon: 'Trello' },
           { id: 'team_matrix', name: { fa: 'دسته‌بندی و لیست تیم‌ها', en: 'Teams and lists' }, icon: 'LayoutGrid' },
           { id: 'timeline', name: { fa: 'تقویم و گانت سررسیدها', en: 'Due date calendar' }, icon: 'Calendar' },
-          { id: 'sprints', name: { fa: 'بک‌لاگ و اسپرینت‌ها', en: 'Backlog and sprints' }, icon: 'Rocket' }
+          { id: 'sprints', name: { fa: 'بک‌لاگ و اسپرینت‌ها', en: 'Backlog and sprints' }, icon: 'Rocket' },
+          { id: 'search', name: { fa: 'جستجو و فیلترها', en: 'Search and filters' }, icon: 'Search' }
         ]
       },
       {

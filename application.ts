@@ -36,6 +36,7 @@ import { IntegrationHub, createIntegrationRouter, createInboundHookRouter } from
 import { ProjectTaskService } from './server/domain/projects-tasks.ts';
 import { SprintService, createSprintRouter } from './server/domain/sprints.ts';
 import { EpicService, createEpicRouter } from './server/domain/epics.ts';
+import { SearchService, createSearchRouter } from './server/search/service.ts';
 const app = express();
 app.enable('case sensitive routing');
 const backendPath = (path: string) => /^\/(?:api|socket\.io)(?:\/|$)/.test(path);
@@ -546,6 +547,7 @@ app.use('/api', createProjectTaskRouter(domainContext, projectTasks));
 const sprintService = new SprintService(projectTasks);
 app.use('/api', createSprintRouter(sprintService));
 app.use('/api', createEpicRouter(new EpicService(projectTasks, sprintService)));
+app.use('/api', createSearchRouter(new SearchService(projectTasks)));
 app.use('/api', createIntegrationRouter(integrationHub));
 app.use('/api', createOrganizationRouter({ scoped, broadcast, integrations: change => integrationHub.emit(change) }));
 app.use('/api', createFileRouter(files));

@@ -79,8 +79,8 @@ export class SprintService {
   touch(action: string, project: any, tasksChanged = false) {
     project.updatedAt = now();
     recordActivity(this.context, action, project.id);
-    if (tasksChanged) this.tasks.emit('tasks_updated', this.tasks.tasks());
-    this.tasks.emit('projects_updated', this.tasks.projects());
+    if (tasksChanged) this.tasks.emit('tasks_updated', () => this.tasks.tasks());
+    this.tasks.emit('projects_updated', () => this.tasks.projects());
   }
 
   // ------------------------------------------------------------------ reads
@@ -288,7 +288,7 @@ export class SprintService {
     this.place(project, moving, target, before?.id || null, false);
     project.updatedAt = now();
     recordActivity(this.context, 'BACKLOG_UPDATED', project.id);
-    this.tasks.emit('tasks_updated', this.tasks.tasks());
+    this.tasks.emit('tasks_updated', () => this.tasks.tasks());
     return this.overview({ projectId: project.id });
   }
   /** Re-ranks the target lane with `moving` placed before `beforeId` (or first/last). */
